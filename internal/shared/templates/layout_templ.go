@@ -42,7 +42,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - Claude Watcher</title><link rel=\"stylesheet\" href=\"/static/css/base.css\"><link rel=\"stylesheet\" href=\"/static/css/nav.css\"><link rel=\"stylesheet\" href=\"/static/css/cards.css\"><link rel=\"stylesheet\" href=\"/static/css/table.css\"><link rel=\"stylesheet\" href=\"/static/css/detail.css\"><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script></head><body>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - Claude Watcher</title><link rel=\"stylesheet\" href=\"/static/css/fonts.css\"><link rel=\"stylesheet\" href=\"/static/css/base.css\"><link rel=\"stylesheet\" href=\"/static/css/nav.css\"><link rel=\"stylesheet\" href=\"/static/css/cards.css\"><link rel=\"stylesheet\" href=\"/static/css/table.css\"><link rel=\"stylesheet\" href=\"/static/css/detail.css\"><script src=\"https://unpkg.com/htmx.org@2.0.4\"></script></head><body>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -1,30 +1,79 @@
+/* Main Navigation */
 .main-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-4) var(--space-6);
   background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  background: rgba(17, 17, 19, 0.85);
 }
 
+/* Brand / Logo */
 .nav-brand {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--color-primary);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
+.nav-brand::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--color-primary);
+  border-radius: 2px;
+}
+
+/* Navigation Links */
 .nav-links {
   display: flex;
-  gap: var(--space-lg);
+  align-items: center;
+  gap: var(--space-1);
   list-style: none;
 }
 
 .nav-links a {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-muted);
   text-decoration: none;
-  transition: color 0.2s;
+  border-radius: var(--radius);
+  transition: color var(--transition-fast), background var(--transition-fast);
 }
 
 .nav-links a:hover {
   color: var(--color-text);
+  background: var(--color-surface-elevated);
+}
+
+.nav-links a.active {
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .main-nav {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .nav-brand {
+    font-size: var(--text-sm);
+  }
+
+  .nav-links a {
+    padding: var(--space-2);
+    font-size: var(--text-xs);
+  }
 }

@@ -1,103 +1,199 @@
+/* Session Header */
 .session-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: var(--space-xl);
+  margin-bottom: var(--space-8);
+  gap: var(--space-4);
 }
 
+/* Status Badge */
 .status-badge {
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius);
-  font-size: 0.75rem;
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-xl);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
-.status-user_quit { background: var(--color-primary); color: white; }
-.status-error { background: var(--color-error); color: white; }
+.status-user_quit {
+  background: var(--color-primary-muted);
+  color: var(--color-primary);
+}
 
+.status-error {
+  background: rgba(248, 113, 113, 0.15);
+  color: var(--color-error);
+}
+
+/* Session Meta Information */
 .session-meta {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-xl);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
 }
 
 .session-meta dl {
   display: grid;
-  grid-template-columns: 150px 1fr;
-  gap: var(--space-sm);
+  grid-template-columns: 160px 1fr;
+  gap: var(--space-3) var(--space-6);
+  align-items: baseline;
 }
 
 .session-meta dt {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .session-meta dd {
-  font-family: monospace;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
 }
 
+/* Token Breakdown Panel */
 .token-breakdown {
   background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  padding: var(--space-lg);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
 }
 
+/* Token Visualization Bar */
 .token-bar {
   display: flex;
-  height: 24px;
-  border-radius: var(--radius);
+  height: 8px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-6);
+  background: var(--color-border-subtle);
 }
 
-.token-segment { height: 100%; }
-.token-input { background: #3b82f6; }
-.token-output { background: #22c55e; }
-.token-thinking { background: #f59e0b; }
-.token-cache { background: #8b5cf6; }
+.token-segment {
+  height: 100%;
+  transition: width var(--transition-slow);
+}
 
+.token-input { background: var(--color-input); }
+.token-output { background: var(--color-output); }
+.token-thinking { background: var(--color-thinking); }
+.token-cache { background: var(--color-cache); }
+
+/* Token Legend */
 .token-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+.token-legend dl {
+  display: contents;
 }
 
 .token-legend dt {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .token-legend dt::before {
   content: "";
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-sm);
 }
 
-.token-legend dt.token-input::before { background: #3b82f6; }
-.token-legend dt.token-output::before { background: #22c55e; }
-.token-legend dt.token-thinking::before { background: #f59e0b; }
-.token-legend dt.token-cache::before { background: #8b5cf6; }
+.token-legend dt.token-input::before { background: var(--color-input); }
+.token-legend dt.token-output::before { background: var(--color-output); }
+.token-legend dt.token-thinking::before { background: var(--color-thinking); }
+.token-legend dt.token-cache::before { background: var(--color-cache); }
 
-.tools-list, .files-list {
+.token-legend dd {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-text);
+  margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tools and Files Lists */
+.tools-list,
+.files-list {
   list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
-.tools-list li, .files-list li {
+.tools-list li,
+.files-list li {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: var(--space-sm) 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.tools-list li:last-child,
+.files-list li:last-child {
+  border-bottom: none;
+}
+
+.tools-list li:hover,
+.files-list li:hover {
+  background: var(--color-surface-elevated);
 }
 
 .tool-count {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
   color: var(--color-text-muted);
-  font-family: monospace;
+  background: var(--color-border-subtle);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius);
+  min-width: 32px;
+  text-align: center;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .session-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .session-meta dl {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .session-meta dt {
+    margin-top: var(--space-3);
+  }
+
+  .session-meta dt:first-child {
+    margin-top: 0;
+  }
+
+  .token-legend {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
