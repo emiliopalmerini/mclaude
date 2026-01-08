@@ -1,0 +1,73 @@
+package sessions
+
+import (
+	"database/sql"
+	"fmt"
+
+	"claude-watcher/internal/shared/templates"
+)
+
+templ SessionsTable(data SessionsData) {
+	<table class="sessions-table">
+		<thead>
+			<tr>
+				<th>Timestamp</th>
+				<th>Host</th>
+				<th>Branch</th>
+				<th>Duration</th>
+				<th>Prompts</th>
+				<th>Tools</th>
+				<th>Cost</th>
+				<th></th>
+			</tr>
+		</thead>
+		<tbody>
+			for _, s := range data.Sessions {
+				<tr>
+					<td>{ s.Timestamp }</td>
+					<td>{ s.Hostname }</td>
+					<td>{ nullStr(s.GitBranch) }</td>
+					<td>{ formatDuration(s.DurationSeconds) }</td>
+					<td>{ nullInt(s.UserPrompts) }</td>
+					<td>{ nullInt(s.ToolCalls) }</td>
+					<td>{ nullCost(s.EstimatedCostUsd) }</td>
+					<td><a href={ templ.SafeURL("/sessions/" + s.SessionID) }>View</a></td>
+				</tr>
+			}
+		</tbody>
+	</table>
+	@templates.Pagination(data.Page, data.TotalPages, "/sessions")
+}
+
+func nullStr(s sql.NullString) string {
+	if s.Valid {
+		return s.String
+	}
+	return "-"
+}
+
+func nullInt(i sql.NullInt64) string {
+	if i.Valid {
+		return fmt.Sprintf("%d", i.Int64)
+	}
+	return "0"
+}
+
+func nullCost(f sql.NullFloat64) string {
+	if f.Valid {
+		return fmt.Sprintf("$%.2f", f.Float64)
+	}
+	return "$0.00"
+}
+
+func formatDuration(d sql.NullInt64) string {
+	if !d.Valid {
+		return "-"
+	}
+	mins := d.Int64 / 60
+	secs := d.Int64 % 60
+	if mins > 0 {
+		return fmt.Sprintf("%dm %ds", mins, secs)
+	}
+	return fmt.Sprintf("%ds", secs)
+}

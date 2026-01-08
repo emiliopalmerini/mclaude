@@ -1,0 +1,8 @@
+package templates
+
+templ StatsCard(label, value, variant string) {
+	<div class={ "stats-card", "stats-card--" + variant }>
+		<div class="stats-card__value">{ value }</div>
+		<div class="stats-card__label">{ label }</div>
+	</div>
+}

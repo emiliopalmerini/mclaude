@@ -1,0 +1,33 @@
+package templates
+
+import "fmt"
+
+templ Pagination(currentPage, totalPages int, baseURL string) {
+	<div class="pagination">
+		if currentPage > 1 {
+			<a
+				href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", baseURL, currentPage-1)) }
+				hx-get={ fmt.Sprintf("%s?page=%d", baseURL, currentPage-1) }
+				hx-target="#content"
+				hx-swap="innerHTML"
+				class="pagination__link"
+			>
+				Previous
+			</a>
+		}
+		<span class="pagination__info">
+			Page { fmt.Sprintf("%d", currentPage) } of { fmt.Sprintf("%d", totalPages) }
+		</span>
+		if currentPage < totalPages {
+			<a
+				href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", baseURL, currentPage+1)) }
+				hx-get={ fmt.Sprintf("%s?page=%d", baseURL, currentPage+1) }
+				hx-target="#content"
+				hx-swap="innerHTML"
+				class="pagination__link"
+			>
+				Next
+			</a>
+		}
+	</div>
+}

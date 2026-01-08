@@ -1,0 +1,24 @@
+package templates
+
+templ Layout(title string) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } - Claude Watcher</title>
+			<link rel="stylesheet" href="/static/css/base.css"/>
+			<link rel="stylesheet" href="/static/css/nav.css"/>
+			<link rel="stylesheet" href="/static/css/cards.css"/>
+			<link rel="stylesheet" href="/static/css/table.css"/>
+			<link rel="stylesheet" href="/static/css/detail.css"/>
+			<script src="https://unpkg.com/htmx.org@2.0.4"></script>
+		</head>
+		<body>
+			@Nav()
+			<main class="container">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

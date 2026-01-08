@@ -1,0 +1,103 @@
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+}
+
+.status-badge {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.status-user_quit { background: var(--color-primary); color: white; }
+.status-error { background: var(--color-error); color: white; }
+
+.session-meta {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.session-meta dl {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: var(--space-sm);
+}
+
+.session-meta dt {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.session-meta dd {
+  font-family: monospace;
+}
+
+.token-breakdown {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+}
+
+.token-bar {
+  display: flex;
+  height: 24px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: var(--space-md);
+}
+
+.token-segment { height: 100%; }
+.token-input { background: #3b82f6; }
+.token-output { background: #22c55e; }
+.token-thinking { background: #f59e0b; }
+.token-cache { background: #8b5cf6; }
+
+.token-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.token-legend dt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.token-legend dt::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.token-legend dt.token-input::before { background: #3b82f6; }
+.token-legend dt.token-output::before { background: #22c55e; }
+.token-legend dt.token-thinking::before { background: #f59e0b; }
+.token-legend dt.token-cache::before { background: #8b5cf6; }
+
+.tools-list, .files-list {
+  list-style: none;
+}
+
+.tools-list li, .files-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tool-count {
+  color: var(--color-text-muted);
+  font-family: monospace;
+}

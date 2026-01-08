@@ -1,0 +1,138 @@
+package session_detail
+
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+
+	"claude-watcher/internal/database/sqlc"
+	"claude-watcher/internal/shared/templates"
+)
+
+templ SessionDetail(s sqlc.Session) {
+	@templates.Layout("Session " + shortID(s.SessionID)) {
+		<div class="session-header">
+			<h1>Session Details</h1>
+			<span class={ "status-badge", "status-" + nullStr(s.ExitReason) }>
+				{ nullStr(s.ExitReason) }
+			</span>
+		</div>
+		<section class="session-meta">
+			<dl>
+				<dt>Session ID</dt>
+				<dd>{ s.SessionID }</dd>
+				<dt>Timestamp</dt>
+				<dd>{ s.Timestamp }</dd>
+				<dt>Hostname</dt>
+				<dd>{ s.Hostname }</dd>
+				<dt>Working Directory</dt>
+				<dd><code>{ nullStr(s.WorkingDirectory) }</code></dd>
+				<dt>Git Branch</dt>
+				<dd>{ nullStr(s.GitBranch) }</dd>
+				<dt>Duration</dt>
+				<dd>{ formatDuration(s.DurationSeconds) }</dd>
+				<dt>Model</dt>
+				<dd>{ nullStr(s.Model) }</dd>
+				<dt>Claude Version</dt>
+				<dd>{ nullStr(s.ClaudeVersion) }</dd>
+			</dl>
+		</section>
+		<section>
+			<h2>Activity</h2>
+			<div class="stats-grid">
+				@templates.StatsCard("User Prompts", nullInt(s.UserPrompts), "sessions")
+				@templates.StatsCard("Responses", nullInt(s.AssistantResponses), "sessions")
+				@templates.StatsCard("Tool Calls", nullInt(s.ToolCalls), "tokens")
+				@templates.StatsCard("Errors", nullInt(s.ErrorsCount), "cost")
+			</div>
+		</section>
+		<section>
+			<h2>Token Usage</h2>
+			<div class="token-breakdown">
+				<div class="token-legend">
+					<dl>
+						<dt class="token-input">Input</dt>
+						<dd>{ nullInt(s.InputTokens) }</dd>
+						<dt class="token-output">Output</dt>
+						<dd>{ nullInt(s.OutputTokens) }</dd>
+						<dt class="token-thinking">Thinking</dt>
+						<dd>{ nullInt(s.ThinkingTokens) }</dd>
+						<dt class="token-cache">Cache Read</dt>
+						<dd>{ nullInt(s.CacheReadTokens) }</dd>
+					</dl>
+				</div>
+				<div style="margin-top: 1rem;">
+					<strong>Estimated Cost:</strong> { nullCost(s.EstimatedCostUsd) }
+				</div>
+			</div>
+		</section>
+		if s.ToolsBreakdown.Valid && s.ToolsBreakdown.String != "" && s.ToolsBreakdown.String != "{}" {
+			<section>
+				<h2>Tools Used</h2>
+				<ul class="tools-list">
+					for name, count := range parseTools(s.ToolsBreakdown) {
+						<li>
+							<span class="tool-name">{ name }</span>
+							<span class="tool-count">{ fmt.Sprintf("%d", count) }</span>
+						</li>
+					}
+				</ul>
+			</section>
+		}
+		if s.Summary.Valid && s.Summary.String != "" {
+			<section>
+				<h2>Summary</h2>
+				<p>{ s.Summary.String }</p>
+			</section>
+		}
+	}
+}
+
+func shortID(id string) string {
+	if len(id) > 8 {
+		return id[:8]
+	}
+	return id
+}
+
+func nullStr(s sql.NullString) string {
+	if s.Valid {
+		return s.String
+	}
+	return "-"
+}
+
+func nullInt(i sql.NullInt64) string {
+	if i.Valid {
+		return fmt.Sprintf("%d", i.Int64)
+	}
+	return "0"
+}
+
+func nullCost(f sql.NullFloat64) string {
+	if f.Valid {
+		return fmt.Sprintf("$%.4f", f.Float64)
+	}
+	return "$0.00"
+}
+
+func formatDuration(d sql.NullInt64) string {
+	if !d.Valid {
+		return "-"
+	}
+	mins := d.Int64 / 60
+	secs := d.Int64 % 60
+	if mins > 0 {
+		return fmt.Sprintf("%dm %ds", mins, secs)
+	}
+	return fmt.Sprintf("%ds", secs)
+}
+
+func parseTools(s sql.NullString) map[string]int {
+	result := make(map[string]int)
+	if !s.Valid || s.String == "" {
+		return result
+	}
+	json.Unmarshal([]byte(s.String), &result)
+	return result
+}

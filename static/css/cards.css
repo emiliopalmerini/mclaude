@@ -1,0 +1,28 @@
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.stats-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-lg);
+}
+
+.stats-card__value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: var(--space-xs);
+}
+
+.stats-card__label {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+}
+
+.stats-card--cost .stats-card__value { color: var(--color-success); }
+.stats-card--tokens .stats-card__value { color: var(--color-primary); }
+.stats-card--sessions .stats-card__value { color: var(--color-warning); }
