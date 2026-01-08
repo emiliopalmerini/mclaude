@@ -1,108 +1,82 @@
-/* Stats Grid Layout */
+/* Stats Grid Layout - compact */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
 }
 
-/* Stats Card Component */
+/* Stats Card Component - minimal */
 .stats-card {
-  position: relative;
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  transition: border-color var(--transition-fast);
 }
 
 .stats-card:hover {
   border-color: var(--color-border);
-  box-shadow: var(--shadow);
 }
 
-/* Value styling - large, prominent numbers */
+/* Value styling - prominent numbers */
 .stats-card__value {
-  font-family: var(--font-sans);
-  font-size: var(--text-3xl);
-  font-weight: var(--font-bold);
-  line-height: var(--leading-tight);
-  letter-spacing: -0.03em;
-  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: var(--font-semibold);
+  line-height: 1;
+  color: var(--color-text);
+  margin-bottom: var(--space-1);
   font-variant-numeric: tabular-nums;
 }
 
-/* Label styling - subtle, uppercase */
+/* Label styling - minimal */
 .stats-card__label {
-  font-size: var(--text-xs);
+  font-size: 0.65rem;
   font-weight: var(--font-medium);
   color: var(--color-text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 
-/* Variant colors - using muted backgrounds with colored text */
-.stats-card--cost {
-  background: var(--color-success-muted);
-  border-color: transparent;
-}
-
-.stats-card--cost .stats-card__value {
-  color: var(--color-success);
-}
-
-.stats-card--cost .stats-card__label {
-  color: var(--color-success);
-  opacity: 0.7;
-}
-
-.stats-card--tokens {
-  background: var(--color-primary-muted);
-  border-color: transparent;
-}
-
-.stats-card--tokens .stats-card__value {
-  color: var(--color-primary);
-}
-
-.stats-card--tokens .stats-card__label {
-  color: var(--color-primary);
-  opacity: 0.7;
-}
-
+/* Remove all color variants - unified monochrome look */
+.stats-card--cost,
+.stats-card--tokens,
 .stats-card--sessions {
-  background: var(--color-warning-muted);
-  border-color: transparent;
+  background: var(--color-surface);
+  border-color: var(--color-border-subtle);
 }
 
+.stats-card--cost .stats-card__value,
+.stats-card--tokens .stats-card__value,
 .stats-card--sessions .stats-card__value {
-  color: var(--color-warning);
+  color: var(--color-text);
 }
 
+.stats-card--cost .stats-card__label,
+.stats-card--tokens .stats-card__label,
 .stats-card--sessions .stats-card__label {
-  color: var(--color-warning);
-  opacity: 0.7;
+  color: var(--color-text-muted);
 }
 
-/* Hover states for variants */
+/* Hover states */
 .stats-card--cost:hover,
 .stats-card--tokens:hover,
 .stats-card--sessions:hover {
-  border-color: transparent;
-  box-shadow: var(--shadow-md);
+  border-color: var(--color-border);
 }
 
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
-    gap: var(--space-3);
+    gap: var(--space-2);
   }
 
   .stats-card {
-    padding: var(--space-4);
+    padding: var(--space-3);
   }
 
   .stats-card__value {
-    font-size: var(--text-2xl);
+    font-size: var(--text-lg);
   }
 }

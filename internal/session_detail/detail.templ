@@ -50,19 +50,26 @@ templ SessionDetail(s sqlc.Session) {
 			<h2>Token Usage</h2>
 			<div class="token-breakdown">
 				<div class="token-legend">
-					<dl>
+					<div class="token-item">
 						<dt class="token-input">Input</dt>
 						<dd>{ nullInt(s.InputTokens) }</dd>
+					</div>
+					<div class="token-item">
 						<dt class="token-output">Output</dt>
 						<dd>{ nullInt(s.OutputTokens) }</dd>
+					</div>
+					<div class="token-item">
 						<dt class="token-thinking">Thinking</dt>
 						<dd>{ nullInt(s.ThinkingTokens) }</dd>
-						<dt class="token-cache">Cache Read</dt>
+					</div>
+					<div class="token-item">
+						<dt class="token-cache">Cache</dt>
 						<dd>{ nullInt(s.CacheReadTokens) }</dd>
-					</dl>
-				</div>
-				<div style="margin-top: 1rem;">
-					<strong>Estimated Cost:</strong> { nullCost(s.EstimatedCostUsd) }
+					</div>
+					<div class="token-item" style="margin-left: auto;">
+						<dt style="color: var(--color-text-secondary);">Cost</dt>
+						<dd style="color: var(--color-text);">{ nullCost(s.EstimatedCostUsd) }</dd>
+					</div>
 				</div>
 			</div>
 		</section>

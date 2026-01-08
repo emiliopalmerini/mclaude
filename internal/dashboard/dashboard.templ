@@ -111,15 +111,15 @@ templ chartsScript() {
 
 				renderCharts(data) {
 					const colors = {
-						primary: '#818cf8',
-						success: '#4ade80',
-						warning: '#fbbf24',
-						input: '#60a5fa',
-						output: '#4ade80',
-						thinking: '#fbbf24',
-						cache: '#a78bfa',
-						grid: '#27272a',
-						text: '#a1a1aa'
+						primary: '#22c55e',
+						secondary: '#3b82f6',
+						tertiary: '#a855f7',
+						input: '#3b82f6',
+						output: '#22c55e',
+						thinking: '#f59e0b',
+						cache: '#8b5cf6',
+						grid: '#1a1a1a',
+						text: '#666666'
 					};
 
 					const chartOptions = {
@@ -145,7 +145,7 @@ templ chartsScript() {
 									label: 'Sessions',
 									data: ts.map(d => d.sessions),
 									borderColor: colors.primary,
-									backgroundColor: colors.primary + '33',
+									backgroundColor: colors.primary + '15',
 									fill: true,
 									tension: 0.3,
 									yAxisID: 'y'
@@ -153,7 +153,7 @@ templ chartsScript() {
 								{
 									label: 'Cost ($)',
 									data: ts.map(d => d.cost),
-									borderColor: colors.success,
+									borderColor: colors.secondary,
 									backgroundColor: 'transparent',
 									tension: 0.3,
 									yAxisID: 'y1'
@@ -177,7 +177,9 @@ templ chartsScript() {
 							labels: data.models.map(d => this.formatModel(d.model)),
 							datasets: [{
 								data: data.models.map(d => d.cost),
-								backgroundColor: [colors.primary, colors.success, colors.warning, colors.cache, colors.input]
+								backgroundColor: ['#22c55e', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'],
+								borderColor: '#0a0a0a',
+								borderWidth: 2
 							}]
 						},
 						options: {
@@ -200,7 +202,7 @@ templ chartsScript() {
 							datasets: [{
 								label: 'Sessions',
 								data: hourData,
-								backgroundColor: colors.primary + '99',
+								backgroundColor: colors.primary + '60',
 								borderColor: colors.primary,
 								borderWidth: 1
 							}]
