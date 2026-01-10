@@ -1,0 +1,47 @@
+package sessions
+
+templ FiltersForm(options FilterOptions, active ActiveFilters) {
+	<form class="filters-form" hx-get="/sessions" hx-target="#content" hx-swap="innerHTML" hx-push-url="true">
+		<div class="filters-form__field">
+			<label for="hostname">Host</label>
+			<select name="hostname" id="hostname">
+				<option value="">All Hosts</option>
+				for _, h := range options.Hostnames {
+					<option value={ h } selected?={ h == active.Hostname }>{ h }</option>
+				}
+			</select>
+		</div>
+		<div class="filters-form__field">
+			<label for="branch">Branch</label>
+			<select name="branch" id="branch">
+				<option value="">All Branches</option>
+				for _, b := range options.Branches {
+					<option value={ b } selected?={ b == active.Branch }>{ b }</option>
+				}
+			</select>
+		</div>
+		<div class="filters-form__field">
+			<label for="model">Model</label>
+			<select name="model" id="model">
+				<option value="">All Models</option>
+				for _, m := range options.Models {
+					<option value={ m } selected?={ m == active.Model }>{ m }</option>
+				}
+			</select>
+		</div>
+		<div class="filters-form__field">
+			<label for="start_date">From</label>
+			<input type="date" name="start_date" id="start_date" value={ active.StartDate }/>
+		</div>
+		<div class="filters-form__field">
+			<label for="end_date">To</label>
+			<input type="date" name="end_date" id="end_date" value={ active.EndDate }/>
+		</div>
+		<div class="filters-form__actions">
+			<button type="submit" class="btn btn--primary">Apply</button>
+			if active.HasFilters() {
+				<a href="/sessions" class="btn btn--secondary" hx-get="/sessions" hx-target="#content" hx-swap="innerHTML" hx-push-url="true">Clear</a>
+			}
+		</div>
+	</form>
+}

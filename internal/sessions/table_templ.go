@@ -152,7 +152,7 @@ func SessionsTable(data SessionsData) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templates.Pagination(data.Page, data.TotalPages, "/sessions").Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = templates.PaginationWithParams(data.Page, data.TotalPages, "/sessions", data.ActiveFilters.QueryString()).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

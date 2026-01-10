@@ -1,0 +1,129 @@
+/* Filters Form */
+.filters-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.filters-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 140px;
+}
+
+.filters-form__field label {
+  font-size: var(--text-xs);
+  font-weight: var(--font-medium);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filters-form__field select,
+.filters-form__field input[type="date"] {
+  height: 36px;
+  padding: 0 var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  background: var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: border-color var(--transition-fast);
+}
+
+.filters-form__field select:hover,
+.filters-form__field input[type="date"]:hover {
+  border-color: var(--color-text-muted);
+}
+
+.filters-form__field select:focus,
+.filters-form__field input[type="date"]:focus {
+  outline: none;
+  border-color: var(--color-text);
+}
+
+.filters-form__field input[type="date"] {
+  width: 140px;
+}
+
+/* Date input calendar icon styling for webkit browsers */
+.filters-form__field input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
+
+.filters-form__actions {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Button styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn--primary {
+  color: var(--color-bg);
+  background: var(--color-text);
+  border: 1px solid var(--color-text);
+}
+
+.btn--primary:hover {
+  background: var(--color-text-secondary);
+  border-color: var(--color-text-secondary);
+}
+
+.btn--secondary {
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: 1px solid var(--color-border);
+}
+
+.btn--secondary:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-muted);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .filters-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters-form__field {
+    width: 100%;
+  }
+
+  .filters-form__field select,
+  .filters-form__field input[type="date"] {
+    width: 100%;
+  }
+
+  .filters-form__actions {
+    margin-left: 0;
+    margin-top: var(--space-2);
+  }
+}

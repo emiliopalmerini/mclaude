@@ -37,6 +37,30 @@ LIMIT ? OFFSET ?;
 -- name: CountSessions :one
 SELECT COUNT(*) as count FROM sessions;
 
+-- name: ListSessionsFiltered :many
+SELECT
+    id, session_id, hostname, timestamp, exit_reason,
+    working_directory, git_branch, duration_seconds,
+    user_prompts, tool_calls, estimated_cost_usd, model
+FROM sessions
+WHERE
+    (sqlc.narg(hostname) IS NULL OR hostname = sqlc.narg(hostname))
+    AND (sqlc.narg(git_branch) IS NULL OR git_branch = sqlc.narg(git_branch))
+    AND (sqlc.narg(model) IS NULL OR model = sqlc.narg(model))
+    AND (sqlc.narg(start_date) IS NULL OR timestamp >= sqlc.narg(start_date))
+    AND (sqlc.narg(end_date) IS NULL OR timestamp <= sqlc.narg(end_date))
+ORDER BY timestamp DESC
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
+
+-- name: CountSessionsFiltered :one
+SELECT COUNT(*) as count FROM sessions
+WHERE
+    (sqlc.narg(hostname) IS NULL OR hostname = sqlc.narg(hostname))
+    AND (sqlc.narg(git_branch) IS NULL OR git_branch = sqlc.narg(git_branch))
+    AND (sqlc.narg(model) IS NULL OR model = sqlc.narg(model))
+    AND (sqlc.narg(start_date) IS NULL OR timestamp >= sqlc.narg(start_date))
+    AND (sqlc.narg(end_date) IS NULL OR timestamp <= sqlc.narg(end_date));
+
 -- name: GetSessionByID :one
 SELECT * FROM sessions WHERE session_id = ?;
 

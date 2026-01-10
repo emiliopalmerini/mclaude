@@ -34,5 +34,5 @@ templ SessionsTable(data SessionsData) {
 			}
 		</tbody>
 	</table>
-	@templates.Pagination(data.Page, data.TotalPages, "/sessions")
+	@templates.PaginationWithParams(data.Page, data.TotalPages, "/sessions", data.ActiveFilters.QueryString())
 }

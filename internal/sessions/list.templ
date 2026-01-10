@@ -5,6 +5,7 @@ import "claude-watcher/internal/shared/templates"
 templ SessionsList(data SessionsData) {
 	@templates.Layout("Sessions") {
 		<h1>Sessions</h1>
+		@FiltersForm(data.FilterOptions, data.ActiveFilters)
 		<div id="content">
 			@SessionsTable(data)
 		</div>

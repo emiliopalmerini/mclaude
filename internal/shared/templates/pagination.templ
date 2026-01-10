@@ -2,14 +2,26 @@ package templates
 
 import "fmt"
 
+func buildPaginationURL(baseURL string, page int, queryParams string) string {
+	if queryParams == "" {
+		return fmt.Sprintf("%s?page=%d", baseURL, page)
+	}
+	return fmt.Sprintf("%s?%s&page=%d", baseURL, queryParams, page)
+}
+
 templ Pagination(currentPage, totalPages int, baseURL string) {
+	@PaginationWithParams(currentPage, totalPages, baseURL, "")
+}
+
+templ PaginationWithParams(currentPage, totalPages int, baseURL, queryParams string) {
 	<div class="pagination">
 		if currentPage > 1 {
 			<a
-				href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", baseURL, currentPage-1)) }
-				hx-get={ fmt.Sprintf("%s?page=%d", baseURL, currentPage-1) }
+				href={ templ.SafeURL(buildPaginationURL(baseURL, currentPage-1, queryParams)) }
+				hx-get={ buildPaginationURL(baseURL, currentPage-1, queryParams) }
 				hx-target="#content"
 				hx-swap="innerHTML"
+				hx-push-url="true"
 				class="pagination__link"
 			>
 				Previous
@@ -20,10 +32,11 @@ templ Pagination(currentPage, totalPages int, baseURL string) {
 		</span>
 		if currentPage < totalPages {
 			<a
-				href={ templ.SafeURL(fmt.Sprintf("%s?page=%d", baseURL, currentPage+1)) }
-				hx-get={ fmt.Sprintf("%s?page=%d", baseURL, currentPage+1) }
+				href={ templ.SafeURL(buildPaginationURL(baseURL, currentPage+1, queryParams)) }
+				hx-get={ buildPaginationURL(baseURL, currentPage+1, queryParams) }
 				hx-target="#content"
 				hx-swap="innerHTML"
+				hx-push-url="true"
 				class="pagination__link"
 			>
 				Next

@@ -21,6 +21,37 @@ func (q *Queries) CountSessions(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countSessionsFiltered = `-- name: CountSessionsFiltered :one
+SELECT COUNT(*) as count FROM sessions
+WHERE
+    (?1 IS NULL OR hostname = ?1)
+    AND (?2 IS NULL OR git_branch = ?2)
+    AND (?3 IS NULL OR model = ?3)
+    AND (?4 IS NULL OR timestamp >= ?4)
+    AND (?5 IS NULL OR timestamp <= ?5)
+`
+
+type CountSessionsFilteredParams struct {
+	Hostname  interface{} `json:"hostname"`
+	GitBranch interface{} `json:"git_branch"`
+	Model     interface{} `json:"model"`
+	StartDate interface{} `json:"start_date"`
+	EndDate   interface{} `json:"end_date"`
+}
+
+func (q *Queries) CountSessionsFiltered(ctx context.Context, arg CountSessionsFilteredParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countSessionsFiltered,
+		arg.Hostname,
+		arg.GitBranch,
+		arg.Model,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getDailyMetrics = `-- name: GetDailyMetrics :many
 SELECT
     date(timestamp) as period,
@@ -460,6 +491,91 @@ func (q *Queries) ListSessions(ctx context.Context, arg ListSessionsParams) ([]L
 	items := []ListSessionsRow{}
 	for rows.Next() {
 		var i ListSessionsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.Hostname,
+			&i.Timestamp,
+			&i.ExitReason,
+			&i.WorkingDirectory,
+			&i.GitBranch,
+			&i.DurationSeconds,
+			&i.UserPrompts,
+			&i.ToolCalls,
+			&i.EstimatedCostUsd,
+			&i.Model,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessionsFiltered = `-- name: ListSessionsFiltered :many
+SELECT
+    id, session_id, hostname, timestamp, exit_reason,
+    working_directory, git_branch, duration_seconds,
+    user_prompts, tool_calls, estimated_cost_usd, model
+FROM sessions
+WHERE
+    (?1 IS NULL OR hostname = ?1)
+    AND (?2 IS NULL OR git_branch = ?2)
+    AND (?3 IS NULL OR model = ?3)
+    AND (?4 IS NULL OR timestamp >= ?4)
+    AND (?5 IS NULL OR timestamp <= ?5)
+ORDER BY timestamp DESC
+LIMIT ?7 OFFSET ?6
+`
+
+type ListSessionsFilteredParams struct {
+	Hostname  interface{} `json:"hostname"`
+	GitBranch interface{} `json:"git_branch"`
+	Model     interface{} `json:"model"`
+	StartDate interface{} `json:"start_date"`
+	EndDate   interface{} `json:"end_date"`
+	Offset    int64       `json:"offset"`
+	Limit     int64       `json:"limit"`
+}
+
+type ListSessionsFilteredRow struct {
+	ID               int64           `json:"id"`
+	SessionID        string          `json:"session_id"`
+	Hostname         string          `json:"hostname"`
+	Timestamp        string          `json:"timestamp"`
+	ExitReason       sql.NullString  `json:"exit_reason"`
+	WorkingDirectory sql.NullString  `json:"working_directory"`
+	GitBranch        sql.NullString  `json:"git_branch"`
+	DurationSeconds  sql.NullInt64   `json:"duration_seconds"`
+	UserPrompts      sql.NullInt64   `json:"user_prompts"`
+	ToolCalls        sql.NullInt64   `json:"tool_calls"`
+	EstimatedCostUsd sql.NullFloat64 `json:"estimated_cost_usd"`
+	Model            sql.NullString  `json:"model"`
+}
+
+func (q *Queries) ListSessionsFiltered(ctx context.Context, arg ListSessionsFilteredParams) ([]ListSessionsFilteredRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsFiltered,
+		arg.Hostname,
+		arg.GitBranch,
+		arg.Model,
+		arg.StartDate,
+		arg.EndDate,
+		arg.Offset,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionsFilteredRow{}
+	for rows.Next() {
+		var i ListSessionsFilteredRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
