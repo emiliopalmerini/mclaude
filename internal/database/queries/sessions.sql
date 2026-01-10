@@ -122,3 +122,101 @@ FROM sessions
 WHERE timestamp >= datetime('now', ? || ' hours')
 GROUP BY strftime('%H', timestamp)
 ORDER BY hour ASC;
+
+-- ============================================================================
+-- PRODUCTIVITY & COST ANALYTICS QUERIES
+-- ============================================================================
+
+-- name: GetToolsBreakdownAll :many
+SELECT tools_breakdown
+FROM sessions
+WHERE tools_breakdown IS NOT NULL AND tools_breakdown != ''
+  AND timestamp >= datetime('now', ? || ' days');
+
+-- name: GetTopProject :one
+SELECT COALESCE(working_directory, 'Unknown') as directory, COUNT(*) as sessions
+FROM sessions
+WHERE working_directory IS NOT NULL AND working_directory != ''
+  AND timestamp >= datetime('now', '-7 days')
+GROUP BY working_directory
+ORDER BY sessions DESC
+LIMIT 1;
+
+-- name: GetProjectMetrics :many
+SELECT
+    COALESCE(working_directory, 'Unknown') as directory,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as cost,
+    COALESCE(SUM(tool_calls), 0) as tool_calls,
+    COALESCE(SUM(user_prompts), 0) as prompts,
+    COALESCE(AVG(duration_seconds), 0) as avg_duration
+FROM sessions
+WHERE working_directory IS NOT NULL AND working_directory != ''
+  AND timestamp >= datetime('now', ? || ' days')
+GROUP BY working_directory
+ORDER BY cost DESC;
+
+-- name: GetCacheMetrics :one
+SELECT
+    COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+    COALESCE(SUM(cache_write_tokens), 0) as cache_write,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days');
+
+-- name: GetCacheMetricsDaily :many
+SELECT
+    date(timestamp) as period,
+    COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY date(timestamp)
+ORDER BY period ASC;
+
+-- name: GetEfficiencyMetrics :one
+SELECT
+    COALESCE(AVG(user_prompts), 0) as avg_prompts_per_session,
+    COALESCE(AVG(tool_calls), 0) as avg_tools_per_session,
+    COALESCE(AVG(CAST(errors_count AS REAL) / NULLIF(tool_calls, 0)), 0) as error_rate,
+    COALESCE(AVG(duration_seconds), 0) as avg_duration
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days');
+
+-- name: GetEfficiencyMetricsDaily :many
+SELECT
+    date(timestamp) as period,
+    COALESCE(AVG(user_prompts), 0) as avg_prompts,
+    COALESCE(AVG(tool_calls), 0) as avg_tools,
+    COUNT(*) as sessions
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY date(timestamp)
+ORDER BY period ASC;
+
+-- name: GetDayOfWeekDistribution :many
+SELECT
+    CAST(strftime('%w', timestamp) AS INTEGER) as day_of_week,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as cost,
+    COALESCE(AVG(user_prompts), 0) as avg_prompts
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY strftime('%w', timestamp)
+ORDER BY day_of_week ASC;
+
+-- name: GetModelEfficiency :many
+SELECT
+    COALESCE(model, 'Unknown') as model,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as total_cost,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
+    CASE
+        WHEN SUM(input_tokens + output_tokens) > 0
+        THEN COALESCE(SUM(estimated_cost_usd), 0) * 1000000.0 / SUM(input_tokens + output_tokens)
+        ELSE 0
+    END as cost_per_million_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY model
+ORDER BY total_cost DESC;

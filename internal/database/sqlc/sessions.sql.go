@@ -52,6 +52,68 @@ func (q *Queries) CountSessionsFiltered(ctx context.Context, arg CountSessionsFi
 	return count, err
 }
 
+const getCacheMetrics = `-- name: GetCacheMetrics :one
+SELECT
+    COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+    COALESCE(SUM(cache_write_tokens), 0) as cache_write,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+`
+
+type GetCacheMetricsRow struct {
+	CacheRead   interface{} `json:"cache_read"`
+	CacheWrite  interface{} `json:"cache_write"`
+	TotalTokens interface{} `json:"total_tokens"`
+}
+
+func (q *Queries) GetCacheMetrics(ctx context.Context, dollar_1 sql.NullString) (GetCacheMetricsRow, error) {
+	row := q.db.QueryRowContext(ctx, getCacheMetrics, dollar_1)
+	var i GetCacheMetricsRow
+	err := row.Scan(&i.CacheRead, &i.CacheWrite, &i.TotalTokens)
+	return i, err
+}
+
+const getCacheMetricsDaily = `-- name: GetCacheMetricsDaily :many
+SELECT
+    date(timestamp) as period,
+    COALESCE(SUM(cache_read_tokens), 0) as cache_read,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY date(timestamp)
+ORDER BY period ASC
+`
+
+type GetCacheMetricsDailyRow struct {
+	Period      interface{} `json:"period"`
+	CacheRead   interface{} `json:"cache_read"`
+	TotalTokens interface{} `json:"total_tokens"`
+}
+
+func (q *Queries) GetCacheMetricsDaily(ctx context.Context, dollar_1 sql.NullString) ([]GetCacheMetricsDailyRow, error) {
+	rows, err := q.db.QueryContext(ctx, getCacheMetricsDaily, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCacheMetricsDailyRow{}
+	for rows.Next() {
+		var i GetCacheMetricsDailyRow
+		if err := rows.Scan(&i.Period, &i.CacheRead, &i.TotalTokens); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDailyMetrics = `-- name: GetDailyMetrics :many
 SELECT
     date(timestamp) as period,
@@ -154,6 +216,53 @@ func (q *Queries) GetDashboardMetrics(ctx context.Context) (GetDashboardMetricsR
 	return i, err
 }
 
+const getDayOfWeekDistribution = `-- name: GetDayOfWeekDistribution :many
+SELECT
+    CAST(strftime('%w', timestamp) AS INTEGER) as day_of_week,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as cost,
+    COALESCE(AVG(user_prompts), 0) as avg_prompts
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY strftime('%w', timestamp)
+ORDER BY day_of_week ASC
+`
+
+type GetDayOfWeekDistributionRow struct {
+	DayOfWeek  int64       `json:"day_of_week"`
+	Sessions   int64       `json:"sessions"`
+	Cost       interface{} `json:"cost"`
+	AvgPrompts interface{} `json:"avg_prompts"`
+}
+
+func (q *Queries) GetDayOfWeekDistribution(ctx context.Context, dollar_1 sql.NullString) ([]GetDayOfWeekDistributionRow, error) {
+	rows, err := q.db.QueryContext(ctx, getDayOfWeekDistribution, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetDayOfWeekDistributionRow{}
+	for rows.Next() {
+		var i GetDayOfWeekDistributionRow
+		if err := rows.Scan(
+			&i.DayOfWeek,
+			&i.Sessions,
+			&i.Cost,
+			&i.AvgPrompts,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getDistinctBranches = `-- name: GetDistinctBranches :many
 SELECT DISTINCT git_branch FROM sessions WHERE git_branch != '' ORDER BY git_branch
 `
@@ -225,6 +334,82 @@ func (q *Queries) GetDistinctModels(ctx context.Context) ([]sql.NullString, erro
 			return nil, err
 		}
 		items = append(items, model)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEfficiencyMetrics = `-- name: GetEfficiencyMetrics :one
+SELECT
+    COALESCE(AVG(user_prompts), 0) as avg_prompts_per_session,
+    COALESCE(AVG(tool_calls), 0) as avg_tools_per_session,
+    COALESCE(AVG(CAST(errors_count AS REAL) / NULLIF(tool_calls, 0)), 0) as error_rate,
+    COALESCE(AVG(duration_seconds), 0) as avg_duration
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+`
+
+type GetEfficiencyMetricsRow struct {
+	AvgPromptsPerSession interface{} `json:"avg_prompts_per_session"`
+	AvgToolsPerSession   interface{} `json:"avg_tools_per_session"`
+	ErrorRate            interface{} `json:"error_rate"`
+	AvgDuration          interface{} `json:"avg_duration"`
+}
+
+func (q *Queries) GetEfficiencyMetrics(ctx context.Context, dollar_1 sql.NullString) (GetEfficiencyMetricsRow, error) {
+	row := q.db.QueryRowContext(ctx, getEfficiencyMetrics, dollar_1)
+	var i GetEfficiencyMetricsRow
+	err := row.Scan(
+		&i.AvgPromptsPerSession,
+		&i.AvgToolsPerSession,
+		&i.ErrorRate,
+		&i.AvgDuration,
+	)
+	return i, err
+}
+
+const getEfficiencyMetricsDaily = `-- name: GetEfficiencyMetricsDaily :many
+SELECT
+    date(timestamp) as period,
+    COALESCE(AVG(user_prompts), 0) as avg_prompts,
+    COALESCE(AVG(tool_calls), 0) as avg_tools,
+    COUNT(*) as sessions
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY date(timestamp)
+ORDER BY period ASC
+`
+
+type GetEfficiencyMetricsDailyRow struct {
+	Period     interface{} `json:"period"`
+	AvgPrompts interface{} `json:"avg_prompts"`
+	AvgTools   interface{} `json:"avg_tools"`
+	Sessions   int64       `json:"sessions"`
+}
+
+func (q *Queries) GetEfficiencyMetricsDaily(ctx context.Context, dollar_1 sql.NullString) ([]GetEfficiencyMetricsDailyRow, error) {
+	rows, err := q.db.QueryContext(ctx, getEfficiencyMetricsDaily, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEfficiencyMetricsDailyRow{}
+	for rows.Next() {
+		var i GetEfficiencyMetricsDailyRow
+		if err := rows.Scan(
+			&i.Period,
+			&i.AvgPrompts,
+			&i.AvgTools,
+			&i.Sessions,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
@@ -374,6 +559,114 @@ func (q *Queries) GetModelDistribution(ctx context.Context, dollar_1 sql.NullStr
 	return items, nil
 }
 
+const getModelEfficiency = `-- name: GetModelEfficiency :many
+SELECT
+    COALESCE(model, 'Unknown') as model,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as total_cost,
+    COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
+    CASE
+        WHEN SUM(input_tokens + output_tokens) > 0
+        THEN COALESCE(SUM(estimated_cost_usd), 0) * 1000000.0 / SUM(input_tokens + output_tokens)
+        ELSE 0
+    END as cost_per_million_tokens
+FROM sessions
+WHERE timestamp >= datetime('now', ? || ' days')
+GROUP BY model
+ORDER BY total_cost DESC
+`
+
+type GetModelEfficiencyRow struct {
+	Model                string      `json:"model"`
+	Sessions             int64       `json:"sessions"`
+	TotalCost            interface{} `json:"total_cost"`
+	TotalTokens          interface{} `json:"total_tokens"`
+	CostPerMillionTokens int64       `json:"cost_per_million_tokens"`
+}
+
+func (q *Queries) GetModelEfficiency(ctx context.Context, dollar_1 sql.NullString) ([]GetModelEfficiencyRow, error) {
+	rows, err := q.db.QueryContext(ctx, getModelEfficiency, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetModelEfficiencyRow{}
+	for rows.Next() {
+		var i GetModelEfficiencyRow
+		if err := rows.Scan(
+			&i.Model,
+			&i.Sessions,
+			&i.TotalCost,
+			&i.TotalTokens,
+			&i.CostPerMillionTokens,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getProjectMetrics = `-- name: GetProjectMetrics :many
+SELECT
+    COALESCE(working_directory, 'Unknown') as directory,
+    COUNT(*) as sessions,
+    COALESCE(SUM(estimated_cost_usd), 0) as cost,
+    COALESCE(SUM(tool_calls), 0) as tool_calls,
+    COALESCE(SUM(user_prompts), 0) as prompts,
+    COALESCE(AVG(duration_seconds), 0) as avg_duration
+FROM sessions
+WHERE working_directory IS NOT NULL AND working_directory != ''
+  AND timestamp >= datetime('now', ? || ' days')
+GROUP BY working_directory
+ORDER BY cost DESC
+`
+
+type GetProjectMetricsRow struct {
+	Directory   string      `json:"directory"`
+	Sessions    int64       `json:"sessions"`
+	Cost        interface{} `json:"cost"`
+	ToolCalls   interface{} `json:"tool_calls"`
+	Prompts     interface{} `json:"prompts"`
+	AvgDuration interface{} `json:"avg_duration"`
+}
+
+func (q *Queries) GetProjectMetrics(ctx context.Context, dollar_1 sql.NullString) ([]GetProjectMetricsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectMetrics, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProjectMetricsRow{}
+	for rows.Next() {
+		var i GetProjectMetricsRow
+		if err := rows.Scan(
+			&i.Directory,
+			&i.Sessions,
+			&i.Cost,
+			&i.ToolCalls,
+			&i.Prompts,
+			&i.AvgDuration,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSessionByID = `-- name: GetSessionByID :one
 SELECT id, session_id, instance_id, hostname, timestamp, exit_reason, permission_mode, working_directory, git_branch, claude_version, duration_seconds, user_prompts, assistant_responses, tool_calls, tools_breakdown, files_accessed, files_modified, input_tokens, output_tokens, thinking_tokens, cache_read_tokens, cache_write_tokens, estimated_cost_usd, errors_count, model, summary FROM sessions WHERE session_id = ?
 `
@@ -429,6 +722,62 @@ func (q *Queries) GetTodayMetrics(ctx context.Context) (GetTodayMetricsRow, erro
 	row := q.db.QueryRowContext(ctx, getTodayMetrics)
 	var i GetTodayMetricsRow
 	err := row.Scan(&i.SessionsToday, &i.CostToday)
+	return i, err
+}
+
+const getToolsBreakdownAll = `-- name: GetToolsBreakdownAll :many
+
+SELECT tools_breakdown
+FROM sessions
+WHERE tools_breakdown IS NOT NULL AND tools_breakdown != ''
+  AND timestamp >= datetime('now', ? || ' days')
+`
+
+// ============================================================================
+// PRODUCTIVITY & COST ANALYTICS QUERIES
+// ============================================================================
+func (q *Queries) GetToolsBreakdownAll(ctx context.Context, dollar_1 sql.NullString) ([]sql.NullString, error) {
+	rows, err := q.db.QueryContext(ctx, getToolsBreakdownAll, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []sql.NullString{}
+	for rows.Next() {
+		var tools_breakdown sql.NullString
+		if err := rows.Scan(&tools_breakdown); err != nil {
+			return nil, err
+		}
+		items = append(items, tools_breakdown)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getTopProject = `-- name: GetTopProject :one
+SELECT COALESCE(working_directory, 'Unknown') as directory, COUNT(*) as sessions
+FROM sessions
+WHERE working_directory IS NOT NULL AND working_directory != ''
+  AND timestamp >= datetime('now', '-7 days')
+GROUP BY working_directory
+ORDER BY sessions DESC
+LIMIT 1
+`
+
+type GetTopProjectRow struct {
+	Directory string `json:"directory"`
+	Sessions  int64  `json:"sessions"`
+}
+
+func (q *Queries) GetTopProject(ctx context.Context) (GetTopProjectRow, error) {
+	row := q.db.QueryRowContext(ctx, getTopProject)
+	var i GetTopProjectRow
+	err := row.Scan(&i.Directory, &i.Sessions)
 	return i, err
 }
 

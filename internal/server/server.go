@@ -8,8 +8,10 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"claude-watcher/internal/api"
+	"claude-watcher/internal/costs"
 	"claude-watcher/internal/dashboard"
 	"claude-watcher/internal/database/sqlc"
+	"claude-watcher/internal/productivity"
 	"claude-watcher/internal/session_detail"
 	"claude-watcher/internal/sessions"
 	sharedmw "claude-watcher/internal/shared/middleware"
@@ -45,12 +47,16 @@ func NewHTTPServer(cfg Config, db *sql.DB) *http.Server {
 	sessionsRepo := sessions.NewSQLCRepository(queries)
 	sessionDetailRepo := session_detail.NewSQLCRepository(queries)
 	apiRepo := api.NewSQLCRepository(queries)
+	productivityRepo := productivity.NewSQLCRepository(queries)
+	costsRepo := costs.NewSQLCRepository(queries)
 
 	// Register routes with handlers
 	dashboard.RegisterRoutes(r, dashboard.NewHandler(dashboardRepo))
 	sessions.RegisterRoutes(r, sessions.NewHandler(sessionsRepo, cfg.DefaultPageSize))
 	session_detail.RegisterRoutes(r, session_detail.NewHandler(sessionDetailRepo))
 	api.RegisterRoutes(r, api.NewHandler(apiRepo, cfg.DefaultRangeHours))
+	productivity.RegisterRoutes(r, productivity.NewHandler(productivityRepo))
+	costs.RegisterRoutes(r, costs.NewHandler(costsRepo))
 
 	return &http.Server{
 		Addr:    cfg.Addr,

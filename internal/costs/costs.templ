@@ -1,0 +1,314 @@
+package costs
+
+import (
+	"encoding/json"
+	"fmt"
+	"path/filepath"
+	"claude-watcher/internal/shared/templates"
+)
+
+templ Costs(data CostsData) {
+	@templates.Layout("Costs") {
+		<h1>Cost Analytics</h1>
+		<div class="time-range">
+			<a href="/costs?range=7d" class={ "time-range__btn", templ.KV("time-range__btn--active", data.Range == "7d") }>7D</a>
+			<a href="/costs?range=30d" class={ "time-range__btn", templ.KV("time-range__btn--active", data.Range == "30d") }>30D</a>
+			<a href="/costs?range=90d" class={ "time-range__btn", templ.KV("time-range__btn--active", data.Range == "90d") }>90D</a>
+		</div>
+
+		<section>
+			<h2>Cache Savings</h2>
+			<div class="stats-grid">
+				@templates.StatsCard("Cache Hit Rate", fmt.Sprintf("%.1f%%", data.CacheHitRate), "tokens")
+				@templates.StatsCard("Est. Savings", fmt.Sprintf("$%.2f", data.TotalSavings), "cost")
+				@templates.StatsCard("Cache Reads", formatNumber(toInt64(data.CacheMetrics.CacheRead)), "tokens")
+				@templates.StatsCard("Cache Writes", formatNumber(toInt64(data.CacheMetrics.CacheWrite)), "sessions")
+			</div>
+		</section>
+
+		<section>
+			<h2>Cost by Project</h2>
+			<div class="table-container">
+				<table class="data-table">
+					<thead>
+						<tr>
+							<th>Project</th>
+							<th>Sessions</th>
+							<th>Cost</th>
+							<th>Tool Calls</th>
+							<th>Prompts</th>
+							<th>Avg Duration</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, p := range data.Projects {
+							<tr>
+								<td title={ p.Directory }>{ shortPath(p.Directory) }</td>
+								<td>{ fmt.Sprintf("%d", p.Sessions) }</td>
+								<td>{ fmt.Sprintf("$%.2f", toFloat(p.Cost)) }</td>
+								<td>{ fmt.Sprintf("%d", toInt(p.ToolCalls)) }</td>
+								<td>{ fmt.Sprintf("%d", toInt(p.Prompts)) }</td>
+								<td>{ fmt.Sprintf("%.0fm", toFloat(p.AvgDuration)/60) }</td>
+							</tr>
+						}
+						if len(data.Projects) == 0 {
+							<tr>
+								<td colspan="6" class="text-center">No project data available</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section>
+			<h2>Model Efficiency</h2>
+			<div class="charts-grid">
+				<div class="chart-card">
+					<div class="chart-card__title">Cost Distribution by Model</div>
+					<div class="chart-card__container">
+						<canvas id="modelCostChart"></canvas>
+					</div>
+				</div>
+				<div class="chart-card">
+					<div class="chart-card__title">Cost per Million Tokens</div>
+					<div class="chart-card__content">
+						<table class="data-table">
+							<thead>
+								<tr>
+									<th>Model</th>
+									<th>Sessions</th>
+									<th>Total Cost</th>
+									<th>$/M Tokens</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, m := range data.Models {
+									<tr>
+										<td>{ formatModel(m.Model) }</td>
+										<td>{ fmt.Sprintf("%d", m.Sessions) }</td>
+										<td>{ fmt.Sprintf("$%.2f", toFloat(m.TotalCost)) }</td>
+										<td>{ fmt.Sprintf("$%.2f", toFloat(m.CostPerMillionTokens)) }</td>
+									</tr>
+								}
+								if len(data.Models) == 0 {
+									<tr>
+										<td colspan="4" class="text-center">No model data available</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section>
+			<h2>Cache Trends</h2>
+			<div class="charts-grid">
+				<div class="chart-card chart-card--full">
+					<div class="chart-card__title">Cache Hit Rate Over Time</div>
+					<div class="chart-card__container chart-card__container--full">
+						<canvas id="cacheTrendChart"></canvas>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<div id="chartData" style="display:none;">{ mustJSON(buildChartData(data)) }</div>
+		@chartsScript()
+	}
+}
+
+templ chartsScript() {
+	<script>
+		(function() {
+			const data = JSON.parse(document.getElementById('chartData').textContent);
+
+			const colors = {
+				primary: '#22c55e',
+				secondary: '#3b82f6',
+				tertiary: '#f59e0b',
+				quaternary: '#8b5cf6',
+				quinary: '#ec4899',
+				grid: '#1a1a1a',
+				text: '#666666'
+			};
+
+			const baseOptions = {
+				responsive: true,
+				maintainAspectRatio: false,
+				animation: false,
+				plugins: { legend: { labels: { color: colors.text } } }
+			};
+
+			// Model Cost Distribution Chart
+			if (data.models && data.models.length > 0) {
+				new Chart(document.getElementById('modelCostChart'), {
+					type: 'doughnut',
+					data: {
+						labels: data.models.map(m => m.model),
+						datasets: [{
+							data: data.models.map(m => m.cost),
+							backgroundColor: [colors.primary, colors.secondary, colors.tertiary, colors.quaternary, colors.quinary],
+							borderColor: '#0a0a0a',
+							borderWidth: 2
+						}]
+					},
+					options: {
+						...baseOptions,
+						plugins: {
+							legend: { position: 'bottom', labels: { color: colors.text } }
+						}
+					}
+				});
+			}
+
+			// Cache Trend Chart
+			if (data.cacheTrends && data.cacheTrends.length > 0) {
+				new Chart(document.getElementById('cacheTrendChart'), {
+					type: 'line',
+					data: {
+						labels: data.cacheTrends.map(d => d.period),
+						datasets: [{
+							label: 'Cache Hit Rate (%)',
+							data: data.cacheTrends.map(d => d.rate),
+							borderColor: colors.primary,
+							backgroundColor: colors.primary + '20',
+							fill: true,
+							tension: 0.3
+						}]
+					},
+					options: {
+						...baseOptions,
+						scales: {
+							x: { grid: { color: colors.grid }, ticks: { color: colors.text } },
+							y: { grid: { color: colors.grid }, ticks: { color: colors.text }, beginAtZero: true, max: 100 }
+						}
+					}
+				});
+			}
+		})();
+	</script>
+}
+
+type chartData struct {
+	Models      []modelData `json:"models"`
+	CacheTrends []cacheData `json:"cacheTrends"`
+}
+
+type modelData struct {
+	Model string  `json:"model"`
+	Cost  float64 `json:"cost"`
+}
+
+type cacheData struct {
+	Period string  `json:"period"`
+	Rate   float64 `json:"rate"`
+}
+
+func buildChartData(data CostsData) chartData {
+	cd := chartData{
+		Models:      make([]modelData, len(data.Models)),
+		CacheTrends: make([]cacheData, len(data.CacheDaily)),
+	}
+
+	for i, m := range data.Models {
+		cd.Models[i] = modelData{
+			Model: formatModel(m.Model),
+			Cost:  toFloat(m.TotalCost),
+		}
+	}
+
+	for i, c := range data.CacheDaily {
+		cacheRead := toInt64(c.CacheRead)
+		totalTokens := toInt64(c.TotalTokens)
+		var rate float64
+		if cacheRead+totalTokens > 0 {
+			rate = float64(cacheRead) / float64(cacheRead+totalTokens) * 100
+		}
+		cd.CacheTrends[i] = cacheData{
+			Period: toString(c.Period),
+			Rate:   rate,
+		}
+	}
+
+	return cd
+}
+
+func mustJSON(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
+func toFloat(v interface{}) float64 {
+	switch val := v.(type) {
+	case float64:
+		return val
+	case int64:
+		return float64(val)
+	case int:
+		return float64(val)
+	default:
+		return 0
+	}
+}
+
+func toInt(v interface{}) int {
+	switch val := v.(type) {
+	case int64:
+		return int(val)
+	case int:
+		return val
+	case float64:
+		return int(val)
+	default:
+		return 0
+	}
+}
+
+func toInt64(v interface{}) int64 {
+	switch val := v.(type) {
+	case int64:
+		return val
+	case int:
+		return int64(val)
+	case float64:
+		return int64(val)
+	default:
+		return 0
+	}
+}
+
+func toString(v interface{}) string {
+	switch val := v.(type) {
+	case string:
+		return val
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+func shortPath(path string) string {
+	if path == "" || path == "Unknown" {
+		return "-"
+	}
+	return filepath.Base(path)
+}
+
+func formatModel(m string) string {
+	if m == "" {
+		return "Unknown"
+	}
+	return m
+}
+
+func formatNumber(n int64) string {
+	if n < 1000 {
+		return fmt.Sprintf("%d", n)
+	}
+	if n < 1000000 {
+		return fmt.Sprintf("%.1fK", float64(n)/1000)
+	}
+	return fmt.Sprintf("%.1fM", float64(n)/1000000)
+}
