@@ -1,81 +1,8 @@
 package templates
 
-import "fmt"
-
 templ StatsCard(label, value, variant string) {
 	<div class={ "stats-card", "stats-card--" + variant }>
 		<div class="stats-card__value">{ value }</div>
 		<div class="stats-card__label">{ label }</div>
 	</div>
-}
-
-// ProgressBar renders a progress bar with percentage and color based on threshold
-templ ProgressBar(current, max int64, label string) {
-	{{
-		percentage := float64(0)
-		if max > 0 {
-			percentage = float64(current) / float64(max) * 100
-		}
-		if percentage > 100 {
-			percentage = 100
-		}
-		colorClass := "progress--ok"
-		if percentage >= 80 {
-			colorClass = "progress--danger"
-		} else if percentage >= 60 {
-			colorClass = "progress--warning"
-		}
-	}}
-	<div class={ "progress", colorClass }>
-		<div class="progress__header">
-			<span class="progress__label">{ label }</span>
-			<span class="progress__stats">
-				{ formatTokens(current) } / { formatTokens(max) }
-			</span>
-		</div>
-		<div
-			class="progress__bar"
-			role="progressbar"
-			aria-valuenow={ fmt.Sprintf("%.0f", percentage) }
-			aria-valuemin="0"
-			aria-valuemax="100"
-		>
-			<div class="progress__fill" style={ fmt.Sprintf("width: %.1f%%", percentage) }></div>
-		</div>
-		<div class="progress__footer">
-			<span class="progress__percent">{ fmt.Sprintf("%.1f%%", percentage) } used</span>
-			<span class="progress__remaining">{ formatTokens(max - current) } remaining</span>
-		</div>
-	</div>
-}
-
-// PlanStatusCard renders the full plan status with progress bar and projections
-templ PlanStatusCard(planName string, current, max int64, burnRate float64, timeToLimit string) {
-	<div class="plan-status">
-		<div class="plan-status__header">
-			<span class="plan-status__plan">{ planName }</span>
-			<span class="plan-status__window">5-hour window</span>
-		</div>
-		@ProgressBar(current, max, "Token Usage")
-		<div class="plan-status__metrics">
-			<div class="plan-status__metric">
-				<span class="plan-status__metric-value">{ fmt.Sprintf("%.0f", burnRate) }</span>
-				<span class="plan-status__metric-label">tok/min</span>
-			</div>
-			<div class="plan-status__metric">
-				<span class="plan-status__metric-value">{ timeToLimit }</span>
-				<span class="plan-status__metric-label">to limit</span>
-			</div>
-		</div>
-	</div>
-}
-
-func formatTokens(n int64) string {
-	if n >= 1000000 {
-		return fmt.Sprintf("%.1fM", float64(n)/1000000)
-	}
-	if n >= 1000 {
-		return fmt.Sprintf("%.1fK", float64(n)/1000)
-	}
-	return fmt.Sprintf("%d", n)
 }

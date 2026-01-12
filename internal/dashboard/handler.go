@@ -2,7 +2,6 @@ package dashboard
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -65,24 +64,6 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		cacheHitRate = float64(toInt64(cacheMetrics.CacheRead)) / float64(totalTokens) * 100
 	}
 
-	// Fetch burn rate and window usage for plan status
-	burnRateMetrics, err := h.repo.GetBurnRateMetrics(ctx)
-	if err != nil {
-		log.Printf("error fetching burn rate: %v", err)
-	}
-
-	windowUsage, err := h.repo.GetCurrentWindowUsage(ctx)
-	if err != nil {
-		log.Printf("error fetching window usage: %v", err)
-	}
-
-	// Extract values from interface{} types
-	windowTokens := toInt64(windowUsage.WindowTokens)
-	tokensPerMin := float64(burnRateMetrics.TokensPerMinute)
-
-	// Calculate plan status (default to Max5 plan)
-	planStatus := calculatePlanStatus("Max5", windowTokens, tokensPerMin)
-
 	data := DashboardData{
 		Metrics:           metrics,
 		Today:             today,
@@ -92,47 +73,9 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		EfficiencyMetrics: efficiencyMetrics,
 		TopTool:           topTool,
 		CacheHitRate:      cacheHitRate,
-		PlanStatus:        planStatus,
 	}
 
 	Dashboard(data).Render(ctx, w)
-}
-
-func calculatePlanStatus(planName string, windowTokens int64, tokensPerMin float64) PlanStatus {
-	limit := PlanLimits[planName]
-	if limit == 0 {
-		limit = PlanLimits["Max5"]
-	}
-
-	timeToLimit := calculateTimeToLimit(windowTokens, limit, tokensPerMin)
-
-	return PlanStatus{
-		PlanName:     planName,
-		CurrentUsage: windowTokens,
-		MaxLimit:     limit,
-		BurnRate:     tokensPerMin,
-		TimeToLimit:  timeToLimit,
-	}
-}
-
-func calculateTimeToLimit(current, limit int64, burnRate float64) string {
-	remaining := limit - current
-	if remaining <= 0 {
-		return "Limit reached"
-	}
-	if burnRate <= 0 {
-		return ">24h"
-	}
-
-	minutesToLimit := float64(remaining) / burnRate
-	if minutesToLimit > 1440 { // More than 24 hours
-		return ">24h"
-	}
-	if minutesToLimit > 60 {
-		hours := minutesToLimit / 60
-		return fmt.Sprintf("~%.1fh", hours)
-	}
-	return fmt.Sprintf("~%.0fm", minutesToLimit)
 }
 
 func toInt64(v interface{}) int64 {

@@ -52,44 +52,6 @@ func (q *Queries) CountSessionsFiltered(ctx context.Context, arg CountSessionsFi
 	return count, err
 }
 
-const getBurnRateMetrics = `-- name: GetBurnRateMetrics :one
-
-SELECT
-    COALESCE(SUM(input_tokens + output_tokens + thinking_tokens), 0) as total_tokens,
-    COALESCE(SUM(duration_seconds), 0) as total_duration_seconds,
-    COUNT(*) as session_count,
-    CASE
-        WHEN SUM(duration_seconds) > 0
-        THEN CAST(SUM(input_tokens + output_tokens + thinking_tokens) AS REAL) / (SUM(duration_seconds) / 60.0)
-        ELSE 0
-    END as tokens_per_minute
-FROM sessions
-WHERE timestamp >= datetime('now', '-24 hours')
-`
-
-type GetBurnRateMetricsRow struct {
-	TotalTokens          interface{} `json:"total_tokens"`
-	TotalDurationSeconds interface{} `json:"total_duration_seconds"`
-	SessionCount         int64       `json:"session_count"`
-	TokensPerMinute      int64       `json:"tokens_per_minute"`
-}
-
-// ============================================================================
-// BURN RATE & LIVE SESSION QUERIES
-// ============================================================================
-// Calculates token velocity over the last 24 hours
-func (q *Queries) GetBurnRateMetrics(ctx context.Context) (GetBurnRateMetricsRow, error) {
-	row := q.db.QueryRowContext(ctx, getBurnRateMetrics)
-	var i GetBurnRateMetricsRow
-	err := row.Scan(
-		&i.TotalTokens,
-		&i.TotalDurationSeconds,
-		&i.SessionCount,
-		&i.TokensPerMinute,
-	)
-	return i, err
-}
-
 const getCacheMetrics = `-- name: GetCacheMetrics :one
 SELECT
     COALESCE(SUM(cache_read_tokens), 0) as cache_read,
@@ -150,29 +112,6 @@ func (q *Queries) GetCacheMetricsDaily(ctx context.Context, dollar_1 sql.NullStr
 		return nil, err
 	}
 	return items, nil
-}
-
-const getCurrentWindowUsage = `-- name: GetCurrentWindowUsage :one
-SELECT
-    COALESCE(SUM(input_tokens + output_tokens + thinking_tokens), 0) as window_tokens,
-    COUNT(*) as window_sessions,
-    COALESCE(SUM(estimated_cost_usd), 0) as window_cost
-FROM sessions
-WHERE timestamp >= datetime('now', '-5 hours')
-`
-
-type GetCurrentWindowUsageRow struct {
-	WindowTokens   interface{} `json:"window_tokens"`
-	WindowSessions int64       `json:"window_sessions"`
-	WindowCost     interface{} `json:"window_cost"`
-}
-
-// Gets token usage in the current 5-hour sliding window (Claude's rate limit window)
-func (q *Queries) GetCurrentWindowUsage(ctx context.Context) (GetCurrentWindowUsageRow, error) {
-	row := q.db.QueryRowContext(ctx, getCurrentWindowUsage)
-	var i GetCurrentWindowUsageRow
-	err := row.Scan(&i.WindowTokens, &i.WindowSessions, &i.WindowCost)
-	return i, err
 }
 
 const getDailyMetrics = `-- name: GetDailyMetrics :many
@@ -580,82 +519,6 @@ func (q *Queries) GetHourlyMetrics(ctx context.Context, dollar_1 sql.NullString)
 	return items, nil
 }
 
-const getLiveSessions = `-- name: GetLiveSessions :many
-SELECT
-    id, session_id, hostname, timestamp, exit_reason,
-    working_directory, git_branch, duration_seconds,
-    user_prompts, tool_calls, estimated_cost_usd, model,
-    input_tokens, output_tokens, thinking_tokens,
-    CASE
-        WHEN duration_seconds > 0
-        THEN CAST(input_tokens + output_tokens + thinking_tokens AS REAL) / (duration_seconds / 60.0)
-        ELSE 0
-    END as tokens_per_minute
-FROM sessions
-WHERE timestamp >= datetime('now', '-30 minutes')
-ORDER BY timestamp DESC
-`
-
-type GetLiveSessionsRow struct {
-	ID               int64           `json:"id"`
-	SessionID        string          `json:"session_id"`
-	Hostname         string          `json:"hostname"`
-	Timestamp        string          `json:"timestamp"`
-	ExitReason       sql.NullString  `json:"exit_reason"`
-	WorkingDirectory sql.NullString  `json:"working_directory"`
-	GitBranch        sql.NullString  `json:"git_branch"`
-	DurationSeconds  sql.NullInt64   `json:"duration_seconds"`
-	UserPrompts      sql.NullInt64   `json:"user_prompts"`
-	ToolCalls        sql.NullInt64   `json:"tool_calls"`
-	EstimatedCostUsd sql.NullFloat64 `json:"estimated_cost_usd"`
-	Model            sql.NullString  `json:"model"`
-	InputTokens      sql.NullInt64   `json:"input_tokens"`
-	OutputTokens     sql.NullInt64   `json:"output_tokens"`
-	ThinkingTokens   sql.NullInt64   `json:"thinking_tokens"`
-	TokensPerMinute  int64           `json:"tokens_per_minute"`
-}
-
-// Gets sessions from the last 30 minutes ordered by recency
-func (q *Queries) GetLiveSessions(ctx context.Context) ([]GetLiveSessionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getLiveSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetLiveSessionsRow{}
-	for rows.Next() {
-		var i GetLiveSessionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.SessionID,
-			&i.Hostname,
-			&i.Timestamp,
-			&i.ExitReason,
-			&i.WorkingDirectory,
-			&i.GitBranch,
-			&i.DurationSeconds,
-			&i.UserPrompts,
-			&i.ToolCalls,
-			&i.EstimatedCostUsd,
-			&i.Model,
-			&i.InputTokens,
-			&i.OutputTokens,
-			&i.ThinkingTokens,
-			&i.TokensPerMinute,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getModelDistribution = `-- name: GetModelDistribution :many
 SELECT
     COALESCE(model, 'Unknown') as model,
@@ -790,70 +653,6 @@ func (q *Queries) GetProjectMetrics(ctx context.Context, dollar_1 sql.NullString
 			&i.ToolCalls,
 			&i.Prompts,
 			&i.AvgDuration,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getRecentSessions = `-- name: GetRecentSessions :many
-SELECT
-    id, session_id, hostname, timestamp, exit_reason,
-    working_directory, git_branch, duration_seconds,
-    user_prompts, tool_calls, estimated_cost_usd, model
-FROM sessions
-WHERE timestamp >= datetime('now', '-2 hours')
-  AND timestamp < datetime('now', '-30 minutes')
-ORDER BY timestamp DESC
-LIMIT 10
-`
-
-type GetRecentSessionsRow struct {
-	ID               int64           `json:"id"`
-	SessionID        string          `json:"session_id"`
-	Hostname         string          `json:"hostname"`
-	Timestamp        string          `json:"timestamp"`
-	ExitReason       sql.NullString  `json:"exit_reason"`
-	WorkingDirectory sql.NullString  `json:"working_directory"`
-	GitBranch        sql.NullString  `json:"git_branch"`
-	DurationSeconds  sql.NullInt64   `json:"duration_seconds"`
-	UserPrompts      sql.NullInt64   `json:"user_prompts"`
-	ToolCalls        sql.NullInt64   `json:"tool_calls"`
-	EstimatedCostUsd sql.NullFloat64 `json:"estimated_cost_usd"`
-	Model            sql.NullString  `json:"model"`
-}
-
-// Gets sessions from the last 2 hours (for "recent" section in live view)
-func (q *Queries) GetRecentSessions(ctx context.Context) ([]GetRecentSessionsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRecentSessions)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetRecentSessionsRow{}
-	for rows.Next() {
-		var i GetRecentSessionsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.SessionID,
-			&i.Hostname,
-			&i.Timestamp,
-			&i.ExitReason,
-			&i.WorkingDirectory,
-			&i.GitBranch,
-			&i.DurationSeconds,
-			&i.UserPrompts,
-			&i.ToolCalls,
-			&i.EstimatedCostUsd,
-			&i.Model,
 		); err != nil {
 			return nil, err
 		}

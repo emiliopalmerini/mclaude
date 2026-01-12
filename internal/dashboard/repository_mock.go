@@ -9,15 +9,13 @@ import (
 
 // MockRepository is a mock implementation of Repository for testing.
 type MockRepository struct {
-	GetDashboardMetricsFunc    func(ctx context.Context) (sqlc.GetDashboardMetricsRow, error)
-	GetTodayMetricsFunc        func(ctx context.Context) (sqlc.GetTodayMetricsRow, error)
-	GetWeekMetricsFunc         func(ctx context.Context) (sqlc.GetWeekMetricsRow, error)
-	GetCacheMetricsFunc        func(ctx context.Context, days string) (sqlc.GetCacheMetricsRow, error)
-	GetTopProjectFunc          func(ctx context.Context) (sqlc.GetTopProjectRow, error)
-	GetEfficiencyMetricsFunc   func(ctx context.Context, days string) (sqlc.GetEfficiencyMetricsRow, error)
-	GetToolsBreakdownAllFunc   func(ctx context.Context, days string) ([]sql.NullString, error)
-	GetBurnRateMetricsFunc     func(ctx context.Context) (sqlc.GetBurnRateMetricsRow, error)
-	GetCurrentWindowUsageFunc  func(ctx context.Context) (sqlc.GetCurrentWindowUsageRow, error)
+	GetDashboardMetricsFunc  func(ctx context.Context) (sqlc.GetDashboardMetricsRow, error)
+	GetTodayMetricsFunc      func(ctx context.Context) (sqlc.GetTodayMetricsRow, error)
+	GetWeekMetricsFunc       func(ctx context.Context) (sqlc.GetWeekMetricsRow, error)
+	GetCacheMetricsFunc      func(ctx context.Context, days string) (sqlc.GetCacheMetricsRow, error)
+	GetTopProjectFunc        func(ctx context.Context) (sqlc.GetTopProjectRow, error)
+	GetEfficiencyMetricsFunc func(ctx context.Context, days string) (sqlc.GetEfficiencyMetricsRow, error)
+	GetToolsBreakdownAllFunc func(ctx context.Context, days string) ([]sql.NullString, error)
 }
 
 func (m *MockRepository) GetDashboardMetrics(ctx context.Context) (sqlc.GetDashboardMetricsRow, error) {
@@ -67,18 +65,4 @@ func (m *MockRepository) GetToolsBreakdownAll(ctx context.Context, days string) 
 		return m.GetToolsBreakdownAllFunc(ctx, days)
 	}
 	return nil, nil
-}
-
-func (m *MockRepository) GetBurnRateMetrics(ctx context.Context) (sqlc.GetBurnRateMetricsRow, error) {
-	if m.GetBurnRateMetricsFunc != nil {
-		return m.GetBurnRateMetricsFunc(ctx)
-	}
-	return sqlc.GetBurnRateMetricsRow{}, nil
-}
-
-func (m *MockRepository) GetCurrentWindowUsage(ctx context.Context) (sqlc.GetCurrentWindowUsageRow, error) {
-	if m.GetCurrentWindowUsageFunc != nil {
-		return m.GetCurrentWindowUsageFunc(ctx)
-	}
-	return sqlc.GetCurrentWindowUsageRow{}, nil
 }

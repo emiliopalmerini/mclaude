@@ -9,16 +9,6 @@ import (
 templ Dashboard(data DashboardData) {
 	@templates.Layout("Dashboard") {
 		<h1>Dashboard</h1>
-		<section>
-			<h2>Plan Status</h2>
-			@templates.PlanStatusCard(
-				data.PlanStatus.PlanName,
-				data.PlanStatus.CurrentUsage,
-				data.PlanStatus.MaxLimit,
-				data.PlanStatus.BurnRate,
-				data.PlanStatus.TimeToLimit,
-			)
-		</section>
 		<div class="stats-grid">
 			@templates.StatsCard("Total Sessions", fmt.Sprintf("%d", data.Metrics.TotalSessions), "sessions")
 			@templates.StatsCard("Total Cost", fmt.Sprintf("$%.2f", toFloat(data.Metrics.TotalCostUsd)), "cost")
