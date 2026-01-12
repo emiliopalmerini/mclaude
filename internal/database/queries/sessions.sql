@@ -211,11 +211,13 @@ SELECT
     COUNT(*) as sessions,
     COALESCE(SUM(estimated_cost_usd), 0) as total_cost,
     COALESCE(SUM(input_tokens + output_tokens), 0) as total_tokens,
-    CASE
-        WHEN SUM(input_tokens + output_tokens) > 0
-        THEN COALESCE(SUM(estimated_cost_usd), 0) * 1000000.0 / SUM(input_tokens + output_tokens)
-        ELSE 0
-    END as cost_per_million_tokens
+    CAST(
+        CASE
+            WHEN SUM(input_tokens + output_tokens) > 0
+            THEN COALESCE(SUM(estimated_cost_usd), 0) * 1000000.0 / SUM(input_tokens + output_tokens)
+            ELSE 0
+        END
+    AS INTEGER) as cost_per_million_tokens
 FROM sessions
 WHERE timestamp >= datetime('now', ? || ' days')
 GROUP BY model
