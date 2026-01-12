@@ -1,9 +1,6 @@
 package domain
 
-import (
-	"claude-watcher/internal/tracker/ports"
-	"fmt"
-)
+import "fmt"
 
 // HookInput represents input from Claude Code SessionEnd hook
 type HookInput struct {
@@ -16,16 +13,16 @@ type HookInput struct {
 
 // Service handles the business logic for tracking sessions
 type Service struct {
-	parser     ports.TranscriptParser
-	repository ports.SessionRepository
-	logger     ports.Logger
+	parser     TranscriptParser
+	repository SessionRepository
+	logger     Logger
 }
 
 // NewService creates a new tracker service
 func NewService(
-	parser ports.TranscriptParser,
-	repository ports.SessionRepository,
-	logger ports.Logger,
+	parser TranscriptParser,
+	repository SessionRepository,
+	logger Logger,
 ) *Service {
 	return &Service{
 		parser:     parser,

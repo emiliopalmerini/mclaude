@@ -1,4 +1,4 @@
-package ports
+package domain
 
 // Logger defines the interface for logging
 type Logger interface {

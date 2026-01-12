@@ -4,15 +4,15 @@ import "encoding/json"
 
 // Entry represents a single line in the JSONL transcript
 type Entry struct {
-	Type       string          `json:"type"`
-	Timestamp  string          `json:"timestamp"`
-	GitBranch  string          `json:"gitBranch"`
-	Version    string          `json:"version"`
-	Model      string          `json:"model"`
-	Message    json.RawMessage `json:"message"`
-	Name       string          `json:"name"`
-	IsError    bool            `json:"is_error"`
-	Content    json.RawMessage `json:"content"`
+	Type      string          `json:"type"`
+	Timestamp string          `json:"timestamp"`
+	GitBranch string          `json:"gitBranch"`
+	Version   string          `json:"version"`
+	Model     string          `json:"model"`
+	Message   json.RawMessage `json:"message"`
+	Name      string          `json:"name"`
+	IsError   bool            `json:"is_error"`
+	Content   json.RawMessage `json:"content"`
 }
 
 // Message represents the message field in transcript entries
