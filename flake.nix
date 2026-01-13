@@ -13,9 +13,9 @@
         in {
           default = pkgs.buildGoModule {
             pname = "claude-watcher";
-            version = "0.1.0";
+            version = "0.2.0";
             src = ./.;
-            vendorHash = "sha256-lPAt4+KOdikrTlwkGDY8244T3ZPmzkNV076y0+wXURI=";
+            vendorHash = "sha256-gODQwQB52Qes2zmjWHZoX+SCF9or4cE3S/MKdKD3RIg=";
             proxyVendor = true;
 
             nativeBuildInputs = [ pkgs.templ pkgs.sqlc ];
