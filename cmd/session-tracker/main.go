@@ -51,10 +51,10 @@ func run() error {
 	// Initialize adapters
 	parser := transcript.NewParser()
 	repo := repository.NewTursoRepository(db)
-	ttyPrompter := prompter.NewTTYPrompter(log)
+	bubbleTeaPrompter := prompter.NewBubbleTeaPrompter(log)
 
 	// Create service
-	service := domain.NewService(parser, repo, ttyPrompter, log)
+	service := domain.NewService(parser, repo, bubbleTeaPrompter, log)
 
 	// Track session
 	instanceID := domain.GenerateInstanceID(config.Hostname, config.HomeDir)
