@@ -1,4 +1,4 @@
-.PHONY: all fmt vet build run test clean generate sqlc templ
+.PHONY: all fmt vet build run test clean generate sqlc templ test-prompter
 
 all: generate fmt vet test build
 
@@ -26,5 +26,8 @@ test: vet
 	go test -v ./...
 
 clean:
-	rm -f claude-watcher
+	rm -f claude-watcher test-prompter
 	go clean ./...
+
+test-prompter: vet
+	go build -o test-prompter ./cmd/test-prompter && ./test-prompter 
