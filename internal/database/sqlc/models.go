@@ -8,6 +8,18 @@ import (
 	"database/sql"
 )
 
+type LimitEvent struct {
+	ID             int64           `json:"id"`
+	Timestamp      string          `json:"timestamp"`
+	LimitType      string          `json:"limit_type"`
+	ResetTime      sql.NullString  `json:"reset_time"`
+	SessionsCount  sql.NullInt64   `json:"sessions_count"`
+	InputTokens    sql.NullInt64   `json:"input_tokens"`
+	OutputTokens   sql.NullInt64   `json:"output_tokens"`
+	ThinkingTokens sql.NullInt64   `json:"thinking_tokens"`
+	TotalCostUsd   sql.NullFloat64 `json:"total_cost_usd"`
+}
+
 type Session struct {
 	ID                 int64           `json:"id"`
 	SessionID          string          `json:"session_id"`
@@ -36,7 +48,11 @@ type Session struct {
 	Model              sql.NullString  `json:"model"`
 	Summary            sql.NullString  `json:"summary"`
 	Rating             sql.NullInt64   `json:"rating"`
+	PromptSpecificity  sql.NullInt64   `json:"prompt_specificity"`
+	TaskCompletion     sql.NullInt64   `json:"task_completion"`
+	CodeConfidence     sql.NullInt64   `json:"code_confidence"`
 	Notes              sql.NullString  `json:"notes"`
+	LimitMessage       sql.NullString  `json:"limit_message"`
 }
 
 type SessionTag struct {

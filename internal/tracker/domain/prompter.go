@@ -2,9 +2,12 @@ package domain
 
 // QualityData holds user feedback collected after a session ends
 type QualityData struct {
-	Tags   []string // Selected tag names
-	Rating *int     // 1-5 rating, nil if skipped
-	Notes  string   // Free-form notes
+	Tags              []string // Selected tag names (task_type only)
+	Rating            *int     // 1-5 session satisfaction, nil if skipped
+	PromptSpecificity *int     // 1-5 how detailed prompts were
+	TaskCompletion    *int     // 1-5 how complete the work is
+	CodeConfidence    *int     // 1-5 confidence in generated code
+	Notes             string   // Free-form notes
 }
 
 // Tag represents a session tag with its category and display color

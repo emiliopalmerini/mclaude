@@ -52,20 +52,26 @@ func isTerminal() bool {
 // Steps in the wizard
 const (
 	stepTagsTaskType = iota
-	stepTagsArchitecture
-	stepTagsPromptStyle
-	stepTagsOutcome
+	stepPromptSpecificity
+	stepTaskCompletion
+	stepCodeConfidence
 	stepRating
 	stepNotes
 	stepDone
 )
 
-var categories = []string{"task_type", "architecture", "prompt_style", "outcome"}
-var categoryLabels = map[string]string{
-	"task_type":    "Task Type",
-	"architecture": "Architecture",
-	"prompt_style": "Prompt Style",
-	"outcome":      "Outcome",
+// Scale definitions with labels and descriptions
+type scaleInfo struct {
+	label    string
+	lowDesc  string
+	highDesc string
+}
+
+var scaleLabels = map[int]scaleInfo{
+	stepPromptSpecificity: {"Prompt Specificity", "Minimal/vague", "Highly detailed"},
+	stepTaskCompletion:    {"Task Completion", "Abandoned", "Fully completed"},
+	stepCodeConfidence:    {"Code Confidence", "Very uncertain", "Highly confident"},
+	stepRating:            {"Session Satisfaction", "Poor", "Excellent"},
 }
 
 // Styles inspired by Claude Code
@@ -140,14 +146,17 @@ const (
 type model struct {
 	step int
 
-	// Tags grouped by category
-	tagsByCategory map[string][]domain.Tag
-	selectedTags   map[string]bool
-	tagCursor      int
+	// Task type tags (only category remaining)
+	taskTypeTags []domain.Tag
+	selectedTags map[string]bool
+	tagCursor    int
 
-	// Rating (1-5, 0 = not set)
-	rating       int
-	ratingCursor int
+	// Scales (1-5, 0 = not set)
+	promptSpecificity int
+	taskCompletion    int
+	codeConfidence    int
+	rating            int
+	scaleCursor       int // Current cursor position for scale steps
 
 	// Notes textarea
 	notesInput textarea.Model
@@ -161,17 +170,18 @@ type model struct {
 }
 
 func newModel(tags []domain.Tag) model {
-	tagsByCategory := make(map[string][]domain.Tag)
+	// Filter to only task_type tags
+	var taskTypeTags []domain.Tag
 	for _, tag := range tags {
-		tagsByCategory[tag.Category] = append(tagsByCategory[tag.Category], tag)
+		if tag.Category == "task_type" {
+			taskTypeTags = append(taskTypeTags, tag)
+		}
 	}
 
-	startStep := stepRating
-	for i, cat := range categories {
-		if len(tagsByCategory[cat]) > 0 {
-			startStep = i
-			break
-		}
+	// Start at tags if available, otherwise first scale
+	startStep := stepPromptSpecificity
+	if len(taskTypeTags) > 0 {
+		startStep = stepTagsTaskType
 	}
 
 	ta := textarea.New()
@@ -182,14 +192,17 @@ func newModel(tags []domain.Tag) model {
 	ta.CharLimit = 500
 
 	return model{
-		step:           startStep,
-		tagsByCategory: tagsByCategory,
-		selectedTags:   make(map[string]bool),
-		tagCursor:      0,
-		rating:         0,
-		ratingCursor:   3,
-		notesInput:     ta,
-		styles:         newStyles(),
+		step:              startStep,
+		taskTypeTags:      taskTypeTags,
+		selectedTags:      make(map[string]bool),
+		tagCursor:         0,
+		promptSpecificity: 0,
+		taskCompletion:    0,
+		codeConfidence:    0,
+		rating:            0,
+		scaleCursor:       3, // Default to middle
+		notesInput:        ta,
+		styles:            newStyles(),
 	}
 }
 
@@ -263,6 +276,10 @@ func (m model) handleNotesKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m model) isScaleStep() bool {
+	return m.step >= stepPromptSpecificity && m.step <= stepRating
+}
+
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
 
@@ -275,23 +292,23 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.step = stepDone
 		return m, tea.Quit
 
-	// Navigation: j/k for up/down, h/l for prev/next step (or rating)
+	// Navigation: j/k for up/down (tags), h/l for prev/next step or scale value
 	case "k", "up":
-		if m.step < stepRating {
+		if m.step == stepTagsTaskType {
 			m.moveCursorUp()
 		}
 		return m, nil
 
 	case "j", "down":
-		if m.step < stepRating {
+		if m.step == stepTagsTaskType {
 			m.moveCursorDown()
 		}
 		return m, nil
 
 	case "h", "left", "backspace":
-		if m.step == stepRating {
-			if m.ratingCursor > 1 {
-				m.ratingCursor--
+		if m.isScaleStep() {
+			if m.scaleCursor > 1 {
+				m.scaleCursor--
 			}
 		} else {
 			return m.prevStep()
@@ -299,9 +316,9 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case "l", "right", "tab":
-		if m.step == stepRating {
-			if m.ratingCursor < 5 {
-				m.ratingCursor++
+		if m.isScaleStep() {
+			if m.scaleCursor < 5 {
+				m.scaleCursor++
 			}
 		} else {
 			return m.nextStep()
@@ -312,18 +329,18 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.nextStep()
 
 	case " ":
-		if m.step < stepRating {
+		if m.step == stepTagsTaskType {
 			m.toggleTag()
-		} else if m.step == stepRating {
-			m.rating = m.ratingCursor
+		} else if m.isScaleStep() {
+			m.setCurrentScale(m.scaleCursor)
 		}
 		return m, nil
 
 	case "1", "2", "3", "4", "5":
-		if m.step == stepRating {
+		if m.isScaleStep() {
 			num := int(key[0] - '0')
-			m.ratingCursor = num
-			m.rating = num
+			m.scaleCursor = num
+			m.setCurrentScale(num)
 		}
 		return m, nil
 	}
@@ -331,27 +348,52 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *model) setCurrentScale(value int) {
+	switch m.step {
+	case stepPromptSpecificity:
+		m.promptSpecificity = value
+	case stepTaskCompletion:
+		m.taskCompletion = value
+	case stepCodeConfidence:
+		m.codeConfidence = value
+	case stepRating:
+		m.rating = value
+	}
+}
+
+func (m *model) getCurrentScaleValue() int {
+	switch m.step {
+	case stepPromptSpecificity:
+		return m.promptSpecificity
+	case stepTaskCompletion:
+		return m.taskCompletion
+	case stepCodeConfidence:
+		return m.codeConfidence
+	case stepRating:
+		return m.rating
+	}
+	return 0
+}
+
 func (m *model) nextStep() (tea.Model, tea.Cmd) {
-	if m.step == stepRating && m.rating == 0 {
-		m.rating = m.ratingCursor
+	// Auto-set scale value if moving forward without explicit selection
+	if m.isScaleStep() && m.getCurrentScaleValue() == 0 {
+		m.setCurrentScale(m.scaleCursor)
 	}
 
-	for {
-		m.step++
-		if m.step >= stepDone {
-			return m, tea.Quit
-		}
-		if m.step < stepRating {
-			cat := categories[m.step]
-			if len(m.tagsByCategory[cat]) > 0 {
-				break
-			}
-		} else {
-			break
-		}
+	m.step++
+	if m.step >= stepDone {
+		return m, tea.Quit
 	}
 
+	// Skip tags step if no tags available
+	if m.step == stepTagsTaskType && len(m.taskTypeTags) == 0 {
+		m.step = stepPromptSpecificity
+	}
+
+	// Reset cursor for new step
 	m.tagCursor = 0
+	m.scaleCursor = 3 // Reset to middle for scales
 
 	if m.step == stepNotes {
 		m.vimMode = modeNormal
@@ -362,66 +404,47 @@ func (m *model) nextStep() (tea.Model, tea.Cmd) {
 }
 
 func (m *model) prevStep() (tea.Model, tea.Cmd) {
-	// Find previous step with content
-	for {
-		m.step--
-		if m.step < 0 {
-			// Already at first step, stay there
-			m.step = m.findFirstStep()
-			return m, nil
-		}
-		if m.step < stepRating {
-			cat := categories[m.step]
-			if len(m.tagsByCategory[cat]) > 0 {
-				break
-			}
-		} else if m.step == stepRating {
-			break
-		}
+	m.step--
+
+	// Skip tags step if no tags available
+	if m.step == stepTagsTaskType && len(m.taskTypeTags) == 0 {
+		m.step-- // Go before tags
+	}
+
+	if m.step < 0 {
+		m.step = m.findFirstStep()
 	}
 
 	m.tagCursor = 0
+	m.scaleCursor = 3
 
 	return m, nil
 }
 
 func (m *model) findFirstStep() int {
-	for i, cat := range categories {
-		if len(m.tagsByCategory[cat]) > 0 {
-			return i
-		}
+	if len(m.taskTypeTags) > 0 {
+		return stepTagsTaskType
 	}
-	return stepRating
-}
-
-func (m *model) getCurrentTags() []domain.Tag {
-	if m.step >= stepRating {
-		return nil
-	}
-	cat := categories[m.step]
-	return m.tagsByCategory[cat]
+	return stepPromptSpecificity
 }
 
 func (m *model) moveCursorUp() {
-	tags := m.getCurrentTags()
-	if len(tags) > 0 && m.tagCursor > 0 {
+	if len(m.taskTypeTags) > 0 && m.tagCursor > 0 {
 		m.tagCursor--
 	}
 }
 
 func (m *model) moveCursorDown() {
-	tags := m.getCurrentTags()
-	if len(tags) > 0 && m.tagCursor < len(tags)-1 {
+	if len(m.taskTypeTags) > 0 && m.tagCursor < len(m.taskTypeTags)-1 {
 		m.tagCursor++
 	}
 }
 
 func (m *model) toggleTag() {
-	tags := m.getCurrentTags()
-	if len(tags) == 0 {
+	if len(m.taskTypeTags) == 0 {
 		return
 	}
-	tagName := tags[m.tagCursor].Name
+	tagName := m.taskTypeTags[m.tagCursor].Name
 	m.selectedTags[tagName] = !m.selectedTags[tagName]
 }
 
@@ -437,12 +460,12 @@ func (m model) View() string {
 	b.WriteString(m.renderProgress())
 	b.WriteString("\n\n")
 
-	switch {
-	case m.step < stepRating:
+	switch m.step {
+	case stepTagsTaskType:
 		b.WriteString(m.viewTags())
-	case m.step == stepRating:
-		b.WriteString(m.viewRating())
-	case m.step == stepNotes:
+	case stepPromptSpecificity, stepTaskCompletion, stepCodeConfidence, stepRating:
+		b.WriteString(m.viewScale())
+	case stepNotes:
 		b.WriteString(m.viewNotes())
 	}
 
@@ -473,46 +496,45 @@ func (m model) renderProgress() string {
 }
 
 func (m model) countTotalSteps() int {
-	count := 2
-	for _, cat := range categories {
-		if len(m.tagsByCategory[cat]) > 0 {
-			count++
-		}
+	// 4 scales + notes = 5, plus tags if available = 6
+	count := 5
+	if len(m.taskTypeTags) > 0 {
+		count++
 	}
 	return count
 }
 
 func (m model) countCurrentStep() int {
-	count := 0
-	for i, cat := range categories {
-		if len(m.tagsByCategory[cat]) > 0 {
-			if m.step > i {
-				count++
-			} else if m.step == i {
-				return count
-			}
+	offset := 0
+	if len(m.taskTypeTags) > 0 {
+		if m.step == stepTagsTaskType {
+			return 0
 		}
+		offset = 1
 	}
-	if m.step == stepRating {
-		return count
+
+	switch m.step {
+	case stepPromptSpecificity:
+		return offset
+	case stepTaskCompletion:
+		return offset + 1
+	case stepCodeConfidence:
+		return offset + 2
+	case stepRating:
+		return offset + 3
+	case stepNotes:
+		return offset + 4
 	}
-	if m.step == stepNotes {
-		return count + 1
-	}
-	return count
+	return 0
 }
 
 func (m model) viewTags() string {
 	var b strings.Builder
 
-	cat := categories[m.step]
-	tags := m.tagsByCategory[cat]
-	label := categoryLabels[cat]
-
-	b.WriteString(m.styles.subtitle.Render(label))
+	b.WriteString(m.styles.subtitle.Render("Task Type"))
 	b.WriteString("\n\n")
 
-	for i, tag := range tags {
+	for i, tag := range m.taskTypeTags {
 		isSelected := m.selectedTags[tag.Name]
 		isCursor := i == m.tagCursor
 
@@ -545,16 +567,27 @@ func (m model) viewTags() string {
 	return b.String()
 }
 
-func (m model) viewRating() string {
+func (m model) viewScale() string {
 	var b strings.Builder
 
-	b.WriteString(m.styles.subtitle.Render("Rate this session"))
+	info := scaleLabels[m.step]
+	currentValue := m.getCurrentScaleValue()
+
+	b.WriteString(m.styles.subtitle.Render(info.label))
 	b.WriteString("\n\n")
 
+	// Scale labels
+	b.WriteString("  ")
+	b.WriteString(m.styles.unselected.Render(info.lowDesc))
+	b.WriteString("                    ")
+	b.WriteString(m.styles.unselected.Render(info.highDesc))
+	b.WriteString("\n")
+
+	// Number row
 	b.WriteString("  ")
 	for i := 1; i <= 5; i++ {
-		isCursor := i == m.ratingCursor
-		isSelected := i == m.rating
+		isCursor := i == m.scaleCursor
+		isSelected := i == currentValue
 		numStr := fmt.Sprintf("%d", i)
 
 		if isCursor {
@@ -572,9 +605,10 @@ func (m model) viewRating() string {
 	}
 	b.WriteString("\n")
 
+	// Cursor indicator row
 	b.WriteString("  ")
 	for i := 1; i <= 5; i++ {
-		if i == m.ratingCursor {
+		if i == m.scaleCursor {
 			b.WriteString(m.styles.indicator.Render("  ▲  "))
 		} else {
 			b.WriteString("      ")
@@ -614,15 +648,14 @@ type keyBinding struct {
 
 func (m model) getKeyBindings() []keyBinding {
 	switch {
-	case m.step < stepRating:
+	case m.step == stepTagsTaskType:
 		return []keyBinding{
 			{"j/k", "nav"},
 			{"spc", "sel"},
-			{"l", "→"},
-			{"h", "←"},
+			{"⏎", "→"},
 			{"q", "quit"},
 		}
-	case m.step == stepRating:
+	case m.isScaleStep():
 		return []keyBinding{
 			{"h/l", "mov"},
 			{"1-5", "sel"},
@@ -668,9 +701,24 @@ func (m model) toQualityData() domain.QualityData {
 		}
 	}
 
+	if m.promptSpecificity > 0 {
+		v := m.promptSpecificity
+		data.PromptSpecificity = &v
+	}
+
+	if m.taskCompletion > 0 {
+		v := m.taskCompletion
+		data.TaskCompletion = &v
+	}
+
+	if m.codeConfidence > 0 {
+		v := m.codeConfidence
+		data.CodeConfidence = &v
+	}
+
 	if m.rating > 0 {
-		rating := m.rating
-		data.Rating = &rating
+		v := m.rating
+		data.Rating = &v
 	}
 
 	data.Notes = strings.TrimSpace(m.notesInput.Value())

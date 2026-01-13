@@ -15,46 +15,15 @@ func (l testLogger) Debug(msg string) {}
 func (l testLogger) Error(msg string) { fmt.Println("[ERROR]", msg) }
 
 func main() {
-	// Extensive realistic tags matching real development workflows
+	// Task type tags only (other categories replaced by scales)
 	tags := []domain.Tag{
-		// Task Type - What kind of work was done
-		{Name: "bug_fix", Category: "task_type", Color: "#EF4444"},
-		{Name: "new_feature", Category: "task_type", Color: "#22C55E"},
-		{Name: "refactoring", Category: "task_type", Color: "#3B82F6"},
-		{Name: "code_review", Category: "task_type", Color: "#8B5CF6"},
-		{Name: "documentation", Category: "task_type", Color: "#F97316"},
-		{Name: "testing", Category: "task_type", Color: "#EC4899"},
-		{Name: "performance", Category: "task_type", Color: "#14B8A6"},
-		{Name: "security", Category: "task_type", Color: "#EF4444"},
-		{Name: "dependency_update", Category: "task_type", Color: "#6366F1"},
-		{Name: "debugging", Category: "task_type", Color: "#F59E0B"},
-
-		// Architecture - Which part of the system
-		{Name: "frontend", Category: "architecture", Color: "#06B6D4"},
-		{Name: "backend", Category: "architecture", Color: "#8B5CF6"},
-		{Name: "database", Category: "architecture", Color: "#EC4899"},
-		{Name: "api", Category: "architecture", Color: "#22C55E"},
-		{Name: "cli", Category: "architecture", Color: "#F97316"},
-		{Name: "infrastructure", Category: "architecture", Color: "#84CC16"},
-		{Name: "devops", Category: "architecture", Color: "#EAB308"},
-		{Name: "full_stack", Category: "architecture", Color: "#A855F7"},
-
-		// Prompt Style - How you interacted with Claude
-		{Name: "detailed_spec", Category: "prompt_style", Color: "#6366F1"},
-		{Name: "minimal_prompt", Category: "prompt_style", Color: "#14B8A6"},
-		{Name: "iterative", Category: "prompt_style", Color: "#F59E0B"},
-		{Name: "pair_programming", Category: "prompt_style", Color: "#22C55E"},
-		{Name: "code_generation", Category: "prompt_style", Color: "#3B82F6"},
-		{Name: "explanation", Category: "prompt_style", Color: "#8B5CF6"},
-		{Name: "troubleshooting", Category: "prompt_style", Color: "#EF4444"},
-
-		// Outcome - How did the session go
-		{Name: "success", Category: "outcome", Color: "#22C55E"},
-		{Name: "partial_success", Category: "outcome", Color: "#EAB308"},
-		{Name: "needs_revision", Category: "outcome", Color: "#F97316"},
-		{Name: "blocked", Category: "outcome", Color: "#EF4444"},
-		{Name: "learning", Category: "outcome", Color: "#6366F1"},
-		{Name: "exploration", Category: "outcome", Color: "#14B8A6"},
+		{Name: "feature", Category: "task_type", Color: "#22C55E"},
+		{Name: "bugfix", Category: "task_type", Color: "#EF4444"},
+		{Name: "refactor", Category: "task_type", Color: "#3B82F6"},
+		{Name: "exploration", Category: "task_type", Color: "#8B5CF6"},
+		{Name: "docs", Category: "task_type", Color: "#F59E0B"},
+		{Name: "test", Category: "task_type", Color: "#06B6D4"},
+		{Name: "config", Category: "task_type", Color: "#64748B"},
 	}
 
 	p := prompter.NewBubbleTeaPrompter(testLogger{})
@@ -65,19 +34,21 @@ func main() {
 	fmt.Println(strings.Repeat("─", 50))
 	fmt.Println()
 	fmt.Println("  This test launches the quality feedback TUI")
-	fmt.Println("  with realistic tag categories:")
 	fmt.Println()
-	fmt.Printf("    • Task Type:    %d options\n", countByCategory(tags, "task_type"))
-	fmt.Printf("    • Architecture: %d options\n", countByCategory(tags, "architecture"))
-	fmt.Printf("    • Prompt Style: %d options\n", countByCategory(tags, "prompt_style"))
-	fmt.Printf("    • Outcome:      %d options\n", countByCategory(tags, "outcome"))
+	fmt.Println("  Steps:")
+	fmt.Printf("    1. Task Type (multi-select, %d options)\n", len(tags))
+	fmt.Println("    2. Prompt Specificity (1-5 scale)")
+	fmt.Println("    3. Task Completion (1-5 scale)")
+	fmt.Println("    4. Code Confidence (1-5 scale)")
+	fmt.Println("    5. Session Satisfaction (1-5 scale)")
+	fmt.Println("    6. Notes (optional)")
 	fmt.Println()
 	fmt.Println("  Vim-style Controls:")
-	fmt.Println("    j/k           Navigate up/down")
-	fmt.Println("    h/l           Previous/next step")
-	fmt.Println("    Space         Toggle selection")
-	fmt.Println("    Enter         Confirm and proceed")
-	fmt.Println("    1-5           Quick rating select")
+	fmt.Println("    j/k           Navigate tags")
+	fmt.Println("    h/l           Scale value / prev-next step")
+	fmt.Println("    Space         Toggle tag / confirm scale")
+	fmt.Println("    Enter         Next step")
+	fmt.Println("    1-5           Quick scale select")
 	fmt.Println("    i             Insert mode (notes)")
 	fmt.Println("    Esc           Normal mode / quit")
 	fmt.Println("    q             Quit")
@@ -100,20 +71,20 @@ func main() {
 	fmt.Println()
 
 	if len(data.Tags) > 0 {
-		fmt.Println("  Selected Tags:")
+		fmt.Println("  Task Types:")
 		for _, tag := range data.Tags {
 			fmt.Printf("    • %s\n", tag)
 		}
 	} else {
-		fmt.Println("  Selected Tags: (none)")
+		fmt.Println("  Task Types: (none)")
 	}
 
 	fmt.Println()
-	if data.Rating != nil {
-		fmt.Printf("  Rating: %s\n", renderRating(*data.Rating))
-	} else {
-		fmt.Println("  Rating: (skipped)")
-	}
+	fmt.Println("  Scales:")
+	fmt.Printf("    Prompt Specificity:   %s\n", formatScale(data.PromptSpecificity))
+	fmt.Printf("    Task Completion:      %s\n", formatScale(data.TaskCompletion))
+	fmt.Printf("    Code Confidence:      %s\n", formatScale(data.CodeConfidence))
+	fmt.Printf("    Session Satisfaction: %s\n", formatScale(data.Rating))
 
 	fmt.Println()
 	if data.Notes != "" {
@@ -126,16 +97,9 @@ func main() {
 	fmt.Println(strings.Repeat("─", 50))
 }
 
-func countByCategory(tags []domain.Tag, category string) int {
-	count := 0
-	for _, t := range tags {
-		if t.Category == category {
-			count++
-		}
+func formatScale(val *int) string {
+	if val == nil {
+		return "(skipped)"
 	}
-	return count
-}
-
-func renderRating(rating int) string {
-	return fmt.Sprintf("%d/5", rating)
+	return fmt.Sprintf("%d/5", *val)
 }

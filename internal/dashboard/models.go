@@ -11,4 +11,5 @@ type DashboardData struct {
 	EfficiencyMetrics sqlc.GetEfficiencyMetricsRow
 	TopTool           string
 	CacheHitRate      float64
+	UsageSinceLimit   sqlc.GetUsageSinceLastLimitRow
 }

@@ -25,10 +25,23 @@ templ Dashboard(data DashboardData) {
 			</div>
 		</section>
 		<section>
+			<h2>Since Last Limit</h2>
+			<div class="stats-grid">
+				@templates.StatsCard("Sessions", fmt.Sprintf("%d", data.UsageSinceLimit.SessionsCount), "sessions")
+				@templates.StatsCard("Cost", fmt.Sprintf("$%.2f", toFloat(data.UsageSinceLimit.TotalCostUsd)), "cost")
+				@templates.StatsCard("Input Tokens", formatTokens(data.UsageSinceLimit.InputTokens), "tokens")
+				@templates.StatsCard("Output Tokens", formatTokens(data.UsageSinceLimit.OutputTokens), "tokens")
+				@templates.StatsCard("Thinking Tokens", formatTokens(data.UsageSinceLimit.ThinkingTokens), "tokens")
+			</div>
+		</section>
+		<section>
 			<h2>Today</h2>
 			<div class="stats-grid">
 				@templates.StatsCard("Sessions", fmt.Sprintf("%d", data.Today.SessionsToday), "sessions")
 				@templates.StatsCard("Cost", fmt.Sprintf("$%.2f", toFloat(data.Today.CostToday)), "cost")
+				@templates.StatsCard("Input Tokens", formatTokens(data.Today.InputTokensToday), "tokens")
+				@templates.StatsCard("Output Tokens", formatTokens(data.Today.OutputTokensToday), "tokens")
+				@templates.StatsCard("Thinking Tokens", formatTokens(data.Today.ThinkingTokensToday), "tokens")
 			</div>
 		</section>
 		<section>
@@ -36,6 +49,9 @@ templ Dashboard(data DashboardData) {
 			<div class="stats-grid">
 				@templates.StatsCard("Sessions", fmt.Sprintf("%d", data.Week.SessionsWeek), "sessions")
 				@templates.StatsCard("Cost", fmt.Sprintf("$%.2f", toFloat(data.Week.CostWeek)), "cost")
+				@templates.StatsCard("Input Tokens", formatTokens(data.Week.InputTokensWeek), "tokens")
+				@templates.StatsCard("Output Tokens", formatTokens(data.Week.OutputTokensWeek), "tokens")
+				@templates.StatsCard("Thinking Tokens", formatTokens(data.Week.ThinkingTokensWeek), "tokens")
 			</div>
 		</section>
 		<section id="charts-section">
@@ -229,4 +245,16 @@ func shortPath(path string) string {
 		return "-"
 	}
 	return filepath.Base(path)
+}
+
+func formatTokens(v interface{}) string {
+	tokens := toFloat(v)
+	switch {
+	case tokens >= 1_000_000:
+		return fmt.Sprintf("%.1fM", tokens/1_000_000)
+	case tokens >= 1_000:
+		return fmt.Sprintf("%.1fK", tokens/1_000)
+	default:
+		return fmt.Sprintf("%.0f", tokens)
+	}
 }

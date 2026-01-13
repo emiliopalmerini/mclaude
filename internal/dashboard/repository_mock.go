@@ -9,13 +9,14 @@ import (
 
 // MockRepository is a mock implementation of Repository for testing.
 type MockRepository struct {
-	GetDashboardMetricsFunc  func(ctx context.Context) (sqlc.GetDashboardMetricsRow, error)
-	GetTodayMetricsFunc      func(ctx context.Context) (sqlc.GetTodayMetricsRow, error)
-	GetWeekMetricsFunc       func(ctx context.Context) (sqlc.GetWeekMetricsRow, error)
-	GetCacheMetricsFunc      func(ctx context.Context, days string) (sqlc.GetCacheMetricsRow, error)
-	GetTopProjectFunc        func(ctx context.Context) (sqlc.GetTopProjectRow, error)
-	GetEfficiencyMetricsFunc func(ctx context.Context, days string) (sqlc.GetEfficiencyMetricsRow, error)
-	GetToolsBreakdownAllFunc func(ctx context.Context, days string) ([]sql.NullString, error)
+	GetDashboardMetricsFunc    func(ctx context.Context) (sqlc.GetDashboardMetricsRow, error)
+	GetTodayMetricsFunc        func(ctx context.Context) (sqlc.GetTodayMetricsRow, error)
+	GetWeekMetricsFunc         func(ctx context.Context) (sqlc.GetWeekMetricsRow, error)
+	GetCacheMetricsFunc        func(ctx context.Context, days string) (sqlc.GetCacheMetricsRow, error)
+	GetTopProjectFunc          func(ctx context.Context) (sqlc.GetTopProjectRow, error)
+	GetEfficiencyMetricsFunc   func(ctx context.Context, days string) (sqlc.GetEfficiencyMetricsRow, error)
+	GetToolsBreakdownAllFunc   func(ctx context.Context, days string) ([]sql.NullString, error)
+	GetUsageSinceLastLimitFunc func(ctx context.Context) (sqlc.GetUsageSinceLastLimitRow, error)
 }
 
 func (m *MockRepository) GetDashboardMetrics(ctx context.Context) (sqlc.GetDashboardMetricsRow, error) {
@@ -65,4 +66,11 @@ func (m *MockRepository) GetToolsBreakdownAll(ctx context.Context, days string) 
 		return m.GetToolsBreakdownAllFunc(ctx, days)
 	}
 	return nil, nil
+}
+
+func (m *MockRepository) GetUsageSinceLastLimit(ctx context.Context) (sqlc.GetUsageSinceLastLimitRow, error) {
+	if m.GetUsageSinceLastLimitFunc != nil {
+		return m.GetUsageSinceLastLimitFunc(ctx)
+	}
+	return sqlc.GetUsageSinceLastLimitRow{}, nil
 }

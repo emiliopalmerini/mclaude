@@ -27,7 +27,11 @@ CREATE TABLE sessions (
     model TEXT,
     summary TEXT,
     rating INTEGER,
-    notes TEXT
+    prompt_specificity INTEGER,
+    task_completion INTEGER,
+    code_confidence INTEGER,
+    notes TEXT,
+    limit_message TEXT
 );
 
 CREATE TABLE tags (
@@ -41,4 +45,16 @@ CREATE TABLE session_tags (
     tag_name TEXT NOT NULL,
     created_at TEXT,
     PRIMARY KEY (session_id, tag_name)
+);
+
+CREATE TABLE limit_events (
+    id INTEGER PRIMARY KEY,
+    timestamp TEXT NOT NULL,
+    limit_type TEXT NOT NULL,
+    reset_time TEXT,
+    sessions_count INTEGER,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    thinking_tokens INTEGER,
+    total_cost_usd REAL
 );

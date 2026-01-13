@@ -28,6 +28,17 @@ func (q *Queries) AddSessionTag(ctx context.Context, arg AddSessionTagParams) er
 	return err
 }
 
+const countLimitEvents = `-- name: CountLimitEvents :one
+SELECT COUNT(*) as count FROM limit_events
+`
+
+func (q *Queries) CountLimitEvents(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countLimitEvents)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countSessions = `-- name: CountSessions :one
 SELECT COUNT(*) as count FROM sessions
 `
@@ -564,6 +575,66 @@ func (q *Queries) GetHourlyMetrics(ctx context.Context, dollar_1 sql.NullString)
 	return items, nil
 }
 
+const getLastLimitEvent = `-- name: GetLastLimitEvent :one
+SELECT timestamp FROM limit_events ORDER BY timestamp DESC LIMIT 1
+`
+
+func (q *Queries) GetLastLimitEvent(ctx context.Context) (string, error) {
+	row := q.db.QueryRowContext(ctx, getLastLimitEvent)
+	var timestamp string
+	err := row.Scan(&timestamp)
+	return timestamp, err
+}
+
+const getLimitEventsByType = `-- name: GetLimitEventsByType :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+WHERE limit_type = ?
+ORDER BY timestamp DESC
+LIMIT ?
+`
+
+type GetLimitEventsByTypeParams struct {
+	LimitType string `json:"limit_type"`
+	Limit     int64  `json:"limit"`
+}
+
+func (q *Queries) GetLimitEventsByType(ctx context.Context, arg GetLimitEventsByTypeParams) ([]LimitEvent, error) {
+	rows, err := q.db.QueryContext(ctx, getLimitEventsByType, arg.LimitType, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LimitEvent{}
+	for rows.Next() {
+		var i LimitEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.Timestamp,
+			&i.LimitType,
+			&i.ResetTime,
+			&i.SessionsCount,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.ThinkingTokens,
+			&i.TotalCostUsd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getModelDistribution = `-- name: GetModelDistribution :many
 SELECT
     COALESCE(model, 'Unknown') as model,
@@ -714,8 +785,51 @@ func (q *Queries) GetProjectMetrics(ctx context.Context, dollar_1 sql.NullString
 	return items, nil
 }
 
+const getRecentLimitEvents = `-- name: GetRecentLimitEvents :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+WHERE timestamp >= datetime('now', ? || ' days')
+ORDER BY timestamp DESC
+`
+
+func (q *Queries) GetRecentLimitEvents(ctx context.Context, dollar_1 sql.NullString) ([]LimitEvent, error) {
+	rows, err := q.db.QueryContext(ctx, getRecentLimitEvents, dollar_1)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LimitEvent{}
+	for rows.Next() {
+		var i LimitEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.Timestamp,
+			&i.LimitType,
+			&i.ResetTime,
+			&i.SessionsCount,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.ThinkingTokens,
+			&i.TotalCostUsd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, session_id, instance_id, hostname, timestamp, exit_reason, permission_mode, working_directory, git_branch, claude_version, duration_seconds, user_prompts, assistant_responses, tool_calls, tools_breakdown, files_accessed, files_modified, input_tokens, output_tokens, thinking_tokens, cache_read_tokens, cache_write_tokens, estimated_cost_usd, errors_count, model, summary, rating, notes FROM sessions WHERE session_id = ?
+SELECT id, session_id, instance_id, hostname, timestamp, exit_reason, permission_mode, working_directory, git_branch, claude_version, duration_seconds, user_prompts, assistant_responses, tool_calls, tools_breakdown, files_accessed, files_modified, input_tokens, output_tokens, thinking_tokens, cache_read_tokens, cache_write_tokens, estimated_cost_usd, errors_count, model, summary, rating, prompt_specificity, task_completion, code_confidence, notes, limit_message FROM sessions WHERE session_id = ?
 `
 
 func (q *Queries) GetSessionByID(ctx context.Context, sessionID string) (Session, error) {
@@ -749,7 +863,11 @@ func (q *Queries) GetSessionByID(ctx context.Context, sessionID string) (Session
 		&i.Model,
 		&i.Summary,
 		&i.Rating,
+		&i.PromptSpecificity,
+		&i.TaskCompletion,
+		&i.CodeConfidence,
 		&i.Notes,
+		&i.LimitMessage,
 	)
 	return i, err
 }
@@ -785,23 +903,88 @@ func (q *Queries) GetSessionTags(ctx context.Context, sessionID string) ([]Tag, 
 	return items, nil
 }
 
+const getSessionsWithLimitMessage = `-- name: GetSessionsWithLimitMessage :many
+SELECT
+    id, session_id, timestamp, limit_message,
+    input_tokens, output_tokens, thinking_tokens, estimated_cost_usd
+FROM sessions
+WHERE limit_message IS NOT NULL AND limit_message != ''
+ORDER BY timestamp DESC
+LIMIT ?
+`
+
+type GetSessionsWithLimitMessageRow struct {
+	ID               int64           `json:"id"`
+	SessionID        string          `json:"session_id"`
+	Timestamp        string          `json:"timestamp"`
+	LimitMessage     sql.NullString  `json:"limit_message"`
+	InputTokens      sql.NullInt64   `json:"input_tokens"`
+	OutputTokens     sql.NullInt64   `json:"output_tokens"`
+	ThinkingTokens   sql.NullInt64   `json:"thinking_tokens"`
+	EstimatedCostUsd sql.NullFloat64 `json:"estimated_cost_usd"`
+}
+
+func (q *Queries) GetSessionsWithLimitMessage(ctx context.Context, limit int64) ([]GetSessionsWithLimitMessageRow, error) {
+	rows, err := q.db.QueryContext(ctx, getSessionsWithLimitMessage, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSessionsWithLimitMessageRow{}
+	for rows.Next() {
+		var i GetSessionsWithLimitMessageRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.Timestamp,
+			&i.LimitMessage,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.ThinkingTokens,
+			&i.EstimatedCostUsd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getTodayMetrics = `-- name: GetTodayMetrics :one
 SELECT
     COUNT(*) as sessions_today,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_today
+    COALESCE(SUM(estimated_cost_usd), 0) as cost_today,
+    COALESCE(SUM(input_tokens), 0) as input_tokens_today,
+    COALESCE(SUM(output_tokens), 0) as output_tokens_today,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_today
 FROM sessions
 WHERE date(timestamp) = date('now')
 `
 
 type GetTodayMetricsRow struct {
-	SessionsToday int64       `json:"sessions_today"`
-	CostToday     interface{} `json:"cost_today"`
+	SessionsToday       int64       `json:"sessions_today"`
+	CostToday           interface{} `json:"cost_today"`
+	InputTokensToday    interface{} `json:"input_tokens_today"`
+	OutputTokensToday   interface{} `json:"output_tokens_today"`
+	ThinkingTokensToday interface{} `json:"thinking_tokens_today"`
 }
 
 func (q *Queries) GetTodayMetrics(ctx context.Context) (GetTodayMetricsRow, error) {
 	row := q.db.QueryRowContext(ctx, getTodayMetrics)
 	var i GetTodayMetricsRow
-	err := row.Scan(&i.SessionsToday, &i.CostToday)
+	err := row.Scan(
+		&i.SessionsToday,
+		&i.CostToday,
+		&i.InputTokensToday,
+		&i.OutputTokensToday,
+		&i.ThinkingTokensToday,
+	)
 	return i, err
 }
 
@@ -861,24 +1044,156 @@ func (q *Queries) GetTopProject(ctx context.Context) (GetTopProjectRow, error) {
 	return i, err
 }
 
+const getUsageSinceLastLimit = `-- name: GetUsageSinceLastLimit :one
+SELECT
+    COUNT(*) as sessions_count,
+    COALESCE(SUM(input_tokens), 0) as input_tokens,
+    COALESCE(SUM(output_tokens), 0) as output_tokens,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens,
+    COALESCE(SUM(estimated_cost_usd), 0) as total_cost_usd
+FROM sessions
+WHERE timestamp > COALESCE(
+    (SELECT timestamp FROM limit_events ORDER BY timestamp DESC LIMIT 1),
+    '1970-01-01'
+)
+`
+
+type GetUsageSinceLastLimitRow struct {
+	SessionsCount  int64       `json:"sessions_count"`
+	InputTokens    interface{} `json:"input_tokens"`
+	OutputTokens   interface{} `json:"output_tokens"`
+	ThinkingTokens interface{} `json:"thinking_tokens"`
+	TotalCostUsd   interface{} `json:"total_cost_usd"`
+}
+
+func (q *Queries) GetUsageSinceLastLimit(ctx context.Context) (GetUsageSinceLastLimitRow, error) {
+	row := q.db.QueryRowContext(ctx, getUsageSinceLastLimit)
+	var i GetUsageSinceLastLimitRow
+	err := row.Scan(
+		&i.SessionsCount,
+		&i.InputTokens,
+		&i.OutputTokens,
+		&i.ThinkingTokens,
+		&i.TotalCostUsd,
+	)
+	return i, err
+}
+
 const getWeekMetrics = `-- name: GetWeekMetrics :one
 SELECT
     COUNT(*) as sessions_week,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_week
+    COALESCE(SUM(estimated_cost_usd), 0) as cost_week,
+    COALESCE(SUM(input_tokens), 0) as input_tokens_week,
+    COALESCE(SUM(output_tokens), 0) as output_tokens_week,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_week
 FROM sessions
 WHERE date(timestamp) >= date('now', '-7 days')
 `
 
 type GetWeekMetricsRow struct {
-	SessionsWeek int64       `json:"sessions_week"`
-	CostWeek     interface{} `json:"cost_week"`
+	SessionsWeek       int64       `json:"sessions_week"`
+	CostWeek           interface{} `json:"cost_week"`
+	InputTokensWeek    interface{} `json:"input_tokens_week"`
+	OutputTokensWeek   interface{} `json:"output_tokens_week"`
+	ThinkingTokensWeek interface{} `json:"thinking_tokens_week"`
 }
 
 func (q *Queries) GetWeekMetrics(ctx context.Context) (GetWeekMetricsRow, error) {
 	row := q.db.QueryRowContext(ctx, getWeekMetrics)
 	var i GetWeekMetricsRow
-	err := row.Scan(&i.SessionsWeek, &i.CostWeek)
+	err := row.Scan(
+		&i.SessionsWeek,
+		&i.CostWeek,
+		&i.InputTokensWeek,
+		&i.OutputTokensWeek,
+		&i.ThinkingTokensWeek,
+	)
 	return i, err
+}
+
+const insertLimitEvent = `-- name: InsertLimitEvent :exec
+
+INSERT INTO limit_events (
+    timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type InsertLimitEventParams struct {
+	Timestamp      string          `json:"timestamp"`
+	LimitType      string          `json:"limit_type"`
+	ResetTime      sql.NullString  `json:"reset_time"`
+	SessionsCount  sql.NullInt64   `json:"sessions_count"`
+	InputTokens    sql.NullInt64   `json:"input_tokens"`
+	OutputTokens   sql.NullInt64   `json:"output_tokens"`
+	ThinkingTokens sql.NullInt64   `json:"thinking_tokens"`
+	TotalCostUsd   sql.NullFloat64 `json:"total_cost_usd"`
+}
+
+// ============================================================================
+// LIMIT EVENTS QUERIES
+// ============================================================================
+func (q *Queries) InsertLimitEvent(ctx context.Context, arg InsertLimitEventParams) error {
+	_, err := q.db.ExecContext(ctx, insertLimitEvent,
+		arg.Timestamp,
+		arg.LimitType,
+		arg.ResetTime,
+		arg.SessionsCount,
+		arg.InputTokens,
+		arg.OutputTokens,
+		arg.ThinkingTokens,
+		arg.TotalCostUsd,
+	)
+	return err
+}
+
+const listLimitEvents = `-- name: ListLimitEvents :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+ORDER BY timestamp DESC
+LIMIT ? OFFSET ?
+`
+
+type ListLimitEventsParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+func (q *Queries) ListLimitEvents(ctx context.Context, arg ListLimitEventsParams) ([]LimitEvent, error) {
+	rows, err := q.db.QueryContext(ctx, listLimitEvents, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LimitEvent{}
+	for rows.Next() {
+		var i LimitEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.Timestamp,
+			&i.LimitType,
+			&i.ResetTime,
+			&i.SessionsCount,
+			&i.InputTokens,
+			&i.OutputTokens,
+			&i.ThinkingTokens,
+			&i.TotalCostUsd,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSessions = `-- name: ListSessions :many

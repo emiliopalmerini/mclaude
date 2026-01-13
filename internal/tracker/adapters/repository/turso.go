@@ -45,8 +45,9 @@ func (r *TursoRepository) Save(session domain.Session) error {
 			tool_calls, tools_breakdown, files_accessed, files_modified,
 			input_tokens, output_tokens, thinking_tokens,
 			cache_read_tokens, cache_write_tokens, estimated_cost_usd,
-			errors_count, model, summary, rating, notes
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			errors_count, model, summary, rating, prompt_specificity,
+			task_completion, code_confidence, notes, limit_message
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.Exec(query,
@@ -76,7 +77,11 @@ func (r *TursoRepository) Save(session domain.Session) error {
 		session.Statistics.Model,
 		session.Statistics.Summary,
 		session.Rating,
+		session.PromptSpecificity,
+		session.TaskCompletion,
+		session.CodeConfidence,
 		session.Notes,
+		nullIfEmpty(session.LimitMessage),
 	)
 
 	if err != nil {
@@ -122,4 +127,11 @@ func (r *TursoRepository) GetAllTags() ([]domain.Tag, error) {
 		return nil, fmt.Errorf("iterate tags: %w", err)
 	}
 	return tags, nil
+}
+
+func nullIfEmpty(s string) interface{} {
+	if s == "" {
+		return nil
+	}
+	return s
 }

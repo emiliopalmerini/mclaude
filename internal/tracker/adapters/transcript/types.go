@@ -5,6 +5,7 @@ import "encoding/json"
 // Entry represents a single line in the JSONL transcript
 type Entry struct {
 	Type      string          `json:"type"`
+	Subtype   string          `json:"subtype"`
 	Timestamp string          `json:"timestamp"`
 	GitBranch string          `json:"gitBranch"`
 	Version   string          `json:"version"`
@@ -13,6 +14,9 @@ type Entry struct {
 	Name      string          `json:"name"`
 	IsError   bool            `json:"is_error"`
 	Content   json.RawMessage `json:"content"`
+	// System message fields
+	Level string          `json:"level"`
+	Error json.RawMessage `json:"error"`
 }
 
 // Message represents the message field in transcript entries

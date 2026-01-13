@@ -29,6 +29,9 @@ type Statistics struct {
 	Summary       string
 	StartTime     *time.Time
 	EndTime       *time.Time
+
+	// Limit tracking
+	LimitMessage string
 }
 
 // Duration calculates session duration in seconds

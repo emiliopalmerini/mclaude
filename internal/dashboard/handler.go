@@ -64,6 +64,11 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		cacheHitRate = float64(toInt64(cacheMetrics.CacheRead)) / float64(totalTokens) * 100
 	}
 
+	usageSinceLimit, err := h.repo.GetUsageSinceLastLimit(ctx)
+	if err != nil {
+		log.Printf("error fetching usage since last limit: %v", err)
+	}
+
 	data := DashboardData{
 		Metrics:           metrics,
 		Today:             today,
@@ -73,6 +78,7 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		EfficiencyMetrics: efficiencyMetrics,
 		TopTool:           topTool,
 		CacheHitRate:      cacheHitRate,
+		UsageSinceLimit:   usageSinceLimit,
 	}
 
 	Dashboard(data).Render(ctx, w)

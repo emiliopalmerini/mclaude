@@ -90,6 +90,8 @@ func (p *Parser) processEntry(
 		p.processToolUse(entry, stats)
 	case "tool_result":
 		p.processToolResult(entry, stats)
+	case "system":
+		p.processSystemMessage(entry, stats)
 	}
 }
 
@@ -253,6 +255,31 @@ func (p *Parser) recordToolUse(
 	filesAccessed[filePath] = true
 	if isModifyingTool(toolName) {
 		filesModified[filePath] = true
+	}
+}
+
+func (p *Parser) processSystemMessage(entry *Entry, stats *domain.Statistics) {
+	// Look for rate limit or usage limit messages
+	if entry.Subtype == "api_error" || entry.Level == "error" {
+		// Try to extract content as string
+		var content string
+		if err := json.Unmarshal(entry.Content, &content); err == nil {
+			if strings.Contains(strings.ToLower(content), "limit") ||
+				strings.Contains(strings.ToLower(content), "rate") {
+				stats.LimitMessage = content
+			}
+		}
+	}
+
+	// Also check the content field directly for limit messages
+	if entry.Content != nil {
+		var content string
+		if err := json.Unmarshal(entry.Content, &content); err == nil {
+			if strings.Contains(content, "hit your limit") ||
+				strings.Contains(content, "resets") {
+				stats.LimitMessage = content
+			}
+		}
 	}
 }
 

@@ -14,14 +14,20 @@ FROM sessions;
 -- name: GetTodayMetrics :one
 SELECT
     COUNT(*) as sessions_today,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_today
+    COALESCE(SUM(estimated_cost_usd), 0) as cost_today,
+    COALESCE(SUM(input_tokens), 0) as input_tokens_today,
+    COALESCE(SUM(output_tokens), 0) as output_tokens_today,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_today
 FROM sessions
 WHERE date(timestamp) = date('now');
 
 -- name: GetWeekMetrics :one
 SELECT
     COUNT(*) as sessions_week,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_week
+    COALESCE(SUM(estimated_cost_usd), 0) as cost_week,
+    COALESCE(SUM(input_tokens), 0) as input_tokens_week,
+    COALESCE(SUM(output_tokens), 0) as output_tokens_week,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_week
 FROM sessions
 WHERE date(timestamp) >= date('now', '-7 days');
 
@@ -239,4 +245,71 @@ FROM tags t
 JOIN session_tags st ON t.name = st.tag_name
 WHERE st.session_id = ?
 ORDER BY t.category, t.name;
+
+-- ============================================================================
+-- LIMIT EVENTS QUERIES
+-- ============================================================================
+
+-- name: InsertLimitEvent :exec
+INSERT INTO limit_events (
+    timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: ListLimitEvents :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+ORDER BY timestamp DESC
+LIMIT ? OFFSET ?;
+
+-- name: CountLimitEvents :one
+SELECT COUNT(*) as count FROM limit_events;
+
+-- name: GetRecentLimitEvents :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+WHERE timestamp >= datetime('now', ? || ' days')
+ORDER BY timestamp DESC;
+
+-- name: GetLimitEventsByType :many
+SELECT
+    id, timestamp, limit_type, reset_time,
+    sessions_count, input_tokens, output_tokens, thinking_tokens,
+    total_cost_usd
+FROM limit_events
+WHERE limit_type = ?
+ORDER BY timestamp DESC
+LIMIT ?;
+
+-- name: GetLastLimitEvent :one
+SELECT timestamp FROM limit_events ORDER BY timestamp DESC LIMIT 1;
+
+-- name: GetUsageSinceLastLimit :one
+SELECT
+    COUNT(*) as sessions_count,
+    COALESCE(SUM(input_tokens), 0) as input_tokens,
+    COALESCE(SUM(output_tokens), 0) as output_tokens,
+    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens,
+    COALESCE(SUM(estimated_cost_usd), 0) as total_cost_usd
+FROM sessions
+WHERE timestamp > COALESCE(
+    (SELECT timestamp FROM limit_events ORDER BY timestamp DESC LIMIT 1),
+    '1970-01-01'
+);
+
+-- name: GetSessionsWithLimitMessage :many
+SELECT
+    id, session_id, timestamp, limit_message,
+    input_tokens, output_tokens, thinking_tokens, estimated_cost_usd
+FROM sessions
+WHERE limit_message IS NOT NULL AND limit_message != ''
+ORDER BY timestamp DESC
+LIMIT ?;
 
