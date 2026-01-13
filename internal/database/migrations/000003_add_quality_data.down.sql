@@ -1,0 +1,3 @@
+-- SQLite requires recreating the table to drop columns
+-- For simplicity, we leave columns in place (they'll just be unused)
+-- In production, implement full table recreation if needed

@@ -15,6 +15,7 @@ type HookInput struct {
 type Service struct {
 	parser     TranscriptParser
 	repository SessionRepository
+	prompter   Prompter
 	logger     Logger
 }
 
@@ -22,11 +23,13 @@ type Service struct {
 func NewService(
 	parser TranscriptParser,
 	repository SessionRepository,
+	prompter Prompter,
 	logger Logger,
 ) *Service {
 	return &Service{
 		parser:     parser,
 		repository: repository,
+		prompter:   prompter,
 		logger:     logger,
 	}
 }
@@ -45,6 +48,22 @@ func (s *Service) TrackSession(input HookInput, instanceID, hostname string) err
 	s.logger.Debug(fmt.Sprintf("Parsed stats: prompts=%d, responses=%d, tools=%d, input_tokens=%d, output_tokens=%d",
 		stats.UserPrompts, stats.AssistantResponses, stats.ToolCalls, stats.InputTokens, stats.OutputTokens))
 
+	// Collect quality feedback from user (optional)
+	var qualityData QualityData
+	if s.prompter != nil {
+		tags, err := s.repository.GetAllTags()
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to get tags: %v", err))
+			// Continue without tags - non-fatal error
+		} else {
+			qualityData, err = s.prompter.CollectQualityData(tags)
+			if err != nil {
+				s.logger.Error(fmt.Sprintf("Failed to collect quality data: %v", err))
+				// Continue without quality data - non-fatal error
+			}
+		}
+	}
+
 	// Create session
 	session := NewSession(
 		input.SessionID,
@@ -54,12 +73,21 @@ func (s *Service) TrackSession(input HookInput, instanceID, hostname string) err
 		input.PermissionMode,
 		input.CWD,
 		stats,
+		qualityData,
 	)
 
 	// Save session
 	if err := s.repository.Save(session); err != nil {
 		s.logger.Error(fmt.Sprintf("Failed to save session: %v", err))
 		return fmt.Errorf("save session: %w", err)
+	}
+
+	// Save tags (if any)
+	if len(qualityData.Tags) > 0 {
+		if err := s.repository.SaveTags(input.SessionID, qualityData.Tags); err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to save tags: %v", err))
+			// Continue - session was saved successfully
+		}
 	}
 
 	s.logger.Debug(fmt.Sprintf("Successfully saved session %s", input.SessionID))

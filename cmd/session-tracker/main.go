@@ -3,6 +3,7 @@ package main
 import (
 	"claude-watcher/internal/database"
 	"claude-watcher/internal/tracker/adapters/logger"
+	"claude-watcher/internal/tracker/adapters/prompter"
 	"claude-watcher/internal/tracker/adapters/repository"
 	"claude-watcher/internal/tracker/adapters/transcript"
 	"claude-watcher/internal/tracker/domain"
@@ -50,9 +51,10 @@ func run() error {
 	// Initialize adapters
 	parser := transcript.NewParser()
 	repo := repository.NewTursoRepository(db)
+	ttyPrompter := prompter.NewTTYPrompter(log)
 
 	// Create service
-	service := domain.NewService(parser, repo, log)
+	service := domain.NewService(parser, repo, ttyPrompter, log)
 
 	// Track session
 	instanceID := domain.GenerateInstanceID(config.Hostname, config.HomeDir)

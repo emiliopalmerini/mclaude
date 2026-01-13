@@ -35,4 +35,18 @@ type Session struct {
 	ErrorsCount        sql.NullInt64   `json:"errors_count"`
 	Model              sql.NullString  `json:"model"`
 	Summary            sql.NullString  `json:"summary"`
+	Rating             sql.NullInt64   `json:"rating"`
+	Notes              sql.NullString  `json:"notes"`
+}
+
+type SessionTag struct {
+	SessionID string         `json:"session_id"`
+	TagName   string         `json:"tag_name"`
+	CreatedAt sql.NullString `json:"created_at"`
+}
+
+type Tag struct {
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Color    string `json:"color"`
 }

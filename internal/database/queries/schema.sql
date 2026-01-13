@@ -1,4 +1,4 @@
--- Schema for sqlc type generation only (table already exists in Turso)
+-- Schema for sqlc type generation only (tables already exist in Turso)
 CREATE TABLE sessions (
     id INTEGER PRIMARY KEY,
     session_id TEXT NOT NULL,
@@ -25,5 +25,20 @@ CREATE TABLE sessions (
     estimated_cost_usd REAL,
     errors_count INTEGER,
     model TEXT,
-    summary TEXT
+    summary TEXT,
+    rating INTEGER,
+    notes TEXT
+);
+
+CREATE TABLE tags (
+    name TEXT PRIMARY KEY,
+    category TEXT NOT NULL,
+    color TEXT NOT NULL
+);
+
+CREATE TABLE session_tags (
+    session_id TEXT NOT NULL,
+    tag_name TEXT NOT NULL,
+    created_at TEXT,
+    PRIMARY KEY (session_id, tag_name)
 );

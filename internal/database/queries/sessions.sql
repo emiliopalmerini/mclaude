@@ -223,3 +223,20 @@ WHERE timestamp >= datetime('now', ? || ' days')
 GROUP BY model
 ORDER BY total_cost DESC;
 
+-- ============================================================================
+-- TAG & QUALITY DATA QUERIES
+-- ============================================================================
+
+-- name: AddSessionTag :exec
+INSERT INTO session_tags (session_id, tag_name) VALUES (?, ?);
+
+-- name: GetAllTags :many
+SELECT name, category, color FROM tags ORDER BY category, name;
+
+-- name: GetSessionTags :many
+SELECT t.name, t.category, t.color
+FROM tags t
+JOIN session_tags st ON t.name = st.tag_name
+WHERE st.session_id = ?
+ORDER BY t.category, t.name;
+

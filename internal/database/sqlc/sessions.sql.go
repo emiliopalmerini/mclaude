@@ -10,6 +10,24 @@ import (
 	"database/sql"
 )
 
+const addSessionTag = `-- name: AddSessionTag :exec
+
+INSERT INTO session_tags (session_id, tag_name) VALUES (?, ?)
+`
+
+type AddSessionTagParams struct {
+	SessionID string `json:"session_id"`
+	TagName   string `json:"tag_name"`
+}
+
+// ============================================================================
+// TAG & QUALITY DATA QUERIES
+// ============================================================================
+func (q *Queries) AddSessionTag(ctx context.Context, arg AddSessionTagParams) error {
+	_, err := q.db.ExecContext(ctx, addSessionTag, arg.SessionID, arg.TagName)
+	return err
+}
+
 const countSessions = `-- name: CountSessions :one
 SELECT COUNT(*) as count FROM sessions
 `
@@ -50,6 +68,33 @@ func (q *Queries) CountSessionsFiltered(ctx context.Context, arg CountSessionsFi
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const getAllTags = `-- name: GetAllTags :many
+SELECT name, category, color FROM tags ORDER BY category, name
+`
+
+func (q *Queries) GetAllTags(ctx context.Context) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getAllTags)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.Name, &i.Category, &i.Color); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getCacheMetrics = `-- name: GetCacheMetrics :one
@@ -670,7 +715,7 @@ func (q *Queries) GetProjectMetrics(ctx context.Context, dollar_1 sql.NullString
 }
 
 const getSessionByID = `-- name: GetSessionByID :one
-SELECT id, session_id, instance_id, hostname, timestamp, exit_reason, permission_mode, working_directory, git_branch, claude_version, duration_seconds, user_prompts, assistant_responses, tool_calls, tools_breakdown, files_accessed, files_modified, input_tokens, output_tokens, thinking_tokens, cache_read_tokens, cache_write_tokens, estimated_cost_usd, errors_count, model, summary FROM sessions WHERE session_id = ?
+SELECT id, session_id, instance_id, hostname, timestamp, exit_reason, permission_mode, working_directory, git_branch, claude_version, duration_seconds, user_prompts, assistant_responses, tool_calls, tools_breakdown, files_accessed, files_modified, input_tokens, output_tokens, thinking_tokens, cache_read_tokens, cache_write_tokens, estimated_cost_usd, errors_count, model, summary, rating, notes FROM sessions WHERE session_id = ?
 `
 
 func (q *Queries) GetSessionByID(ctx context.Context, sessionID string) (Session, error) {
@@ -703,8 +748,41 @@ func (q *Queries) GetSessionByID(ctx context.Context, sessionID string) (Session
 		&i.ErrorsCount,
 		&i.Model,
 		&i.Summary,
+		&i.Rating,
+		&i.Notes,
 	)
 	return i, err
+}
+
+const getSessionTags = `-- name: GetSessionTags :many
+SELECT t.name, t.category, t.color
+FROM tags t
+JOIN session_tags st ON t.name = st.tag_name
+WHERE st.session_id = ?
+ORDER BY t.category, t.name
+`
+
+func (q *Queries) GetSessionTags(ctx context.Context, sessionID string) ([]Tag, error) {
+	rows, err := q.db.QueryContext(ctx, getSessionTags, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Tag{}
+	for rows.Next() {
+		var i Tag
+		if err := rows.Scan(&i.Name, &i.Category, &i.Color); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getTodayMetrics = `-- name: GetTodayMetrics :one

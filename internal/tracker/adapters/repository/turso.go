@@ -45,8 +45,8 @@ func (r *TursoRepository) Save(session domain.Session) error {
 			tool_calls, tools_breakdown, files_accessed, files_modified,
 			input_tokens, output_tokens, thinking_tokens,
 			cache_read_tokens, cache_write_tokens, estimated_cost_usd,
-			errors_count, model, summary
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			errors_count, model, summary, rating, notes
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
 	_, err = r.db.Exec(query,
@@ -75,6 +75,8 @@ func (r *TursoRepository) Save(session domain.Session) error {
 		session.Statistics.ErrorsCount,
 		session.Statistics.Model,
 		session.Statistics.Summary,
+		session.Rating,
+		session.Notes,
 	)
 
 	if err != nil {
@@ -82,4 +84,42 @@ func (r *TursoRepository) Save(session domain.Session) error {
 	}
 
 	return nil
+}
+
+// SaveTags saves tags for a session
+func (r *TursoRepository) SaveTags(sessionID string, tags []string) error {
+	if len(tags) == 0 {
+		return nil
+	}
+
+	query := `INSERT INTO session_tags (session_id, tag_name) VALUES (?, ?)`
+	for _, tag := range tags {
+		if _, err := r.db.Exec(query, sessionID, tag); err != nil {
+			return fmt.Errorf("insert session tag %q: %w", tag, err)
+		}
+	}
+	return nil
+}
+
+// GetAllTags returns all available tags
+func (r *TursoRepository) GetAllTags() ([]domain.Tag, error) {
+	query := `SELECT name, category, color FROM tags ORDER BY category, name`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		return nil, fmt.Errorf("query tags: %w", err)
+	}
+	defer rows.Close()
+
+	var tags []domain.Tag
+	for rows.Next() {
+		var t domain.Tag
+		if err := rows.Scan(&t.Name, &t.Category, &t.Color); err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		tags = append(tags, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate tags: %w", err)
+	}
+	return tags, nil
 }
