@@ -4,11 +4,11 @@ import "fmt"
 
 // HookInput represents input from Claude Code SessionEnd hook
 type HookInput struct {
-	SessionID      string
-	TranscriptPath string
-	ExitReason     string
-	CWD            string
-	PermissionMode string
+	SessionID      string `json:"session_id"`
+	TranscriptPath string `json:"transcript_path"`
+	ExitReason     string `json:"reason"`
+	CWD            string `json:"cwd"`
+	PermissionMode string `json:"permission_mode"`
 }
 
 // Service handles the business logic for tracking sessions
@@ -51,16 +51,18 @@ func (s *Service) TrackSession(input HookInput, instanceID, hostname string) err
 	// Collect quality feedback from user (optional)
 	var qualityData QualityData
 	if s.prompter != nil {
-		tags, err := s.repository.GetAllTags()
+		var tags []Tag
+		var err error
+		tags, err = s.repository.GetAllTags()
 		if err != nil {
 			s.logger.Error(fmt.Sprintf("Failed to get tags: %v", err))
-			// Continue without tags - non-fatal error
-		} else {
-			qualityData, err = s.prompter.CollectQualityData(tags)
-			if err != nil {
-				s.logger.Error(fmt.Sprintf("Failed to collect quality data: %v", err))
-				// Continue without quality data - non-fatal error
-			}
+			// Continue with empty tags - non-fatal error
+			tags = []Tag{}
+		}
+		qualityData, err = s.prompter.CollectQualityData(tags)
+		if err != nil {
+			s.logger.Error(fmt.Sprintf("Failed to collect quality data: %v", err))
+			// Continue without quality data - non-fatal error
 		}
 	}
 

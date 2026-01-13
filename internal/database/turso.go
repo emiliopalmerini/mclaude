@@ -10,6 +10,16 @@ import (
 )
 
 func NewTurso(databaseURL, authToken string) (*sql.DB, error) {
+	return NewTursoWithOptions(databaseURL, authToken, true)
+}
+
+// NewTursoNoPing creates a connection without an initial ping.
+// Useful for hooks where latency matters and we'll discover failures on first query.
+func NewTursoNoPing(databaseURL, authToken string) (*sql.DB, error) {
+	return NewTursoWithOptions(databaseURL, authToken, false)
+}
+
+func NewTursoWithOptions(databaseURL, authToken string, ping bool) (*sql.DB, error) {
 	connStr := databaseURL + "?authToken=" + authToken
 	db, err := sql.Open("libsql", connStr)
 	if err != nil {
@@ -24,8 +34,10 @@ func NewTurso(databaseURL, authToken string) (*sql.DB, error) {
 	db.SetConnMaxLifetime(5 * time.Minute)
 	db.SetConnMaxIdleTime(0) // Don't keep idle connections
 
-	if err := db.Ping(); err != nil {
-		return nil, err
+	if ping {
+		if err := db.Ping(); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil

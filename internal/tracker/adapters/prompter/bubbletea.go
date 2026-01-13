@@ -24,29 +24,56 @@ func NewBubbleTeaPrompter(logger domain.Logger) *BubbleTeaPrompter {
 // CollectQualityData prompts the user for session feedback via TUI.
 // Returns empty QualityData if TTY is unavailable or user skips.
 func (p *BubbleTeaPrompter) CollectQualityData(tags []domain.Tag) (domain.QualityData, error) {
-	if !isTerminal() {
-		p.logger.Debug("TTY not available, skipping quality prompts")
-		return domain.QualityData{}, nil
+	p.logger.Debug("CollectQualityData called")
+
+	// Ensure TERM is set for proper terminal rendering
+	if os.Getenv("TERM") == "" {
+		os.Setenv("TERM", "xterm-256color")
+		p.logger.Debug("TERM was empty, set to xterm-256color")
 	}
 
+	// Open /dev/tty directly since stdin is consumed by hook input
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		p.logger.Debug(fmt.Sprintf("TTY not available: %v, skipping quality prompts", err))
+		return domain.QualityData{}, nil
+	}
+	defer tty.Close()
+
+	return p.runTUI(tags, tty)
+}
+
+// CollectQualityDataWithTTY prompts using a pre-opened TTY file.
+// Used by forked child processes that inherit TTY from parent.
+func (p *BubbleTeaPrompter) CollectQualityDataWithTTY(tags []domain.Tag, tty *os.File) (domain.QualityData, error) {
+	p.logger.Debug("CollectQualityDataWithTTY called")
+
+	if os.Getenv("TERM") == "" {
+		os.Setenv("TERM", "xterm-256color")
+	}
+
+	return p.runTUI(tags, tty)
+}
+
+func (p *BubbleTeaPrompter) runTUI(tags []domain.Tag, tty *os.File) (domain.QualityData, error) {
+	p.logger.Debug(fmt.Sprintf("Starting TUI, TERM=%s", os.Getenv("TERM")))
+
 	m := newModel(tags)
-	prog := tea.NewProgram(m, tea.WithAltScreen())
+	prog := tea.NewProgram(m, tea.WithAltScreen(), tea.WithInput(tty), tea.WithOutput(tty))
 	finalModel, err := prog.Run()
 	if err != nil {
+		p.logger.Debug(fmt.Sprintf("TUI error: %v", err))
 		return domain.QualityData{}, err
 	}
 
 	result := finalModel.(model)
 	if result.cancelled {
+		p.logger.Debug("TUI cancelled by user")
 		return domain.QualityData{}, nil
 	}
 
+	p.logger.Debug("TUI completed successfully")
 	return result.toQualityData(), nil
-}
-
-func isTerminal() bool {
-	_, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
-	return err == nil
 }
 
 // Steps in the wizard
