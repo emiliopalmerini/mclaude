@@ -72,6 +72,16 @@ templ SessionDetail(s sqlc.Session) {
 				</div>
 			</div>
 		</section>
+		if hasQualityData(s) {
+			<section>
+				<h2>Quality</h2>
+				<div class="quality-scales">
+					@qualityScale("Prompt Specificity", s.PromptSpecificity.Int64, s.PromptSpecificity.Valid)
+					@qualityScale("Task Completion", s.TaskCompletion.Int64, s.TaskCompletion.Valid)
+					@qualityScale("Code Confidence", s.CodeConfidence.Int64, s.CodeConfidence.Valid)
+				</div>
+			</section>
+		}
 		if s.ToolsBreakdown.Valid && s.ToolsBreakdown.String != "" && s.ToolsBreakdown.String != "{}" {
 			<section>
 				<h2>Tools Used</h2>
@@ -92,4 +102,26 @@ templ SessionDetail(s sqlc.Session) {
 			</section>
 		}
 	}
+}
+
+templ qualityScale(label string, value int64, valid bool) {
+	<div class="quality-scale">
+		<div class="quality-scale__label">{ label }</div>
+		<div class="quality-scale__bar">
+			for i := 1; i <= 5; i++ {
+				<div class={ "quality-scale__segment", templ.KV("quality-scale__segment--filled", valid && int64(i) <= value) }></div>
+			}
+		</div>
+		<div class="quality-scale__value">
+			if valid {
+				{ fmt.Sprintf("%d", value) }
+			} else {
+				-
+			}
+		</div>
+	</div>
+}
+
+func hasQualityData(s sqlc.Session) bool {
+	return s.PromptSpecificity.Valid || s.TaskCompletion.Valid || s.CodeConfidence.Valid
 }
