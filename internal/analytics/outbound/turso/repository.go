@@ -45,11 +45,11 @@ func (r *Repository) GetOverviewMetrics(ctx context.Context) (analytics.Overview
 
 	return analytics.OverviewMetrics{
 		TotalSessions: int(weekRow.SessionsWeek),
-		TotalCost:     toFloat64(weekRow.CostWeek),
+		TotalCost:     weekRow.CostWeek,
 		Tokens: analytics.TokenSummary{
-			Input:    toInt64(weekRow.InputTokensWeek),
-			Output:   toInt64(weekRow.OutputTokensWeek),
-			Thinking: toInt64(weekRow.ThinkingTokensWeek),
+			Input:    weekRow.InputTokensWeek,
+			Output:   weekRow.OutputTokensWeek,
+			Thinking: weekRow.ThinkingTokensWeek,
 		},
 		LimitHits:    int(limitHits),
 		LastLimitHit: lastLimitHit,
@@ -95,12 +95,77 @@ func (r *Repository) ListSessions(ctx context.Context, filter analytics.SessionF
 	return sessions, int(total), nil
 }
 
+// GetSession retrieves detailed session information
+func (r *Repository) GetSession(ctx context.Context, sessionID string) (analytics.SessionDetail, error) {
+	row, err := r.queries.GetSessionByID(ctx, sessionID)
+	if err != nil {
+		return analytics.SessionDetail{}, fmt.Errorf("get session: %w", err)
+	}
+
+	detail := analytics.SessionDetail{
+		SessionID:          row.SessionID,
+		Hostname:           row.Hostname,
+		ExitReason:         row.ExitReason.String,
+		WorkingDirectory:   row.WorkingDirectory.String,
+		GitBranch:          row.GitBranch.String,
+		Model:              row.Model.String,
+		ClaudeVersion:      row.ClaudeVersion.String,
+		DurationSeconds:    int(row.DurationSeconds.Int64),
+		EstimatedCost:      row.EstimatedCostUsd.Float64,
+		UserPrompts:        int(row.UserPrompts.Int64),
+		AssistantResponses: int(row.AssistantResponses.Int64),
+		ToolCalls:          int(row.ToolCalls.Int64),
+		ErrorsCount:        int(row.ErrorsCount.Int64),
+		Summary:            row.Summary.String,
+		Notes:              row.Notes.String,
+		Tokens: analytics.TokenSummary{
+			Input:      row.InputTokens.Int64,
+			Output:     row.OutputTokens.Int64,
+			Thinking:   row.ThinkingTokens.Int64,
+			CacheRead:  row.CacheReadTokens.Int64,
+			CacheWrite: row.CacheWriteTokens.Int64,
+		},
+	}
+
+	if t, err := time.Parse(time.RFC3339, row.Timestamp); err == nil {
+		detail.Timestamp = t
+	}
+
+	if row.Rating.Valid {
+		rating := int(row.Rating.Int64)
+		detail.Rating = &rating
+	}
+	if row.PromptSpecificity.Valid {
+		ps := int(row.PromptSpecificity.Int64)
+		detail.PromptSpecificity = &ps
+	}
+	if row.TaskCompletion.Valid {
+		tc := int(row.TaskCompletion.Int64)
+		detail.TaskCompletion = &tc
+	}
+	if row.CodeConfidence.Valid {
+		cc := int(row.CodeConfidence.Int64)
+		detail.CodeConfidence = &cc
+	}
+
+	return detail, nil
+}
+
 func toInt64(v interface{}) int64 {
 	switch val := v.(type) {
 	case int64:
 		return val
+	case int:
+		return int64(val)
 	case float64:
 		return int64(val)
+	case float32:
+		return int64(val)
+	case string:
+		// Try to parse string as int
+		var i int64
+		fmt.Sscanf(val, "%d", &i)
+		return i
 	case nil:
 		return 0
 	default:
@@ -112,8 +177,17 @@ func toFloat64(v interface{}) float64 {
 	switch val := v.(type) {
 	case float64:
 		return val
+	case float32:
+		return float64(val)
 	case int64:
 		return float64(val)
+	case int:
+		return float64(val)
+	case string:
+		// Try to parse string as float
+		var f float64
+		fmt.Sscanf(val, "%f", &f)
+		return f
 	case nil:
 		return 0
 	default:

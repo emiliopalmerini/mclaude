@@ -24,10 +24,10 @@ WHERE date(timestamp) = date('now');
 -- name: GetWeekMetrics :one
 SELECT
     COUNT(*) as sessions_week,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_week,
-    COALESCE(SUM(input_tokens), 0) as input_tokens_week,
-    COALESCE(SUM(output_tokens), 0) as output_tokens_week,
-    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_week
+    CAST(COALESCE(SUM(estimated_cost_usd), 0) AS REAL) as cost_week,
+    CAST(COALESCE(SUM(input_tokens), 0) AS INTEGER) as input_tokens_week,
+    CAST(COALESCE(SUM(output_tokens), 0) AS INTEGER) as output_tokens_week,
+    CAST(COALESCE(SUM(thinking_tokens), 0) AS INTEGER) as thinking_tokens_week
 FROM sessions
 WHERE date(timestamp) >= date('now', '-7 days');
 

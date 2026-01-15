@@ -33,6 +33,11 @@ func RenderMetricCards(cards []MetricCard, totalWidth int) string {
 		return ""
 	}
 
+	// Default width if not set yet
+	if totalWidth <= 0 {
+		totalWidth = 80
+	}
+
 	// Calculate card width (2 cards per row with spacing)
 	cardWidth := (totalWidth - 4) / 2
 	if cardWidth < 20 {

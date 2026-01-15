@@ -42,3 +42,28 @@ type SessionFilter struct {
 	Limit  int
 	Offset int
 }
+
+// SessionDetail contains full session data for detail view
+type SessionDetail struct {
+	SessionID          string
+	Hostname           string
+	Timestamp          time.Time
+	ExitReason         string
+	WorkingDirectory   string
+	GitBranch          string
+	Model              string
+	ClaudeVersion      string
+	DurationSeconds    int
+	Tokens             TokenSummary
+	EstimatedCost      float64
+	UserPrompts        int
+	AssistantResponses int
+	ToolCalls          int
+	ErrorsCount        int
+	Summary            string
+	Rating             *int
+	PromptSpecificity  *int
+	TaskCompletion     *int
+	CodeConfidence     *int
+	Notes              string
+}

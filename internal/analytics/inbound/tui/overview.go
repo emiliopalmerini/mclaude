@@ -42,7 +42,7 @@ func (o *Overview) loadMetrics() tea.Cmd {
 		ctx := context.Background()
 		metrics, err := o.service.GetOverview(ctx)
 		if err != nil {
-			return metricsErrorMsg{err}
+			return metricsErrorMsg{fmt.Errorf("load metrics: %w", err)}
 		}
 		return metricsLoadedMsg{metrics}
 	}

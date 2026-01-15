@@ -27,3 +27,9 @@ func (s *Service) ListSessions(ctx context.Context, filter SessionFilter) ([]Ses
 	s.logger.Debug("Listing sessions")
 	return s.repo.ListSessions(ctx, filter)
 }
+
+// GetSession returns detailed session information
+func (s *Service) GetSession(ctx context.Context, sessionID string) (SessionDetail, error) {
+	s.logger.Debug("Getting session detail")
+	return s.repo.GetSession(ctx, sessionID)
+}

@@ -9,6 +9,9 @@ type Repository interface {
 
 	// ListSessions returns paginated session summaries with total count
 	ListSessions(ctx context.Context, filter SessionFilter) ([]SessionSummary, int, error)
+
+	// GetSession retrieves detailed session information
+	GetSession(ctx context.Context, sessionID string) (SessionDetail, error)
 }
 
 // Logger defines the interface for logging

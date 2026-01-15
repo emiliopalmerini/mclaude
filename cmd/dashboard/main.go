@@ -14,8 +14,8 @@ import (
 )
 
 type config struct {
-	TursoDatabaseURL string `envconfig:"TURSO_DATABASE_URL" required:"true"`
-	TursoAuthToken   string `envconfig:"TURSO_AUTH_TOKEN" required:"true"`
+	TursoDatabaseURL string `envconfig:"TURSO_DATABASE_URL_CLAUDE_WATCHER" required:"true"`
+	TursoAuthToken   string `envconfig:"TURSO_AUTH_TOKEN_CLAUDE_WATCHER" required:"true"`
 }
 
 func main() {

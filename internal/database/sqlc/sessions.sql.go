@@ -1082,20 +1082,20 @@ func (q *Queries) GetUsageSinceLastLimit(ctx context.Context) (GetUsageSinceLast
 const getWeekMetrics = `-- name: GetWeekMetrics :one
 SELECT
     COUNT(*) as sessions_week,
-    COALESCE(SUM(estimated_cost_usd), 0) as cost_week,
-    COALESCE(SUM(input_tokens), 0) as input_tokens_week,
-    COALESCE(SUM(output_tokens), 0) as output_tokens_week,
-    COALESCE(SUM(thinking_tokens), 0) as thinking_tokens_week
+    CAST(COALESCE(SUM(estimated_cost_usd), 0) AS REAL) as cost_week,
+    CAST(COALESCE(SUM(input_tokens), 0) AS INTEGER) as input_tokens_week,
+    CAST(COALESCE(SUM(output_tokens), 0) AS INTEGER) as output_tokens_week,
+    CAST(COALESCE(SUM(thinking_tokens), 0) AS INTEGER) as thinking_tokens_week
 FROM sessions
 WHERE date(timestamp) >= date('now', '-7 days')
 `
 
 type GetWeekMetricsRow struct {
-	SessionsWeek       int64       `json:"sessions_week"`
-	CostWeek           interface{} `json:"cost_week"`
-	InputTokensWeek    interface{} `json:"input_tokens_week"`
-	OutputTokensWeek   interface{} `json:"output_tokens_week"`
-	ThinkingTokensWeek interface{} `json:"thinking_tokens_week"`
+	SessionsWeek       int64   `json:"sessions_week"`
+	CostWeek           float64 `json:"cost_week"`
+	InputTokensWeek    int64   `json:"input_tokens_week"`
+	OutputTokensWeek   int64   `json:"output_tokens_week"`
+	ThinkingTokensWeek int64   `json:"thinking_tokens_week"`
 }
 
 func (q *Queries) GetWeekMetrics(ctx context.Context) (GetWeekMetricsRow, error) {

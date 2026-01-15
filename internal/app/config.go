@@ -10,8 +10,8 @@ type Config struct {
 	Addr            string        `envconfig:"ADDR" default:":8080"`
 	ShutdownTimeout time.Duration `envconfig:"SHUTDOWN_TIMEOUT" default:"10s"`
 
-	TursoDatabaseURL string `envconfig:"TURSO_DATABASE_URL" required:"true"`
-	TursoAuthToken   string `envconfig:"TURSO_AUTH_TOKEN" required:"true"`
+	TursoDatabaseURL string `envconfig:"TURSO_DATABASE_URL_CLAUDE_WATCHER" required:"true"`
+	TursoAuthToken   string `envconfig:"TURSO_AUTH_TOKEN_CLAUDE_WATCHER" required:"true"`
 
 	// Pagination
 	DefaultPageSize int64 `envconfig:"DEFAULT_PAGE_SIZE" default:"20"`
