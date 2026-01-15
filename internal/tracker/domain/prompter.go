@@ -17,6 +17,19 @@ type Tag struct {
 	Color    string
 }
 
+// DefaultTaskTypeTags returns the predefined task type tags
+func DefaultTaskTypeTags() []Tag {
+	return []Tag{
+		{Name: "feature", Category: "task_type", Color: "#10B981"},
+		{Name: "bugfix", Category: "task_type", Color: "#EF4444"},
+		{Name: "refactor", Category: "task_type", Color: "#8B5CF6"},
+		{Name: "exploration", Category: "task_type", Color: "#3B82F6"},
+		{Name: "docs", Category: "task_type", Color: "#F59E0B"},
+		{Name: "test", Category: "task_type", Color: "#EC4899"},
+		{Name: "config", Category: "task_type", Color: "#6B7280"},
+	}
+}
+
 // Prompter collects quality feedback from the user
 type Prompter interface {
 	// CollectQualityData prompts the user for session feedback.

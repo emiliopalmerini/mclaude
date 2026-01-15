@@ -51,12 +51,17 @@ func run() error {
 	log.Debug(fmt.Sprintf("Parsed stats: prompts=%d, responses=%d, tools=%d, limit_events=%d",
 		stats.UserPrompts, stats.AssistantResponses, stats.ToolCalls, len(parsed.LimitEvents)))
 
-	// 2. Collect quality feedback via TUI (no DB needed - this is the interactive part)
-	bubbleTeaPrompter := prompter.NewBubbleTeaPrompter(log)
-	qualityData, err := bubbleTeaPrompter.CollectQualityData(nil)
-	if err != nil {
-		log.Error(fmt.Sprintf("Failed to collect quality data: %v", err))
-		// Continue without quality data
+	// 2. Collect quality feedback via TUI (only if session was interactive)
+	var qualityData domain.QualityData
+	if input.IsInteractive {
+		bubbleTeaPrompter := prompter.NewBubbleTeaPrompter(log)
+		qualityData, err = bubbleTeaPrompter.CollectQualityData(domain.DefaultTaskTypeTags())
+		if err != nil {
+			log.Error(fmt.Sprintf("Failed to collect quality data: %v", err))
+			// Continue without quality data
+		}
+	} else {
+		log.Debug("Skipping quality prompts - session was not interactive")
 	}
 
 	// 3. Connect to database and save (after user interaction completes)

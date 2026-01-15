@@ -9,6 +9,7 @@ type HookInput struct {
 	ExitReason     string `json:"reason"`
 	CWD            string `json:"cwd"`
 	PermissionMode string `json:"permission_mode"`
+	IsInteractive  bool   `json:"is_interactive"`
 }
 
 // Service handles the business logic for tracking sessions
