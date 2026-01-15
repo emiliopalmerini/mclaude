@@ -16,6 +16,7 @@ const (
 	ScreenOverview Screen = iota
 	ScreenSessions
 	ScreenDetail
+	ScreenCosts
 )
 
 // App is the main dashboard TUI application
@@ -25,6 +26,7 @@ type App struct {
 	overview      *analyticstui.Overview
 	sessions      *analyticstui.Sessions
 	detail        *analyticstui.Detail
+	costs         *analyticstui.Costs
 	styles        *theme.Styles
 	width         int
 	height        int
@@ -37,6 +39,7 @@ func NewApp(analyticsService *analytics.Service) *App {
 		currentScreen: ScreenOverview,
 		overview:      analyticstui.NewOverview(analyticsService),
 		sessions:      analyticstui.NewSessions(analyticsService),
+		costs:         analyticstui.NewCosts(analyticsService),
 		styles:        theme.Default(),
 	}
 }
@@ -62,6 +65,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if a.currentScreen != ScreenSessions {
 				a.currentScreen = ScreenSessions
 				return a, a.sessions.Init()
+			}
+		case "3":
+			if a.currentScreen != ScreenCosts {
+				a.currentScreen = ScreenCosts
+				return a, a.costs.Init()
 			}
 		case "esc":
 			if a.currentScreen == ScreenDetail {
@@ -91,6 +99,8 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if a.detail != nil {
 			a.detail, cmd = a.detail.Update(msg)
 		}
+	case ScreenCosts:
+		a.costs, cmd = a.costs.Update(msg)
 	}
 
 	return a, cmd
@@ -100,6 +110,11 @@ func (a *App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (a *App) View() string {
 	header := a.renderHeader()
 	nav := a.renderNav()
+
+	// Separator line for clean visual hierarchy
+	sep := lipgloss.NewStyle().
+		Foreground(theme.Gray700).
+		Render("────────────────────────────────────────────────────────────────")
 
 	var content string
 	switch a.currentScreen {
@@ -111,24 +126,33 @@ func (a *App) View() string {
 		if a.detail != nil {
 			content = a.detail.View()
 		}
+	case ScreenCosts:
+		content = a.costs.View()
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, nav, "", content)
+	return lipgloss.JoinVertical(lipgloss.Left, header, nav, sep, "", content)
 }
 
 func (a *App) renderHeader() string {
-	title := a.styles.Title.Copy().
-		Foreground(theme.BrightPurple).
+	// Bold, prominent title - typography as the focus
+	title := lipgloss.NewStyle().
 		Bold(true).
-		Render("Claude Watcher")
+		Foreground(theme.White).
+		Render("CLAUDE WATCHER")
 
-	return title
+	// Subtle tagline
+	tagline := lipgloss.NewStyle().
+		Foreground(theme.Gray600).
+		Render("Session Analytics")
+
+	return lipgloss.JoinHorizontal(lipgloss.Bottom, title, "  ", tagline)
 }
 
 func (a *App) renderNav() string {
 	items := []NavItem{
 		{Key: "1", Label: "Overview", Active: a.currentScreen == ScreenOverview},
 		{Key: "2", Label: "Sessions", Active: a.currentScreen == ScreenSessions || a.currentScreen == ScreenDetail},
+		{Key: "3", Label: "Costs", Active: a.currentScreen == ScreenCosts},
 	}
 	nav := NewNavBar(items)
 	return nav.View()

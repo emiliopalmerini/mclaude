@@ -194,3 +194,82 @@ func toFloat64(v interface{}) float64 {
 		return 0
 	}
 }
+
+// GetCostsBreakdown retrieves cost analysis data
+func (r *Repository) GetCostsBreakdown(ctx context.Context) (analytics.CostsBreakdown, error) {
+	var result analytics.CostsBreakdown
+
+	// Get total cost from all time
+	dashboardMetrics, err := r.queries.GetDashboardMetrics(ctx)
+	if err != nil {
+		return result, fmt.Errorf("get dashboard metrics: %w", err)
+	}
+	result.TotalCost = toFloat64(dashboardMetrics.TotalCostUsd)
+
+	// Get today's cost
+	todayMetrics, err := r.queries.GetTodayMetrics(ctx)
+	if err != nil {
+		return result, fmt.Errorf("get today metrics: %w", err)
+	}
+	result.TodayCost = toFloat64(todayMetrics.CostToday)
+
+	// Get this week's cost
+	weekMetrics, err := r.queries.GetWeekMetrics(ctx)
+	if err != nil {
+		return result, fmt.Errorf("get week metrics: %w", err)
+	}
+	result.WeekCost = weekMetrics.CostWeek
+
+	// Get model breakdown (last 30 days)
+	modelRows, err := r.queries.GetModelEfficiency(ctx, sql.NullString{String: "-30", Valid: true})
+	if err != nil {
+		return result, fmt.Errorf("get model efficiency: %w", err)
+	}
+	result.ByModel = make([]analytics.ModelCostRow, 0, len(modelRows))
+	for _, row := range modelRows {
+		result.ByModel = append(result.ByModel, analytics.ModelCostRow{
+			Model:              row.Model,
+			Sessions:           int(row.Sessions),
+			Cost:               toFloat64(row.TotalCost),
+			CostPerMillionToks: float64(row.CostPerMillionTokens),
+		})
+	}
+
+	// Get daily trend (last 7 days)
+	dailyRows, err := r.queries.GetDailyMetrics(ctx, sql.NullString{String: "-7", Valid: true})
+	if err != nil {
+		return result, fmt.Errorf("get daily metrics: %w", err)
+	}
+	result.DailyTrend = make([]analytics.DailyCost, 0, len(dailyRows))
+	for _, row := range dailyRows {
+		date := ""
+		if s, ok := row.Period.(string); ok {
+			date = s
+		}
+		result.DailyTrend = append(result.DailyTrend, analytics.DailyCost{
+			Date: date,
+			Cost: toFloat64(row.Cost),
+		})
+	}
+
+	// Get project breakdown (last 30 days, top 5)
+	projectRows, err := r.queries.GetProjectMetrics(ctx, sql.NullString{String: "-30", Valid: true})
+	if err != nil {
+		return result, fmt.Errorf("get project metrics: %w", err)
+	}
+	limit := 5
+	if len(projectRows) < limit {
+		limit = len(projectRows)
+	}
+	result.ByProject = make([]analytics.ProjectCostRow, 0, limit)
+	for i := 0; i < limit; i++ {
+		row := projectRows[i]
+		result.ByProject = append(result.ByProject, analytics.ProjectCostRow{
+			Project:  row.Directory,
+			Sessions: int(row.Sessions),
+			Cost:     toFloat64(row.Cost),
+		})
+	}
+
+	return result, nil
+}

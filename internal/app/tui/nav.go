@@ -29,22 +29,30 @@ func NewNavBar(items []NavItem) *NavBar {
 	}
 }
 
-// View renders the navigation bar
+// View renders the navigation bar as toggle-style tabs
 func (n NavBar) View() string {
 	var items []string
 
 	for _, item := range n.Items {
-		keyStyle := n.styles.HelpKey
-		var labelStyle lipgloss.Style
-
+		var rendered string
 		if item.Active {
-			labelStyle = n.styles.Active
+			// Active tab: inverted colors (white on black effect)
+			rendered = n.styles.Active.Render(item.Label)
 		} else {
-			labelStyle = n.styles.Muted
+			// Inactive: muted with key hint
+			key := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("#525252")).
+				Render("[" + item.Key + "]")
+			label := n.styles.Inactive.Render(item.Label)
+			rendered = key + " " + label
 		}
-
-		items = append(items, keyStyle.Render(item.Key)+":"+labelStyle.Render(item.Label))
+		items = append(items, rendered)
 	}
 
-	return strings.Join(items, "  ")
+	// Join with generous spacing for clean look
+	sep := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#404040")).
+		Render("  /  ")
+
+	return strings.Join(items, sep)
 }

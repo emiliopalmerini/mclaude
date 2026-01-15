@@ -33,3 +33,9 @@ func (s *Service) GetSession(ctx context.Context, sessionID string) (SessionDeta
 	s.logger.Debug("Getting session detail")
 	return s.repo.GetSession(ctx, sessionID)
 }
+
+// GetCostsBreakdown returns cost analysis data
+func (s *Service) GetCostsBreakdown(ctx context.Context) (CostsBreakdown, error) {
+	s.logger.Debug("Getting costs breakdown")
+	return s.repo.GetCostsBreakdown(ctx)
+}

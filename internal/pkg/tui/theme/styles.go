@@ -59,22 +59,22 @@ func Default() *Styles {
 
 func newStyles() *Styles {
 	return &Styles{
-		// Text styles
+		// Text styles - typography-focused, high contrast
 		Title: lipgloss.NewStyle().
 			Bold(true).
 			Foreground(White).
 			MarginBottom(1),
 
 		Subtitle: lipgloss.NewStyle().
-			Foreground(Purple).
+			Foreground(Gray300).
 			Bold(true).
-			MarginBottom(1),
+			MarginTop(1),
 
 		Body: lipgloss.NewStyle().
-			Foreground(LightGray),
+			Foreground(Gray400),
 
 		Muted: lipgloss.NewStyle().
-			Foreground(DimGray),
+			Foreground(Gray500),
 
 		Bold: lipgloss.NewStyle().
 			Bold(true).
@@ -82,70 +82,77 @@ func newStyles() *Styles {
 
 		BoldMuted: lipgloss.NewStyle().
 			Bold(true).
-			Foreground(DimGray),
+			Foreground(Gray500),
 
 		Highlighted: lipgloss.NewStyle().
-			Foreground(BrightPurple).
+			Foreground(White).
 			Bold(true),
 
-		// Interactive elements
+		// Interactive elements - inverted for selection
 		Cursor: lipgloss.NewStyle().
-			Foreground(BrightPurple).
+			Foreground(Black).
+			Background(White).
 			Bold(true),
 
 		Selected: lipgloss.NewStyle().
-			Foreground(Purple),
-
-		Unselected: lipgloss.NewStyle().
-			Foreground(DimGray),
-
-		Active: lipgloss.NewStyle().
-			Foreground(BrightPurple).
+			Foreground(White).
 			Bold(true),
 
+		Unselected: lipgloss.NewStyle().
+			Foreground(Gray500),
+
+		Active: lipgloss.NewStyle().
+			Foreground(Black).
+			Background(White).
+			Bold(true).
+			Padding(0, 1),
+
 		Inactive: lipgloss.NewStyle().
-			Foreground(DimGray),
+			Foreground(Gray500).
+			Padding(0, 1),
 
 		// Help and hints
 		Help: lipgloss.NewStyle().
-			Foreground(DimGray).
-			MarginTop(1),
+			Foreground(Gray600).
+			MarginTop(2),
 
 		HelpKey: lipgloss.NewStyle().
-			Foreground(LightGray).
+			Foreground(Gray400).
 			Bold(true),
 
-		// Layout
+		// Layout - minimal borders, clean lines
 		Container: lipgloss.NewStyle().
 			Padding(1, 2),
 
 		Card: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(DarkGray).
-			Padding(1, 2),
+			Border(lipgloss.NormalBorder(), false, false, false, true).
+			BorderForeground(Gray700).
+			Padding(0, 2).
+			MarginRight(2),
 
 		Border: lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(DimGray),
+			Border(lipgloss.NormalBorder()).
+			BorderForeground(Gray700),
 
 		// Progress indicators
 		ProgressActive: lipgloss.NewStyle().
-			Foreground(Purple),
+			Foreground(White),
 
 		ProgressInactive: lipgloss.NewStyle().
-			Foreground(DimGray),
+			Foreground(Gray700),
 
-		// Status indicators
+		// Status indicators - subtle differentiation
 		Success: lipgloss.NewStyle().
-			Foreground(Success),
+			Foreground(White),
 
 		Warning: lipgloss.NewStyle().
-			Foreground(Warning),
+			Foreground(Gray300),
 
 		Error: lipgloss.NewStyle().
-			Foreground(Error),
+			Foreground(Gray400).
+			Italic(true),
 
 		Info: lipgloss.NewStyle().
-			Foreground(Info),
+			Foreground(Gray400),
 	}
 }

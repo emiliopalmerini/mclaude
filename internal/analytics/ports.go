@@ -12,6 +12,9 @@ type Repository interface {
 
 	// GetSession retrieves detailed session information
 	GetSession(ctx context.Context, sessionID string) (SessionDetail, error)
+
+	// GetCostsBreakdown retrieves cost analysis data
+	GetCostsBreakdown(ctx context.Context) (CostsBreakdown, error)
 }
 
 // Logger defines the interface for logging

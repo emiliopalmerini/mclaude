@@ -13,14 +13,24 @@ type MetricCard struct {
 	Subtitle string
 }
 
-// View renders the metric card
+// View renders the metric card with minimal, typography-focused design
 func (m MetricCard) View(width int) string {
 	styles := theme.Default()
 
 	card := styles.Card.Copy().Width(width)
 
-	title := styles.Muted.Render(m.Title)
-	value := styles.Bold.Copy().Foreground(theme.BrightPurple).Render(m.Value)
+	// Large, bold value as focal point
+	value := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(theme.White).
+		Render(m.Value)
+
+	// Title above value, uppercase for hierarchy
+	title := lipgloss.NewStyle().
+		Foreground(theme.Gray500).
+		Render(m.Title)
+
+	// Subtitle below, muted
 	subtitle := styles.Muted.Render(m.Subtitle)
 
 	content := lipgloss.JoinVertical(lipgloss.Left, title, value, subtitle)

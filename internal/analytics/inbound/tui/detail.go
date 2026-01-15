@@ -176,10 +176,13 @@ func (d *Detail) View() string {
 }
 
 func (d *Detail) renderField(label, value string) string {
-	labelStyle := d.styles.BoldMuted.Copy().Width(14)
-	valueStyle := d.styles.Body
+	labelStyle := lipgloss.NewStyle().
+		Foreground(theme.Gray500).
+		Width(14)
+	valueStyle := lipgloss.NewStyle().
+		Foreground(theme.White)
 	return lipgloss.JoinHorizontal(lipgloss.Top,
-		labelStyle.Render(label+":"),
+		labelStyle.Render(label),
 		valueStyle.Render(value),
 	)
 }

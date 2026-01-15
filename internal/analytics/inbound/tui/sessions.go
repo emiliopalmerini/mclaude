@@ -150,22 +150,21 @@ func (s *Sessions) View() string {
 }
 
 func (s *Sessions) renderHeader() string {
+	headerStyle := lipgloss.NewStyle().
+		Foreground(theme.Gray500).
+		Bold(true)
+
 	cols := []string{
-		s.styles.BoldMuted.Copy().Width(12).Render("Time"),
-		s.styles.BoldMuted.Copy().Width(25).Render("Project"),
-		s.styles.BoldMuted.Copy().Width(15).Render("Model"),
-		s.styles.BoldMuted.Copy().Width(10).Render("Cost"),
-		s.styles.BoldMuted.Copy().Width(8).Render("Tools"),
+		headerStyle.Copy().Width(12).Render("TIME"),
+		headerStyle.Copy().Width(25).Render("PROJECT"),
+		headerStyle.Copy().Width(15).Render("MODEL"),
+		headerStyle.Copy().Width(10).Render("COST"),
+		headerStyle.Copy().Width(8).Render("TOOLS"),
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, cols...)
 }
 
 func (s *Sessions) renderRow(session analytics.SessionSummary, selected bool) string {
-	style := s.styles.Body
-	if selected {
-		style = s.styles.Highlighted
-	}
-
 	// Format timestamp
 	timeStr := session.Timestamp.Format("Jan 02 15:04")
 
@@ -187,6 +186,18 @@ func (s *Sessions) renderRow(session analytics.SessionSummary, selected bool) st
 	model = strings.TrimPrefix(model, "claude-")
 	if len(model) > 13 {
 		model = model[:10] + "..."
+	}
+
+	var style lipgloss.Style
+	if selected {
+		// Inverted selection: white text on dark background
+		style = lipgloss.NewStyle().
+			Foreground(theme.Black).
+			Background(theme.White).
+			Bold(true)
+	} else {
+		style = lipgloss.NewStyle().
+			Foreground(theme.Gray400)
 	}
 
 	cols := []string{

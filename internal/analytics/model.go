@@ -67,3 +67,34 @@ type SessionDetail struct {
 	CodeConfidence     *int
 	Notes              string
 }
+
+// CostsBreakdown contains cost analysis data
+type CostsBreakdown struct {
+	TotalCost  float64
+	TodayCost  float64
+	WeekCost   float64
+	ByModel    []ModelCostRow
+	DailyTrend []DailyCost
+	ByProject  []ProjectCostRow
+}
+
+// ModelCostRow represents cost data for a single model
+type ModelCostRow struct {
+	Model              string
+	Sessions           int
+	Cost               float64
+	CostPerMillionToks float64
+}
+
+// DailyCost represents cost for a single day
+type DailyCost struct {
+	Date string
+	Cost float64
+}
+
+// ProjectCostRow represents cost data for a single project
+type ProjectCostRow struct {
+	Project  string
+	Sessions int
+	Cost     float64
+}
