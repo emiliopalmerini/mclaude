@@ -8,6 +8,7 @@
 *.so
 *.dylib
 /claude-watcher
+/session-tracker
 /test-prompter
 /dashboard
 
