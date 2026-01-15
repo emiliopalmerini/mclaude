@@ -24,3 +24,21 @@ type TokenSummary struct {
 func (t TokenSummary) Total() int64 {
 	return t.Input + t.Output
 }
+
+// SessionSummary is a lightweight session for list views
+type SessionSummary struct {
+	SessionID     string
+	Timestamp     time.Time
+	WorkingDir    string
+	Model         string
+	EstimatedCost float64
+	TotalTokens   int64
+	ToolCalls     int
+	Rating        *int
+}
+
+// SessionFilter defines criteria for filtering sessions
+type SessionFilter struct {
+	Limit  int
+	Offset int
+}

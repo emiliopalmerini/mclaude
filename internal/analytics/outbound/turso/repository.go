@@ -56,6 +56,45 @@ func (r *Repository) GetOverviewMetrics(ctx context.Context) (analytics.Overview
 	}, nil
 }
 
+// ListSessions returns paginated session summaries with total count
+func (r *Repository) ListSessions(ctx context.Context, filter analytics.SessionFilter) ([]analytics.SessionSummary, int, error) {
+	// Get total count
+	total, err := r.queries.CountSessions(ctx)
+	if err != nil {
+		return nil, 0, fmt.Errorf("count sessions: %w", err)
+	}
+
+	// Get sessions
+	params := sqlc.ListSessionsParams{
+		Limit:  int64(filter.Limit),
+		Offset: int64(filter.Offset),
+	}
+
+	rows, err := r.queries.ListSessions(ctx, params)
+	if err != nil {
+		return nil, 0, fmt.Errorf("list sessions: %w", err)
+	}
+
+	sessions := make([]analytics.SessionSummary, 0, len(rows))
+	for _, row := range rows {
+		s := analytics.SessionSummary{
+			SessionID:     row.SessionID,
+			WorkingDir:    row.WorkingDirectory.String,
+			Model:         row.Model.String,
+			EstimatedCost: row.EstimatedCostUsd.Float64,
+			ToolCalls:     int(row.ToolCalls.Int64),
+		}
+
+		if t, err := time.Parse(time.RFC3339, row.Timestamp); err == nil {
+			s.Timestamp = t
+		}
+
+		sessions = append(sessions, s)
+	}
+
+	return sessions, int(total), nil
+}
+
 func toInt64(v interface{}) int64 {
 	switch val := v.(type) {
 	case int64:

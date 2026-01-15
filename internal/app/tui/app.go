@@ -9,19 +9,33 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// Screen identifies the current screen
+type Screen int
+
+const (
+	ScreenOverview Screen = iota
+	ScreenSessions
+)
+
 // App is the main dashboard TUI application
 type App struct {
-	overview *analyticstui.Overview
-	styles   *theme.Styles
-	width    int
-	height   int
+	service       *analytics.Service
+	currentScreen Screen
+	overview      *analyticstui.Overview
+	sessions      *analyticstui.Sessions
+	styles        *theme.Styles
+	width         int
+	height        int
 }
 
 // NewApp creates a new dashboard application
 func NewApp(analyticsService *analytics.Service) *App {
 	return &App{
-		overview: analyticstui.NewOverview(analyticsService),
-		styles:   theme.Default(),
+		service:       analyticsService,
+		currentScreen: ScreenOverview,
+		overview:      analyticstui.NewOverview(analyticsService),
+		sessions:      analyticstui.NewSessions(analyticsService),
+		styles:        theme.Default(),
 	}
 }
 
@@ -37,6 +51,16 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q", "ctrl+c":
 			return a, tea.Quit
+		case "1":
+			if a.currentScreen != ScreenOverview {
+				a.currentScreen = ScreenOverview
+				return a, a.overview.Init()
+			}
+		case "2":
+			if a.currentScreen != ScreenSessions {
+				a.currentScreen = ScreenSessions
+				return a, a.sessions.Init()
+			}
 		}
 
 	case tea.WindowSizeMsg:
@@ -44,18 +68,32 @@ func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		a.height = msg.Height
 	}
 
-	// Forward to overview screen
+	// Forward to current screen
 	var cmd tea.Cmd
-	a.overview, cmd = a.overview.Update(msg)
+	switch a.currentScreen {
+	case ScreenOverview:
+		a.overview, cmd = a.overview.Update(msg)
+	case ScreenSessions:
+		a.sessions, cmd = a.sessions.Update(msg)
+	}
+
 	return a, cmd
 }
 
 // View implements tea.Model
 func (a App) View() string {
 	header := a.renderHeader()
-	content := a.overview.View()
+	nav := a.renderNav()
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, "", content)
+	var content string
+	switch a.currentScreen {
+	case ScreenOverview:
+		content = a.overview.View()
+	case ScreenSessions:
+		content = a.sessions.View()
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, header, nav, "", content)
 }
 
 func (a App) renderHeader() string {
@@ -65,4 +103,13 @@ func (a App) renderHeader() string {
 		Render("Claude Watcher")
 
 	return title
+}
+
+func (a App) renderNav() string {
+	items := []NavItem{
+		{Key: "1", Label: "Overview", Active: a.currentScreen == ScreenOverview},
+		{Key: "2", Label: "Sessions", Active: a.currentScreen == ScreenSessions},
+	}
+	nav := NewNavBar(items)
+	return nav.View()
 }

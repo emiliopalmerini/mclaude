@@ -21,3 +21,9 @@ func (s *Service) GetOverview(ctx context.Context) (OverviewMetrics, error) {
 	s.logger.Debug("Fetching overview metrics")
 	return s.repo.GetOverviewMetrics(ctx)
 }
+
+// ListSessions returns filtered session summaries with total count
+func (s *Service) ListSessions(ctx context.Context, filter SessionFilter) ([]SessionSummary, int, error) {
+	s.logger.Debug("Listing sessions")
+	return s.repo.ListSessions(ctx, filter)
+}

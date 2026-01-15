@@ -6,6 +6,9 @@ import "context"
 type Repository interface {
 	// GetOverviewMetrics retrieves aggregate metrics for the dashboard overview
 	GetOverviewMetrics(ctx context.Context) (OverviewMetrics, error)
+
+	// ListSessions returns paginated session summaries with total count
+	ListSessions(ctx context.Context, filter SessionFilter) ([]SessionSummary, int, error)
 }
 
 // Logger defines the interface for logging
