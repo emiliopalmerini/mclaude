@@ -298,9 +298,13 @@ func (m model) handleNotesKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "q":
 		m.cancelled = true
 		return m, tea.Quit
-	case "h", "backspace":
+	case "b", "shift+tab":
 		return m.prevStep()
-	case "l", "enter":
+	case "enter", "tab":
+		m.step = stepDone
+		return m, tea.Quit
+	case "esc":
+		// Skip and finish
 		m.step = stepDone
 		return m, tea.Quit
 	}
@@ -321,10 +325,19 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case "esc":
+		// Skip remaining and finish
 		m.step = stepDone
 		return m, tea.Quit
 
-	// Navigation: j/k for up/down (tags), h/l for prev/next step or scale value
+	// Back navigation - always go to previous step
+	case "b", "shift+tab":
+		return m.prevStep()
+
+	// Forward navigation
+	case "enter", "tab":
+		return m.nextStep()
+
+	// Vertical navigation (tags only)
 	case "k", "up":
 		if m.step == stepTagsTaskType {
 			m.moveCursorUp()
@@ -337,29 +350,20 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
-	case "h", "left", "backspace":
-		if m.isScaleStep() {
-			if m.scaleCursor > 1 {
-				m.scaleCursor--
-			}
-		} else {
-			return m.prevStep()
+	// Horizontal navigation (scales only)
+	case "h", "left":
+		if m.isScaleStep() && m.scaleCursor > 1 {
+			m.scaleCursor--
 		}
 		return m, nil
 
-	case "l", "right", "tab":
-		if m.isScaleStep() {
-			if m.scaleCursor < 5 {
-				m.scaleCursor++
-			}
-		} else {
-			return m.nextStep()
+	case "l", "right":
+		if m.isScaleStep() && m.scaleCursor < 5 {
+			m.scaleCursor++
 		}
 		return m, nil
 
-	case "enter":
-		return m.nextStep()
-
+	// Selection
 	case " ":
 		if m.step == stepTagsTaskType {
 			m.toggleTag()
@@ -368,6 +372,7 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	// Quick number selection for scales
 	case "1", "2", "3", "4", "5":
 		if m.isScaleStep() {
 			num := int(key[0] - '0')
@@ -679,30 +684,31 @@ func (m model) getKeyBindings() []keyBinding {
 	switch {
 	case m.step == stepTagsTaskType:
 		return []keyBinding{
-			{"j/k", "nav"},
-			{"spc", "sel"},
-			{"⏎", "→"},
-			{"q", "quit"},
+			{"j/k", "move"},
+			{"spc", "toggle"},
+			{"⏎", "next"},
+			{"b", "back"},
+			{"esc", "skip"},
 		}
 	case m.isScaleStep():
 		return []keyBinding{
-			{"h/l", "mov"},
-			{"1-5", "sel"},
-			{"spc", "ok"},
-			{"⏎", "→"},
-			{"q", "quit"},
+			{"h/l", "adjust"},
+			{"1-5", "select"},
+			{"⏎", "next"},
+			{"b", "back"},
+			{"esc", "skip"},
 		}
 	case m.step == stepNotes:
 		if m.vimMode == modeInsert {
 			return []keyBinding{
-				{"esc", "normal"},
+				{"esc", "exit edit"},
 			}
 		}
 		return []keyBinding{
-			{"i", "ins"},
-			{"h", "←"},
-			{"l/⏎", "done"},
-			{"q", "quit"},
+			{"i", "edit"},
+			{"⏎", "done"},
+			{"b", "back"},
+			{"esc", "skip"},
 		}
 	}
 	return nil
