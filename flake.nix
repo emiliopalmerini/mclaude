@@ -13,7 +13,7 @@
         in {
           default = pkgs.buildGoModule {
             pname = "claude-watcher";
-            version = "0.2.0";
+            version = "0.3.0";
             src = ./.;
             vendorHash = "sha256-gODQwQB52Qes2zmjWHZoX+SCF9or4cE3S/MKdKD3RIg=";
             proxyVendor = true;
