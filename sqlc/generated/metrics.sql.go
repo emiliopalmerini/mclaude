@@ -117,6 +117,160 @@ func (q *Queries) CreateSessionTool(ctx context.Context, arg CreateSessionToolPa
 	return err
 }
 
+const getAggregateStats = `-- name: GetAggregateStats :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.created_at >= ?
+`
+
+type GetAggregateStatsRow struct {
+	SessionCount           int64       `json:"session_count"`
+	TotalUserMessages      interface{} `json:"total_user_messages"`
+	TotalAssistantMessages interface{} `json:"total_assistant_messages"`
+	TotalTurns             interface{} `json:"total_turns"`
+	TotalTokenInput        interface{} `json:"total_token_input"`
+	TotalTokenOutput       interface{} `json:"total_token_output"`
+	TotalTokenCacheRead    interface{} `json:"total_token_cache_read"`
+	TotalTokenCacheWrite   interface{} `json:"total_token_cache_write"`
+	TotalCostUsd           interface{} `json:"total_cost_usd"`
+	TotalErrors            interface{} `json:"total_errors"`
+}
+
+func (q *Queries) GetAggregateStats(ctx context.Context, createdAt string) (GetAggregateStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getAggregateStats, createdAt)
+	var i GetAggregateStatsRow
+	err := row.Scan(
+		&i.SessionCount,
+		&i.TotalUserMessages,
+		&i.TotalAssistantMessages,
+		&i.TotalTurns,
+		&i.TotalTokenInput,
+		&i.TotalTokenOutput,
+		&i.TotalTokenCacheRead,
+		&i.TotalTokenCacheWrite,
+		&i.TotalCostUsd,
+		&i.TotalErrors,
+	)
+	return i, err
+}
+
+const getAggregateStatsByExperiment = `-- name: GetAggregateStatsByExperiment :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.experiment_id = ? AND s.created_at >= ?
+`
+
+type GetAggregateStatsByExperimentParams struct {
+	ExperimentID sql.NullString `json:"experiment_id"`
+	CreatedAt    string         `json:"created_at"`
+}
+
+type GetAggregateStatsByExperimentRow struct {
+	SessionCount           int64       `json:"session_count"`
+	TotalUserMessages      interface{} `json:"total_user_messages"`
+	TotalAssistantMessages interface{} `json:"total_assistant_messages"`
+	TotalTurns             interface{} `json:"total_turns"`
+	TotalTokenInput        interface{} `json:"total_token_input"`
+	TotalTokenOutput       interface{} `json:"total_token_output"`
+	TotalTokenCacheRead    interface{} `json:"total_token_cache_read"`
+	TotalTokenCacheWrite   interface{} `json:"total_token_cache_write"`
+	TotalCostUsd           interface{} `json:"total_cost_usd"`
+	TotalErrors            interface{} `json:"total_errors"`
+}
+
+func (q *Queries) GetAggregateStatsByExperiment(ctx context.Context, arg GetAggregateStatsByExperimentParams) (GetAggregateStatsByExperimentRow, error) {
+	row := q.db.QueryRowContext(ctx, getAggregateStatsByExperiment, arg.ExperimentID, arg.CreatedAt)
+	var i GetAggregateStatsByExperimentRow
+	err := row.Scan(
+		&i.SessionCount,
+		&i.TotalUserMessages,
+		&i.TotalAssistantMessages,
+		&i.TotalTurns,
+		&i.TotalTokenInput,
+		&i.TotalTokenOutput,
+		&i.TotalTokenCacheRead,
+		&i.TotalTokenCacheWrite,
+		&i.TotalCostUsd,
+		&i.TotalErrors,
+	)
+	return i, err
+}
+
+const getAggregateStatsByProject = `-- name: GetAggregateStatsByProject :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.project_id = ? AND s.created_at >= ?
+`
+
+type GetAggregateStatsByProjectParams struct {
+	ProjectID string `json:"project_id"`
+	CreatedAt string `json:"created_at"`
+}
+
+type GetAggregateStatsByProjectRow struct {
+	SessionCount           int64       `json:"session_count"`
+	TotalUserMessages      interface{} `json:"total_user_messages"`
+	TotalAssistantMessages interface{} `json:"total_assistant_messages"`
+	TotalTurns             interface{} `json:"total_turns"`
+	TotalTokenInput        interface{} `json:"total_token_input"`
+	TotalTokenOutput       interface{} `json:"total_token_output"`
+	TotalTokenCacheRead    interface{} `json:"total_token_cache_read"`
+	TotalTokenCacheWrite   interface{} `json:"total_token_cache_write"`
+	TotalCostUsd           interface{} `json:"total_cost_usd"`
+	TotalErrors            interface{} `json:"total_errors"`
+}
+
+func (q *Queries) GetAggregateStatsByProject(ctx context.Context, arg GetAggregateStatsByProjectParams) (GetAggregateStatsByProjectRow, error) {
+	row := q.db.QueryRowContext(ctx, getAggregateStatsByProject, arg.ProjectID, arg.CreatedAt)
+	var i GetAggregateStatsByProjectRow
+	err := row.Scan(
+		&i.SessionCount,
+		&i.TotalUserMessages,
+		&i.TotalAssistantMessages,
+		&i.TotalTurns,
+		&i.TotalTokenInput,
+		&i.TotalTokenOutput,
+		&i.TotalTokenCacheRead,
+		&i.TotalTokenCacheWrite,
+		&i.TotalCostUsd,
+		&i.TotalErrors,
+	)
+	return i, err
+}
+
 const getSessionMetricsBySessionID = `-- name: GetSessionMetricsBySessionID :one
 SELECT session_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count FROM session_metrics WHERE session_id = ?
 `
@@ -137,6 +291,53 @@ func (q *Queries) GetSessionMetricsBySessionID(ctx context.Context, sessionID st
 		&i.ErrorCount,
 	)
 	return i, err
+}
+
+const getTopToolsUsage = `-- name: GetTopToolsUsage :many
+SELECT
+    tool_name,
+    SUM(invocation_count) as total_invocations,
+    SUM(error_count) as total_errors
+FROM session_tools st
+JOIN sessions s ON st.session_id = s.id
+WHERE s.created_at >= ?
+GROUP BY tool_name
+ORDER BY total_invocations DESC
+LIMIT ?
+`
+
+type GetTopToolsUsageParams struct {
+	CreatedAt string `json:"created_at"`
+	Limit     int64  `json:"limit"`
+}
+
+type GetTopToolsUsageRow struct {
+	ToolName         string          `json:"tool_name"`
+	TotalInvocations sql.NullFloat64 `json:"total_invocations"`
+	TotalErrors      sql.NullFloat64 `json:"total_errors"`
+}
+
+func (q *Queries) GetTopToolsUsage(ctx context.Context, arg GetTopToolsUsageParams) ([]GetTopToolsUsageRow, error) {
+	rows, err := q.db.QueryContext(ctx, getTopToolsUsage, arg.CreatedAt, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetTopToolsUsageRow{}
+	for rows.Next() {
+		var i GetTopToolsUsageRow
+		if err := rows.Scan(&i.ToolName, &i.TotalInvocations, &i.TotalErrors); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSessionCommandsBySessionID = `-- name: ListSessionCommandsBySessionID :many

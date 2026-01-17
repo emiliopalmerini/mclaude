@@ -1,0 +1,296 @@
+package cli
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/spf13/cobra"
+
+	"github.com/emiliopalmerini/claude-watcher/internal/adapters/turso"
+	sqlc "github.com/emiliopalmerini/claude-watcher/sqlc/generated"
+)
+
+var statsCmd = &cobra.Command{
+	Use:   "stats",
+	Short: "Show usage statistics",
+	Long: `Show summary statistics for Claude Code usage.
+
+Examples:
+  claude-watcher stats                          # All-time stats
+  claude-watcher stats --period today           # Today's stats
+  claude-watcher stats --period week            # This week's stats
+  claude-watcher stats --experiment "baseline"  # Stats for an experiment
+  claude-watcher stats --project <id>           # Stats for a project`,
+	RunE: runStats,
+}
+
+// Flags
+var (
+	statsPeriod     string
+	statsExperiment string
+	statsProject    string
+)
+
+func init() {
+	rootCmd.AddCommand(statsCmd)
+
+	statsCmd.Flags().StringVarP(&statsPeriod, "period", "p", "all", "Time period: today, week, month, all")
+	statsCmd.Flags().StringVarP(&statsExperiment, "experiment", "e", "", "Filter by experiment name")
+	statsCmd.Flags().StringVar(&statsProject, "project", "", "Filter by project ID")
+}
+
+// Stats holds the aggregate statistics
+type Stats struct {
+	SessionCount           int64
+	TotalUserMessages      int64
+	TotalAssistantMessages int64
+	TotalTurns             int64
+	TotalTokenInput        int64
+	TotalTokenOutput       int64
+	TotalTokenCacheRead    int64
+	TotalTokenCacheWrite   int64
+	TotalCostUsd           float64
+	TotalErrors            int64
+}
+
+func runStats(cmd *cobra.Command, args []string) error {
+	ctx := context.Background()
+
+	db, err := turso.NewDB()
+	if err != nil {
+		return fmt.Errorf("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	queries := sqlc.New(db)
+
+	// Calculate start date based on period
+	startDate := getStartDate(statsPeriod)
+
+	var stats Stats
+	var filterLabel string
+
+	if statsExperiment != "" {
+		// Get experiment ID by name
+		exp, err := queries.GetExperimentByName(ctx, statsExperiment)
+		if err != nil {
+			return fmt.Errorf("experiment %q not found", statsExperiment)
+		}
+
+		row, err := queries.GetAggregateStatsByExperiment(ctx, sqlc.GetAggregateStatsByExperimentParams{
+			ExperimentID: toNullString(exp.ID),
+			CreatedAt:    startDate,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get stats: %w", err)
+		}
+		stats = statsFromExperimentRow(row)
+		filterLabel = fmt.Sprintf("Experiment: %s", statsExperiment)
+	} else if statsProject != "" {
+		row, err := queries.GetAggregateStatsByProject(ctx, sqlc.GetAggregateStatsByProjectParams{
+			ProjectID: statsProject,
+			CreatedAt: startDate,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to get stats: %w", err)
+		}
+		stats = statsFromProjectRow(row)
+		filterLabel = fmt.Sprintf("Project: %s", truncate(statsProject, 16))
+	} else {
+		row, err := queries.GetAggregateStats(ctx, startDate)
+		if err != nil {
+			return fmt.Errorf("failed to get stats: %w", err)
+		}
+		stats = statsFromRow(row)
+		filterLabel = "All sessions"
+	}
+
+	// Get active experiment
+	activeExp, _ := queries.GetActiveExperiment(ctx)
+	activeExpName := "-"
+	if activeExp.Name != "" {
+		activeExpName = activeExp.Name
+	}
+
+	// Get top tools
+	tools, _ := queries.GetTopToolsUsage(ctx, sqlc.GetTopToolsUsageParams{
+		CreatedAt: startDate,
+		Limit:     5,
+	})
+
+	// Print stats
+	printStats(stats, filterLabel, statsPeriod, activeExpName, tools)
+
+	return nil
+}
+
+func statsFromRow(row sqlc.GetAggregateStatsRow) Stats {
+	return Stats{
+		SessionCount:           row.SessionCount,
+		TotalUserMessages:      toInt64(row.TotalUserMessages),
+		TotalAssistantMessages: toInt64(row.TotalAssistantMessages),
+		TotalTurns:             toInt64(row.TotalTurns),
+		TotalTokenInput:        toInt64(row.TotalTokenInput),
+		TotalTokenOutput:       toInt64(row.TotalTokenOutput),
+		TotalTokenCacheRead:    toInt64(row.TotalTokenCacheRead),
+		TotalTokenCacheWrite:   toInt64(row.TotalTokenCacheWrite),
+		TotalCostUsd:           toFloat64(row.TotalCostUsd),
+		TotalErrors:            toInt64(row.TotalErrors),
+	}
+}
+
+func statsFromExperimentRow(row sqlc.GetAggregateStatsByExperimentRow) Stats {
+	return Stats{
+		SessionCount:           row.SessionCount,
+		TotalUserMessages:      toInt64(row.TotalUserMessages),
+		TotalAssistantMessages: toInt64(row.TotalAssistantMessages),
+		TotalTurns:             toInt64(row.TotalTurns),
+		TotalTokenInput:        toInt64(row.TotalTokenInput),
+		TotalTokenOutput:       toInt64(row.TotalTokenOutput),
+		TotalTokenCacheRead:    toInt64(row.TotalTokenCacheRead),
+		TotalTokenCacheWrite:   toInt64(row.TotalTokenCacheWrite),
+		TotalCostUsd:           toFloat64(row.TotalCostUsd),
+		TotalErrors:            toInt64(row.TotalErrors),
+	}
+}
+
+func statsFromProjectRow(row sqlc.GetAggregateStatsByProjectRow) Stats {
+	return Stats{
+		SessionCount:           row.SessionCount,
+		TotalUserMessages:      toInt64(row.TotalUserMessages),
+		TotalAssistantMessages: toInt64(row.TotalAssistantMessages),
+		TotalTurns:             toInt64(row.TotalTurns),
+		TotalTokenInput:        toInt64(row.TotalTokenInput),
+		TotalTokenOutput:       toInt64(row.TotalTokenOutput),
+		TotalTokenCacheRead:    toInt64(row.TotalTokenCacheRead),
+		TotalTokenCacheWrite:   toInt64(row.TotalTokenCacheWrite),
+		TotalCostUsd:           toFloat64(row.TotalCostUsd),
+		TotalErrors:            toInt64(row.TotalErrors),
+	}
+}
+
+func toInt64(v interface{}) int64 {
+	if v == nil {
+		return 0
+	}
+	switch n := v.(type) {
+	case int64:
+		return n
+	case int:
+		return int64(n)
+	case float64:
+		return int64(n)
+	default:
+		return 0
+	}
+}
+
+func toFloat64(v interface{}) float64 {
+	if v == nil {
+		return 0
+	}
+	switch n := v.(type) {
+	case float64:
+		return n
+	case int64:
+		return float64(n)
+	case int:
+		return float64(n)
+	default:
+		return 0
+	}
+}
+
+func getStartDate(period string) string {
+	now := time.Now().UTC()
+	var start time.Time
+
+	switch period {
+	case "today":
+		start = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	case "week":
+		// Start of current week (Monday)
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7
+		}
+		start = time.Date(now.Year(), now.Month(), now.Day()-weekday+1, 0, 0, 0, 0, time.UTC)
+	case "month":
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	default:
+		// All time - use Unix epoch
+		start = time.Unix(0, 0)
+	}
+
+	return start.Format(time.RFC3339)
+}
+
+func printStats(stats Stats, filterLabel, period, activeExp string, tools []sqlc.GetTopToolsUsageRow) {
+	periodLabel := "All time"
+	switch period {
+	case "today":
+		periodLabel = "Today"
+	case "week":
+		periodLabel = "This week"
+	case "month":
+		periodLabel = "This month"
+	}
+
+	fmt.Println()
+	fmt.Printf("  Claude Watcher Stats\n")
+	fmt.Printf("  =====================\n")
+	fmt.Println()
+
+	fmt.Printf("  Period:            %s\n", periodLabel)
+	fmt.Printf("  Filter:            %s\n", filterLabel)
+	fmt.Printf("  Active experiment: %s\n", activeExp)
+	fmt.Println()
+
+	fmt.Printf("  Sessions\n")
+	fmt.Printf("  --------\n")
+	fmt.Printf("  Total:             %d\n", stats.SessionCount)
+	fmt.Printf("  Turns:             %s\n", formatNumber(stats.TotalTurns))
+	fmt.Printf("  User messages:     %s\n", formatNumber(stats.TotalUserMessages))
+	fmt.Printf("  Assistant msgs:    %s\n", formatNumber(stats.TotalAssistantMessages))
+	fmt.Printf("  Errors:            %d\n", stats.TotalErrors)
+	fmt.Println()
+
+	fmt.Printf("  Tokens\n")
+	fmt.Printf("  ------\n")
+	fmt.Printf("  Input:             %s\n", formatNumber(stats.TotalTokenInput))
+	fmt.Printf("  Output:            %s\n", formatNumber(stats.TotalTokenOutput))
+	fmt.Printf("  Cache read:        %s\n", formatNumber(stats.TotalTokenCacheRead))
+	fmt.Printf("  Cache write:       %s\n", formatNumber(stats.TotalTokenCacheWrite))
+	totalTokens := stats.TotalTokenInput + stats.TotalTokenOutput
+	fmt.Printf("  Total:             %s\n", formatNumber(totalTokens))
+	fmt.Println()
+
+	fmt.Printf("  Cost\n")
+	fmt.Printf("  ----\n")
+	fmt.Printf("  Estimated:         $%.4f\n", stats.TotalCostUsd)
+	fmt.Println()
+
+	if len(tools) > 0 {
+		fmt.Printf("  Top Tools\n")
+		fmt.Printf("  ---------\n")
+		for _, tool := range tools {
+			invocations := int64(0)
+			if tool.TotalInvocations.Valid {
+				invocations = int64(tool.TotalInvocations.Float64)
+			}
+			fmt.Printf("  %-18s %s calls\n", tool.ToolName, formatNumber(invocations))
+		}
+		fmt.Println()
+	}
+}
+
+func formatNumber(n int64) string {
+	if n < 1000 {
+		return fmt.Sprintf("%d", n)
+	}
+	if n < 1000000 {
+		return fmt.Sprintf("%.1fK", float64(n)/1000)
+	}
+	return fmt.Sprintf("%.1fM", float64(n)/1000000)
+}

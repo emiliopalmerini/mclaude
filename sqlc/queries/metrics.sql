@@ -30,3 +30,63 @@ VALUES (?, ?, ?, ?);
 
 -- name: ListSessionCommandsBySessionID :many
 SELECT * FROM session_commands WHERE session_id = ? ORDER BY id ASC;
+
+-- name: GetAggregateStats :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.created_at >= ?;
+
+-- name: GetAggregateStatsByExperiment :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.experiment_id = ? AND s.created_at >= ?;
+
+-- name: GetAggregateStatsByProject :one
+SELECT
+    COUNT(DISTINCT s.id) as session_count,
+    COALESCE(SUM(m.message_count_user), 0) as total_user_messages,
+    COALESCE(SUM(m.message_count_assistant), 0) as total_assistant_messages,
+    COALESCE(SUM(m.turn_count), 0) as total_turns,
+    COALESCE(SUM(m.token_input), 0) as total_token_input,
+    COALESCE(SUM(m.token_output), 0) as total_token_output,
+    COALESCE(SUM(m.token_cache_read), 0) as total_token_cache_read,
+    COALESCE(SUM(m.token_cache_write), 0) as total_token_cache_write,
+    COALESCE(SUM(m.cost_estimate_usd), 0) as total_cost_usd,
+    COALESCE(SUM(m.error_count), 0) as total_errors
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.project_id = ? AND s.created_at >= ?;
+
+-- name: GetTopToolsUsage :many
+SELECT
+    tool_name,
+    SUM(invocation_count) as total_invocations,
+    SUM(error_count) as total_errors
+FROM session_tools st
+JOIN sessions s ON st.session_id = s.id
+WHERE s.created_at >= ?
+GROUP BY tool_name
+ORDER BY total_invocations DESC
+LIMIT ?;
