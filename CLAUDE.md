@@ -1,102 +1,227 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with code in this repository.
 
 ## Project Overview
 
-Claude Watcher is a TUI dashboard for tracking Claude Code session usage. It displays metrics like session counts, costs, token usage, and tool calls from data stored in a Turso (libsql) database.
+Claude Watcher is a personal analytics and experimentation platform for Claude Code usage. It captures session data via hooks, parses transcripts for detailed metrics, and provides a web dashboard for visualization and analysis.
+
+**Primary use case**: Run month-long experiments with different Claude usage styles, then compare token usage, efficacy, efficiency, and cost metrics.
 
 ## Tech Stack
 
-- **Go 1.25+** for backend
-- **BubbleTea** for TUI framework
-- **Lipgloss** for TUI styling
-- **sqlc** for type-safe SQL queries
-- **Turso/libsql** as the database
+| Component | Technology |
+|-----------|------------|
+| Language | Go 1.22+ |
+| CLI | Cobra |
+| Database | Turso (libsql) |
+| SQL | sqlc (type-safe queries) |
+| Migrations | go-migrate (embedded) |
+| Web Templates | templ |
+| Web Interactivity | HTMX + Alpine.js |
+| Charts | Apache ECharts |
+
+## Environment Variables
+
+```bash
+CLAUDE_WATCHER_DATABASE_URL  # libsql connection URL
+CLAUDE_WATCHER_AUTH_TOKEN    # Turso auth token
+```
 
 ## Build Commands
 
 ```bash
-make build          # Build both binaries (dashboard + session-tracker)
-make dashboard      # Build only the dashboard
-make session-tracker # Build only the session tracker
-make run            # Build and run the dashboard
-make test           # Run tests
-make sqlc           # Generate sqlc code
-make fmt            # Format code
-make clean          # Remove build artifacts
+make build      # Build the claude-watcher binary
+make test       # Run tests
+make sqlc       # Regenerate sqlc code
+make templ      # Regenerate templ templates
+make fmt        # Format code
+make clean      # Remove build artifacts
 ```
-
-## Environment Variables
-
-Dashboard:
-- `TURSO_DATABASE_URL_CLAUDE_WATCHER` - libsql connection URL
-- `TURSO_AUTH_TOKEN_CLAUDE_WATCHER` - Turso auth token
-
-Session Tracker:
-- `CLAUDE_WATCHER_DATABASE_URL` - libsql connection URL
-- `CLAUDE_WATCHER_AUTH_TOKEN` - Turso auth token
 
 ## Architecture
 
-The codebase follows hexagonal architecture (ports & adapters) with vertical slices:
+The codebase follows hexagonal architecture (ports & adapters):
 
 ```
 cmd/
-├── dashboard/          # TUI dashboard entry point
-└── session-tracker/    # Hook handler entry point
+└── claude-watcher/             # Single CLI entry point (Cobra)
 
 internal/
-├── analytics/          # Analytics domain
-│   ├── model.go        # Domain models (Metrics, Session summaries)
-│   ├── ports.go        # Repository interface
-│   ├── service.go      # Query use cases
-│   ├── inbound/tui/    # TUI screens (overview, sessions, costs, detail)
-│   └── outbound/turso/ # Database repository implementation
-├── app/tui/            # Main TUI app shell and navigation
-├── database/           # Database infrastructure
-│   ├── migrations/     # SQL migration files
-│   ├── queries/        # sqlc query definitions (.sql)
-│   └── sqlc/           # Generated sqlc code (DO NOT EDIT)
-├── limits/             # Usage limits domain
-│   ├── model.go        # LimitEvent, LimitType
-│   ├── ports.go        # Repository interface
-│   ├── service.go      # Limit tracking logic
-│   └── outbound/       # Turso repository
-├── pkg/tui/            # Shared TUI components
-│   ├── components/     # Reusable widgets (scale, selector, help)
-│   └── theme/          # Lipgloss styles and colors
-├── pricing/            # Pricing domain (pure calculation)
-│   ├── model.go        # ModelPricing, TokenUsage
-│   └── service.go      # Cost calculator
-├── tracker/            # Session tracker domain
-│   ├── domain/         # Core models and interfaces
-│   └── adapters/       # Repository, prompter, parser implementations
-└── transcript/         # Transcript parser
-    ├── model.go        # ParsedTranscript, SessionStatistics
-    ├── ports.go        # Parser interface
-    └── parser.go       # JSONL transcript parser
+├── domain/                     # Domain entities (no dependencies)
+│   ├── session.go              # Session, SessionMetrics
+│   ├── experiment.go           # Experiment
+│   ├── project.go              # Project
+│   └── pricing.go              # ModelPricing
+│
+├── ports/                      # Interfaces (defined by domain)
+│   ├── session_repository.go
+│   ├── experiment_repository.go
+│   ├── project_repository.go
+│   ├── pricing_repository.go
+│   └── transcript_storage.go
+│
+├── adapters/                   # Interface implementations
+│   ├── turso/                  # Database adapters
+│   │   ├── db.go               # Connection setup
+│   │   ├── session_repository.go
+│   │   ├── experiment_repository.go
+│   │   ├── project_repository.go
+│   │   └── pricing_repository.go
+│   └── storage/
+│       └── transcript_storage.go   # XDG + gzip storage
+│
+├── parser/                     # Transcript parsing (pure logic)
+│   └── transcript.go           # JSONL parser, metric extraction
+│
+├── cli/                        # Cobra commands
+│   ├── root.go
+│   ├── record.go               # Hook handler
+│   ├── migrate.go              # Database migrations
+│   ├── serve.go                # Web server
+│   ├── experiment.go           # Experiment CRUD
+│   ├── stats.go                # Quick statistics
+│   ├── sessions.go             # Session listing
+│   ├── cost.go                 # Pricing config
+│   ├── cleanup.go              # Data deletion
+│   └── export.go               # JSON/CSV export
+│
+└── web/                        # Web dashboard
+    ├── server.go               # HTTP server setup
+    ├── routes.go               # Route definitions
+    ├── handlers/               # HTTP handlers
+    │   ├── dashboard.go
+    │   ├── experiments.go
+    │   ├── sessions.go
+    │   ├── projects.go
+    │   └── settings.go
+    ├── templates/              # templ templates
+    │   ├── layouts/
+    │   │   └── base.templ
+    │   ├── pages/
+    │   │   ├── dashboard.templ
+    │   │   ├── experiments.templ
+    │   │   ├── sessions.templ
+    │   │   ├── projects.templ
+    │   │   └── settings.templ
+    │   └── components/
+    │       ├── navbar.templ
+    │       ├── stats_card.templ
+    │       └── chart.templ
+    └── static/
+        ├── css/
+        └── js/                 # htmx, alpine, echarts
+
+migrations/                     # SQL files (go:embed)
+├── 001_create_experiments.up.sql
+├── 001_create_experiments.down.sql
+├── ...
+└── embed.go
+
+sqlc/
+├── sqlc.yaml
+├── queries/                    # SQL query definitions
+│   ├── sessions.sql
+│   ├── experiments.sql
+│   ├── projects.sql
+│   └── pricing.sql
+└── generated/                  # DO NOT EDIT - sqlc output
 ```
+
+## Database Schema
+
+8 normalized tables:
+
+1. **experiments** - Experiment definitions (name, description, hypothesis, dates, is_active)
+2. **projects** - Project aggregations (id=SHA256 of cwd, path, name)
+3. **sessions** - Core session data (links to project and experiment)
+4. **session_metrics** - Token counts, cost estimates per session
+5. **session_tools** - Tool usage breakdown per session
+6. **session_files** - File operations per session
+7. **session_commands** - Bash commands executed per session
+8. **model_pricing** - Configurable model pricing for cost estimation
 
 ## Key Patterns
 
-### Hexagonal Architecture
-- **Domain** defines ports (interfaces) in `ports.go`
-- **Inbound adapters** (TUI screens) call domain services
-- **Outbound adapters** (Turso repositories) implement domain interfaces
+### Adding a New CLI Command
 
-### Adding New Features
-1. Create domain models in `model.go`
-2. Define repository interface in `ports.go`
-3. Implement business logic in `service.go`
-4. Create TUI screens in `inbound/tui/`
-5. Implement repository in `outbound/turso/`
+1. Create `internal/cli/<command>.go`
+2. Implement Cobra command with `RunE` function
+3. Register in `internal/cli/root.go` via `rootCmd.AddCommand()`
+4. Inject dependencies (repositories) from root command setup
 
-### Adding SQL Queries
-1. Add query to `internal/database/queries/*.sql` with sqlc annotation
-2. Run `make sqlc` to regenerate code in `internal/database/sqlc/`
+### Adding a New Database Query
 
-### TUI Development
-- Use shared styles from `internal/pkg/tui/theme/`
-- Reusable components in `internal/pkg/tui/components/`
-- Screens implement `tea.Model` interface from BubbleTea
+1. Add SQL to `sqlc/queries/<domain>.sql` with sqlc annotations:
+   ```sql
+   -- name: GetSessionByID :one
+   SELECT * FROM sessions WHERE id = ?;
+   ```
+2. Run `make sqlc` to regenerate `sqlc/generated/`
+3. Use generated functions in repository adapters
+
+### Adding a Web Page
+
+1. Create handler in `internal/web/handlers/<page>.go`
+2. Create templ template in `internal/web/templates/pages/<page>.templ`
+3. Run `make templ` to generate Go code
+4. Register route in `internal/web/routes.go`
+
+### Transcript Parsing
+
+The `record` command receives JSON from stdin (Claude Code hook), then:
+
+1. Parses the hook input (session_id, transcript_path, cwd, permission_mode, reason)
+2. Reads and parses the JSONL transcript file
+3. Extracts metrics: timestamps, token counts, tool usage, file ops, commands
+4. Copies transcript to XDG storage with gzip compression
+5. Saves all data to database (session + metrics + tools + files + commands)
+
+### Domain Rules
+
+- **Active experiment**: Only one experiment can be active at a time
+- **Project ID**: SHA256 hash of the `cwd` path (deterministic)
+- **Cost estimation**: Uses default model pricing if no model specified
+- **Cleanup cascade**: Deleting sessions also removes transcript files from storage
+
+## Testing Strategy
+
+- **Unit tests**: Domain logic, parser, cost calculations
+- **Integration tests**: Repository adapters with test database
+- **No mocks for ports**: Use real implementations with test fixtures
+
+## Code Style
+
+- Follow Go conventions (gofmt, golint)
+- Error wrapping with `fmt.Errorf("context: %w", err)`
+- Table-driven tests
+- No global state - dependency injection via constructors
+- Context propagation for cancellation
+
+## Performance Considerations
+
+- `record` command must be fast (runs on every session end)
+- Use single INSERT statements, no transactions for simple writes
+- Transcript parsing is I/O bound - read file once, extract all metrics
+- Web dashboard queries should use appropriate indexes
+
+## Common Tasks
+
+### Reset database
+
+```bash
+claude-watcher migrate 0    # Migrate down to version 0
+claude-watcher migrate      # Migrate up to latest
+```
+
+### Test record command locally
+
+```bash
+echo '{"session_id":"test123","transcript_path":"/path/to/transcript.jsonl","cwd":"/project","permission_mode":"default","reason":"exit"}' | claude-watcher record
+```
+
+### Debug transcript parsing
+
+```bash
+cat /path/to/transcript.jsonl | head -20  # Inspect structure
+```
