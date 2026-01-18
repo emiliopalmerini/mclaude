@@ -5,7 +5,7 @@ pkgs.buildGoModule {
   version = "0.1.0";
   src = pkgs.lib.cleanSource ../.;
 
-  vendorHash = "sha256-RtVSv2eNHOTyPSDmuKqFTuwT4O7Kvk/SGvwf2O4k72E=";
+  vendorHash = "sha256-2M/v9Ppm4MImCER582Y1GSmUZfxwRZ7rIlHQr0Untok=";
 
   subPackages = [ "cmd/mclaude-otel" ];
 

@@ -21,6 +21,10 @@ func TestRecordCommand_Integration(t *testing.T) {
 		t.Skip("Skipping integration test: MCLAUDE_DATABASE_URL not set")
 	}
 
+	// Force synchronous processing for testing
+	recordSync = true
+	defer func() { recordSync = false }()
+
 	ctx := context.Background()
 
 	// Connect to database

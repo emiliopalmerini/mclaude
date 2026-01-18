@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -15,6 +17,9 @@ import (
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/parser"
 )
+
+var recordBackgroundFile string
+var recordSync bool
 
 var recordCmd = &cobra.Command{
 	Use:   "record",
@@ -41,8 +46,17 @@ This command is designed to be called from a Claude Code hook:
 	RunE: runRecord,
 }
 
+func init() {
+	recordCmd.Flags().StringVar(&recordBackgroundFile, "background", "", "process hook input from file (internal use)")
+	recordCmd.Flags().MarkHidden("background")
+	recordCmd.Flags().BoolVar(&recordSync, "sync", false, "process synchronously (for debugging)")
+}
+
 func runRecord(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
+	// If --background flag is set, process from file
+	if recordBackgroundFile != "" {
+		return processRecordBackground(recordBackgroundFile)
+	}
 
 	// Read hook input from stdin
 	input, err := io.ReadAll(os.Stdin)
@@ -54,6 +68,64 @@ func runRecord(cmd *cobra.Command, args []string) error {
 	if err := json.Unmarshal(input, &hookInput); err != nil {
 		return fmt.Errorf("failed to parse hook input: %w", err)
 	}
+
+	// Process synchronously if --sync flag is set
+	if recordSync {
+		return processRecordInput(&hookInput)
+	}
+
+	// Write input to temp file for background processing
+	tempDir := os.TempDir()
+	tempFile := filepath.Join(tempDir, fmt.Sprintf("mclaude-record-%s.json", hookInput.SessionID))
+	if err := os.WriteFile(tempFile, input, 0600); err != nil {
+		return fmt.Errorf("failed to write temp file: %w", err)
+	}
+
+	// Spawn background process
+	executable, err := os.Executable()
+	if err != nil {
+		// Fallback to synchronous if we can't find executable
+		os.Remove(tempFile)
+		return processRecordInput(&hookInput)
+	}
+
+	bgCmd := exec.Command(executable, "record", "--background", tempFile)
+	bgCmd.Stdout = nil
+	bgCmd.Stderr = nil
+	bgCmd.Stdin = nil
+
+	if err := bgCmd.Start(); err != nil {
+		// Fallback to synchronous if spawn fails
+		os.Remove(tempFile)
+		return processRecordInput(&hookInput)
+	}
+
+	// Detach from child process
+	bgCmd.Process.Release()
+
+	return nil
+}
+
+func processRecordBackground(inputFile string) error {
+	// Read hook input from file
+	input, err := os.ReadFile(inputFile)
+	if err != nil {
+		return fmt.Errorf("failed to read input file: %w", err)
+	}
+
+	// Clean up temp file
+	defer os.Remove(inputFile)
+
+	var hookInput domain.HookInput
+	if err := json.Unmarshal(input, &hookInput); err != nil {
+		return fmt.Errorf("failed to parse hook input: %w", err)
+	}
+
+	return processRecordInput(&hookInput)
+}
+
+func processRecordInput(hookInput *domain.HookInput) error {
+	ctx := context.Background()
 
 	// Connect to database
 	db, err := turso.NewDB()
