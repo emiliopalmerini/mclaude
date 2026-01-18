@@ -11,6 +11,7 @@ type DashboardStats struct {
 	CacheWrite       int64
 	TotalErrors      int64
 	ActiveExperiment string
+	DefaultModel     string // Display name of the default model for cost calculations
 	TopTools         []ToolUsage
 	RecentSessions   []SessionSummary
 	// Quality stats

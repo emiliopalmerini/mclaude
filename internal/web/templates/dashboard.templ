@@ -16,7 +16,7 @@ templ Dashboard(stats DashboardStats) {
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 				@StatCard("Sessions", fmt.Sprintf("%d", stats.SessionCount), "Total sessions recorded")
 				@StatCard("Tokens", formatTokens(stats.TotalTokens), fmt.Sprintf("%s in / %s out", formatTokens(stats.TokenInput), formatTokens(stats.TokenOutput)))
-				@StatCard("Cost", fmt.Sprintf("$%.4f", stats.TotalCost), "Estimated total cost")
+				@CostCard(stats.TotalCost, stats.DefaultModel)
 				@QualityDashboardCard(stats.ReviewedCount, stats.SuccessRate, stats.AvgOverall)
 				@UsageLimitCard(stats.UsageStats)
 			</div>
@@ -77,6 +77,20 @@ templ StatCard(title, value, subtitle string) {
 		<dt class="text-sm font-medium text-gray-500 truncate">{ title }</dt>
 		<dd class="mt-1 text-3xl font-semibold text-gray-900">{ value }</dd>
 		<dd class="mt-1 text-sm text-gray-500">{ subtitle }</dd>
+	</div>
+}
+
+templ CostCard(totalCost float64, defaultModel string) {
+	<div class="card">
+		<dt class="text-sm font-medium text-gray-500 truncate">Cost</dt>
+		<dd class="mt-1 text-3xl font-semibold text-gray-900">{ fmt.Sprintf("$%.4f", totalCost) }</dd>
+		<dd class="mt-1 text-sm text-gray-500">
+			if defaultModel != "" {
+				{ defaultModel }
+			} else {
+				No model configured
+			}
+		</dd>
 	</div>
 }
 

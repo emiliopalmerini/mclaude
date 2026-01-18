@@ -80,6 +80,12 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		stats.ActiveExperiment = activeExp.Name
 	}
 
+	// Get default model
+	defaultModel, _ := queries.GetDefaultModelPricing(ctx)
+	if defaultModel.DisplayName != "" {
+		stats.DefaultModel = defaultModel.DisplayName
+	}
+
 	// Get top tools
 	tools, _ := queries.GetTopToolsUsage(ctx, sqlc.GetTopToolsUsageParams{
 		CreatedAt: startDate,
