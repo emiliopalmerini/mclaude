@@ -1,7 +1,8 @@
-.PHONY: all build test test-unit test-integration clean sqlc templ fmt lint run migrate reset install help
+.PHONY: all build build-otel test test-unit test-integration clean sqlc templ fmt lint run migrate reset install help
 
 # Variables
 BINARY_NAME := mclaude
+OTEL_BINARY_NAME := mclaude-otel
 BUILD_DIR := .
 GO_FILES := $(shell find . -name '*.go' -not -path './sqlc/generated/*')
 TEMPL_FILES := $(shell find . -name '*.templ')
@@ -32,6 +33,17 @@ build: generate
 # Build with version info
 build-release: generate
 	go build -ldflags="-s -w" -o $(BINARY_NAME) ./cmd/mclaude
+
+# Build OTEL receiver binary
+build-otel: generate
+	go build -o $(OTEL_BINARY_NAME) ./cmd/mclaude-otel
+
+# Build OTEL receiver with optimizations
+build-otel-release: generate
+	go build -ldflags="-s -w" -o $(OTEL_BINARY_NAME) ./cmd/mclaude-otel
+
+# Build all binaries
+build-all: build build-otel
 
 # Install to GOPATH/bin
 install: generate
@@ -106,7 +118,7 @@ dev:
 
 # Clean build artifacts
 clean:
-	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME) $(OTEL_BINARY_NAME)
 	rm -f coverage.out coverage.html
 
 # Clean generated code too
@@ -123,8 +135,11 @@ help:
 	@echo ""
 	@echo "Build targets:"
 	@echo "  all             Build everything (default)"
-	@echo "  build           Generate code + build binary"
+	@echo "  build           Generate code + build mclaude binary"
+	@echo "  build-otel      Generate code + build mclaude-otel binary"
+	@echo "  build-all       Build both mclaude and mclaude-otel"
 	@echo "  build-release   Generate code + build optimized binary"
+	@echo "  build-otel-release Build optimized mclaude-otel binary"
 	@echo "  install         Generate code + install to GOPATH/bin"
 	@echo "  clean           Remove build artifacts"
 	@echo "  clean-all       Remove build + generated code"

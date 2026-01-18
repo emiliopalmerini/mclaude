@@ -8,6 +8,7 @@
 *.so
 *.dylib
 /mclaude
+/mclaude-otel
 /session-tracker
 /test-prompter
 /dashboard

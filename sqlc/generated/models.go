@@ -30,6 +30,16 @@ type ModelPricing struct {
 	CreatedAt            string          `json:"created_at"`
 }
 
+type PlanConfig struct {
+	ID                int64           `json:"id"`
+	PlanType          string          `json:"plan_type"`
+	WindowHours       int64           `json:"window_hours"`
+	LearnedTokenLimit sql.NullFloat64 `json:"learned_token_limit"`
+	LearnedAt         sql.NullString  `json:"learned_at"`
+	CreatedAt         string          `json:"created_at"`
+	UpdatedAt         string          `json:"updated_at"`
+}
+
 type Project struct {
 	ID        string `json:"id"`
 	Path      string `json:"path"`
@@ -100,4 +110,22 @@ type SessionTool struct {
 	InvocationCount int64         `json:"invocation_count"`
 	TotalDurationMs sql.NullInt64 `json:"total_duration_ms"`
 	ErrorCount      int64         `json:"error_count"`
+}
+
+type UsageLimit struct {
+	ID            string          `json:"id"`
+	LimitValue    float64         `json:"limit_value"`
+	WarnThreshold sql.NullFloat64 `json:"warn_threshold"`
+	Enabled       int64           `json:"enabled"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+}
+
+type UsageMetric struct {
+	ID         int64          `json:"id"`
+	MetricName string         `json:"metric_name"`
+	Value      float64        `json:"value"`
+	Attributes sql.NullString `json:"attributes"`
+	RecordedAt string         `json:"recorded_at"`
+	CreatedAt  string         `json:"created_at"`
 }
