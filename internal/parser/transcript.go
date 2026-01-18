@@ -30,6 +30,7 @@ type TranscriptEntry struct {
 type Message struct {
 	Role    string    `json:"role"`
 	Content []Content `json:"content"`
+	Usage   *Usage    `json:"usage,omitempty"`
 }
 
 type Content struct {
@@ -119,12 +120,16 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 			processToolResult(entry, result)
 		}
 
-		// Accumulate token usage
-		if entry.Usage != nil {
-			result.Metrics.TokenInput += entry.Usage.InputTokens
-			result.Metrics.TokenOutput += entry.Usage.OutputTokens
-			result.Metrics.TokenCacheRead += entry.Usage.CacheReadInputTokens
-			result.Metrics.TokenCacheWrite += entry.Usage.CacheCreationInputTokens
+		// Accumulate token usage (check both top-level and message-level usage)
+		usage := entry.Usage
+		if usage == nil && entry.Message != nil {
+			usage = entry.Message.Usage
+		}
+		if usage != nil {
+			result.Metrics.TokenInput += usage.InputTokens
+			result.Metrics.TokenOutput += usage.OutputTokens
+			result.Metrics.TokenCacheRead += usage.CacheReadInputTokens
+			result.Metrics.TokenCacheWrite += usage.CacheCreationInputTokens
 		}
 	}
 
