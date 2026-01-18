@@ -10,6 +10,53 @@ import (
 	"database/sql"
 )
 
+const deleteSessionQuality = `-- name: DeleteSessionQuality :exec
+DELETE FROM session_quality WHERE session_id = ?
+`
+
+func (q *Queries) DeleteSessionQuality(ctx context.Context, sessionID string) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionQuality, sessionID)
+	return err
+}
+
+const getOverallQualityStats = `-- name: GetOverallQualityStats :one
+SELECT
+    COUNT(DISTINCT sq.session_id) as reviewed_count,
+    AVG(sq.overall_rating) as avg_overall_rating,
+    SUM(CASE WHEN sq.is_success = 1 THEN 1 ELSE 0 END) as success_count,
+    SUM(CASE WHEN sq.is_success = 0 THEN 1 ELSE 0 END) as failure_count,
+    AVG(sq.accuracy_rating) as avg_accuracy,
+    AVG(sq.helpfulness_rating) as avg_helpfulness,
+    AVG(sq.efficiency_rating) as avg_efficiency
+FROM session_quality sq
+WHERE sq.reviewed_at IS NOT NULL
+`
+
+type GetOverallQualityStatsRow struct {
+	ReviewedCount    int64           `json:"reviewed_count"`
+	AvgOverallRating sql.NullFloat64 `json:"avg_overall_rating"`
+	SuccessCount     sql.NullFloat64 `json:"success_count"`
+	FailureCount     sql.NullFloat64 `json:"failure_count"`
+	AvgAccuracy      sql.NullFloat64 `json:"avg_accuracy"`
+	AvgHelpfulness   sql.NullFloat64 `json:"avg_helpfulness"`
+	AvgEfficiency    sql.NullFloat64 `json:"avg_efficiency"`
+}
+
+func (q *Queries) GetOverallQualityStats(ctx context.Context) (GetOverallQualityStatsRow, error) {
+	row := q.db.QueryRowContext(ctx, getOverallQualityStats)
+	var i GetOverallQualityStatsRow
+	err := row.Scan(
+		&i.ReviewedCount,
+		&i.AvgOverallRating,
+		&i.SuccessCount,
+		&i.FailureCount,
+		&i.AvgAccuracy,
+		&i.AvgHelpfulness,
+		&i.AvgEfficiency,
+	)
+	return i, err
+}
+
 const getQualityStatsByExperiment = `-- name: GetQualityStatsByExperiment :one
 SELECT
     COUNT(DISTINCT sq.session_id) as reviewed_count,
@@ -130,6 +177,47 @@ func (q *Queries) GetSessionQualityBySessionID(ctx context.Context, sessionID st
 		&i.CreatedAt,
 	)
 	return i, err
+}
+
+const listSessionQualitiesForSessions = `-- name: ListSessionQualitiesForSessions :many
+SELECT session_id, overall_rating, is_success, reviewed_at
+FROM session_quality
+WHERE reviewed_at IS NOT NULL
+`
+
+type ListSessionQualitiesForSessionsRow struct {
+	SessionID     string         `json:"session_id"`
+	OverallRating sql.NullInt64  `json:"overall_rating"`
+	IsSuccess     sql.NullInt64  `json:"is_success"`
+	ReviewedAt    sql.NullString `json:"reviewed_at"`
+}
+
+func (q *Queries) ListSessionQualitiesForSessions(ctx context.Context) ([]ListSessionQualitiesForSessionsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionQualitiesForSessions)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionQualitiesForSessionsRow{}
+	for rows.Next() {
+		var i ListSessionQualitiesForSessionsRow
+		if err := rows.Scan(
+			&i.SessionID,
+			&i.OverallRating,
+			&i.IsSuccess,
+			&i.ReviewedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listUnreviewedSessionIDs = `-- name: ListUnreviewedSessionIDs :many

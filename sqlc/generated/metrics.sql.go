@@ -57,7 +57,7 @@ func (q *Queries) CreateSessionFile(ctx context.Context, arg CreateSessionFilePa
 }
 
 const createSessionMetrics = `-- name: CreateSessionMetrics :exec
-INSERT INTO session_metrics (session_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count)
+INSERT OR REPLACE INTO session_metrics (session_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 

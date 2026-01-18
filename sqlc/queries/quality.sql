@@ -15,6 +15,26 @@ ON CONFLICT (session_id) DO UPDATE SET
 -- name: GetSessionQualityBySessionID :one
 SELECT * FROM session_quality WHERE session_id = ?;
 
+-- name: DeleteSessionQuality :exec
+DELETE FROM session_quality WHERE session_id = ?;
+
+-- name: ListSessionQualitiesForSessions :many
+SELECT session_id, overall_rating, is_success, reviewed_at
+FROM session_quality
+WHERE reviewed_at IS NOT NULL;
+
+-- name: GetOverallQualityStats :one
+SELECT
+    COUNT(DISTINCT sq.session_id) as reviewed_count,
+    AVG(sq.overall_rating) as avg_overall_rating,
+    SUM(CASE WHEN sq.is_success = 1 THEN 1 ELSE 0 END) as success_count,
+    SUM(CASE WHEN sq.is_success = 0 THEN 1 ELSE 0 END) as failure_count,
+    AVG(sq.accuracy_rating) as avg_accuracy,
+    AVG(sq.helpfulness_rating) as avg_helpfulness,
+    AVG(sq.efficiency_rating) as avg_efficiency
+FROM session_quality sq
+WHERE sq.reviewed_at IS NOT NULL;
+
 -- name: ListUnreviewedSessionIDs :many
 SELECT s.id FROM sessions s
 LEFT JOIN session_quality sq ON s.id = sq.session_id

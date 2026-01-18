@@ -13,6 +13,10 @@ type DashboardStats struct {
 	ActiveExperiment string
 	TopTools         []ToolUsage
 	RecentSessions   []SessionSummary
+	// Quality stats
+	ReviewedCount int64
+	SuccessRate   *float64
+	AvgOverall    *float64
 }
 
 type ToolUsage struct {
@@ -29,6 +33,10 @@ type SessionSummary struct {
 	Turns        int64
 	Tokens       int64
 	Cost         float64
+	// Quality (nil if not reviewed)
+	IsReviewed    bool
+	OverallRating int
+	IsSuccess     *bool
 }
 
 type SessionDetail struct {
@@ -53,6 +61,8 @@ type SessionDetail struct {
 	ErrorCount            int64
 	Tools                 []ToolUsage
 	Files                 []FileOperation
+	// Quality
+	Quality *SessionQuality
 }
 
 type FileOperation struct {
@@ -105,6 +115,13 @@ type ExperimentDetail struct {
 	TopTools []ToolUsage
 	// Recent sessions
 	RecentSessions []SessionSummary
+	// Quality stats
+	ReviewedCount  int64
+	AvgOverall     *float64
+	SuccessRate    *float64
+	AvgAccuracy    *float64
+	AvgHelpfulness *float64
+	AvgEfficiency  *float64
 }
 
 type ExperimentComparison struct {

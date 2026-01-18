@@ -77,6 +77,29 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	stats.RecentSessions = recentSessions
 
+	// Get overall quality stats
+	qualityStats, err := queries.GetOverallQualityStats(ctx)
+	if err == nil && qualityStats.ReviewedCount > 0 {
+		stats.ReviewedCount = qualityStats.ReviewedCount
+		if qualityStats.AvgOverallRating.Valid {
+			avg := qualityStats.AvgOverallRating.Float64
+			stats.AvgOverall = &avg
+		}
+		successCount := int64(0)
+		failureCount := int64(0)
+		if qualityStats.SuccessCount.Valid {
+			successCount = int64(qualityStats.SuccessCount.Float64)
+		}
+		if qualityStats.FailureCount.Valid {
+			failureCount = int64(qualityStats.FailureCount.Float64)
+		}
+		total := successCount + failureCount
+		if total > 0 {
+			rate := float64(successCount) / float64(total)
+			stats.SuccessRate = &rate
+		}
+	}
+
 	templates.Dashboard(stats).Render(ctx, w)
 }
 
@@ -85,6 +108,14 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	queries := sqlc.New(s.db)
 
 	sessions, _ := queries.ListSessions(ctx, 50)
+
+	// Build quality lookup map
+	qualityMap := make(map[string]sqlc.ListSessionQualitiesForSessionsRow)
+	if qualities, err := queries.ListSessionQualitiesForSessions(ctx); err == nil {
+		for _, q := range qualities {
+			qualityMap[q.SessionID] = q
+		}
+	}
 
 	sessionList := make([]templates.SessionSummary, 0, len(sessions))
 	for _, sess := range sessions {
@@ -102,6 +133,17 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 			summary.Tokens = m.TokenInput + m.TokenOutput
 			if m.CostEstimateUsd.Valid {
 				summary.Cost = m.CostEstimateUsd.Float64
+			}
+		}
+		// Add quality data
+		if q, ok := qualityMap[sess.ID]; ok {
+			summary.IsReviewed = true
+			if q.OverallRating.Valid {
+				summary.OverallRating = int(q.OverallRating.Int64)
+			}
+			if q.IsSuccess.Valid {
+				isSuccess := q.IsSuccess.Int64 == 1
+				summary.IsSuccess = &isSuccess
 			}
 		}
 		sessionList = append(sessionList, summary)
@@ -175,6 +217,36 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 			Operation: f.Operation,
 			Count:     f.OperationCount,
 		})
+	}
+
+	// Get quality
+	if q, err := queries.GetSessionQualityBySessionID(ctx, id); err == nil {
+		quality := templates.SessionQuality{
+			SessionID: q.SessionID,
+		}
+		if q.OverallRating.Valid {
+			quality.OverallRating = int(q.OverallRating.Int64)
+		}
+		if q.IsSuccess.Valid {
+			isSuccess := q.IsSuccess.Int64 == 1
+			quality.IsSuccess = &isSuccess
+		}
+		if q.AccuracyRating.Valid {
+			quality.AccuracyRating = int(q.AccuracyRating.Int64)
+		}
+		if q.HelpfulnessRating.Valid {
+			quality.HelpfulnessRating = int(q.HelpfulnessRating.Int64)
+		}
+		if q.EfficiencyRating.Valid {
+			quality.EfficiencyRating = int(q.EfficiencyRating.Int64)
+		}
+		if q.Notes.Valid {
+			quality.Notes = q.Notes.String
+		}
+		if q.ReviewedAt.Valid {
+			quality.ReviewedAt = q.ReviewedAt.String
+		}
+		detail.Quality = &quality
 	}
 
 	templates.SessionDetailPage(detail).Render(ctx, w)
@@ -313,6 +385,42 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 		detail.RecentSessions = append(detail.RecentSessions, summary)
+	}
+
+	// Get quality stats
+	qualityStats, err := queries.GetQualityStatsByExperiment(ctx, toNullString(exp.ID))
+	if err == nil && qualityStats.ReviewedCount > 0 {
+		detail.ReviewedCount = qualityStats.ReviewedCount
+		if qualityStats.AvgOverallRating.Valid {
+			avg := qualityStats.AvgOverallRating.Float64
+			detail.AvgOverall = &avg
+		}
+		if qualityStats.AvgAccuracy.Valid {
+			avg := qualityStats.AvgAccuracy.Float64
+			detail.AvgAccuracy = &avg
+		}
+		if qualityStats.AvgHelpfulness.Valid {
+			avg := qualityStats.AvgHelpfulness.Float64
+			detail.AvgHelpfulness = &avg
+		}
+		if qualityStats.AvgEfficiency.Valid {
+			avg := qualityStats.AvgEfficiency.Float64
+			detail.AvgEfficiency = &avg
+		}
+		// Calculate success rate
+		successCount := int64(0)
+		failureCount := int64(0)
+		if qualityStats.SuccessCount.Valid {
+			successCount = int64(qualityStats.SuccessCount.Float64)
+		}
+		if qualityStats.FailureCount.Valid {
+			failureCount = int64(qualityStats.FailureCount.Float64)
+		}
+		total := successCount + failureCount
+		if total > 0 {
+			rate := float64(successCount) / float64(total)
+			detail.SuccessRate = &rate
+		}
 	}
 
 	templates.ExperimentDetailPage(detail).Render(ctx, w)

@@ -16,6 +16,7 @@ templ Sessions(sessions []SessionSummary) {
 							<th class="table-header">Turns</th>
 							<th class="table-header">Tokens</th>
 							<th class="table-header">Cost</th>
+							<th class="table-header">Quality</th>
 							<th class="table-header">Exit</th>
 						</tr>
 					</thead>
@@ -29,6 +30,9 @@ templ Sessions(sessions []SessionSummary) {
 								<td class="table-cell">{ fmt.Sprintf("%d", s.Turns) }</td>
 								<td class="table-cell">{ formatTokens(s.Tokens) }</td>
 								<td class="table-cell text-green-600">{ fmt.Sprintf("$%.4f", s.Cost) }</td>
+								<td class="table-cell">
+									@QualityIndicator(s.IsReviewed, s.OverallRating, s.IsSuccess)
+								</td>
 								<td class="table-cell">
 									<span class={ "badge", exitReasonBadge(s.ExitReason) }>{ s.ExitReason }</span>
 								</td>
@@ -65,7 +69,7 @@ templ SessionDetailPage(session SessionDetail) {
 				@StatCard("Turns", fmt.Sprintf("%d", session.TurnCount), "Conversation turns")
 				@StatCard("Tokens", formatTokens(session.TokenInput + session.TokenOutput), fmt.Sprintf("%s in / %s out", formatTokens(session.TokenInput), formatTokens(session.TokenOutput)))
 				@StatCard("Cost", fmt.Sprintf("$%.4f", session.CostEstimateUsd), "Estimated cost")
-				@StatCard("Duration", formatDuration(session.DurationSeconds), "Session duration")
+				@QualityStatCard(session.Quality)
 			</div>
 
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -161,4 +165,47 @@ func formatDuration(seconds int64) string {
 		return fmt.Sprintf("%ds", seconds)
 	}
 	return fmt.Sprintf("%dm %ds", seconds/60, seconds%60)
+}
+
+templ QualityIndicator(isReviewed bool, rating int, isSuccess *bool) {
+	if !isReviewed {
+		<span class="text-gray-400 text-xs">—</span>
+	} else {
+		<div class="flex items-center gap-1">
+			if isSuccess != nil {
+				if *isSuccess {
+					<span class="text-green-600" title="Success">✓</span>
+				} else {
+					<span class="text-red-600" title="Failure">✗</span>
+				}
+			}
+			if rating > 0 {
+				<span class="text-yellow-500">{ fmt.Sprintf("%d★", rating) }</span>
+			}
+		</div>
+	}
+}
+
+templ QualityStatCard(quality *SessionQuality) {
+	<div class="card">
+		<div class="text-sm text-gray-500 mb-1">Quality</div>
+		if quality == nil || quality.ReviewedAt == "" {
+			<div class="text-2xl font-bold text-gray-400">—</div>
+			<div class="text-xs text-gray-400">Not reviewed</div>
+		} else {
+			<div class="flex items-center gap-2">
+				if quality.IsSuccess != nil {
+					if *quality.IsSuccess {
+						<span class="text-2xl text-green-600">✓</span>
+					} else {
+						<span class="text-2xl text-red-600">✗</span>
+					}
+				}
+				if quality.OverallRating > 0 {
+					<span class="text-2xl font-bold text-yellow-500">{ fmt.Sprintf("%d★", quality.OverallRating) }</span>
+				}
+			</div>
+			<div class="text-xs text-gray-500">Reviewed</div>
+		}
+	</div>
 }

@@ -101,6 +101,10 @@ func (r *SessionQualityRepository) GetBySessionID(ctx context.Context, sessionID
 	return quality, nil
 }
 
+func (r *SessionQualityRepository) Delete(ctx context.Context, sessionID string) error {
+	return r.queries.DeleteSessionQuality(ctx, sessionID)
+}
+
 func (r *SessionQualityRepository) ListUnreviewed(ctx context.Context, limit int) ([]string, error) {
 	return r.queries.ListUnreviewedSessionIDs(ctx, int64(limit))
 }

@@ -11,7 +11,7 @@ import (
 )
 
 const createSession = `-- name: CreateSession :exec
-INSERT INTO sessions (id, project_id, experiment_id, transcript_path, transcript_stored_path, cwd, permission_mode, exit_reason, started_at, ended_at, duration_seconds, created_at)
+INSERT OR REPLACE INTO sessions (id, project_id, experiment_id, transcript_path, transcript_stored_path, cwd, permission_mode, exit_reason, started_at, ended_at, duration_seconds, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 

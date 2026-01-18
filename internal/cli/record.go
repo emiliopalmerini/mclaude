@@ -71,6 +71,7 @@ func runRecord(cmd *cobra.Command, args []string) error {
 	fileRepo := turso.NewSessionFileRepository(db)
 	commandRepo := turso.NewSessionCommandRepository(db)
 	pricingRepo := turso.NewPricingRepository(db)
+	qualityRepo := turso.NewSessionQualityRepository(db)
 
 	// Initialize transcript storage
 	transcriptStorage, err := storage.NewTranscriptStorage()
@@ -146,10 +147,13 @@ func runRecord(cmd *cobra.Command, args []string) error {
 		session.ExperimentID = &activeExperiment.ID
 	}
 
-	// Save session
+	// Save session (upsert - handles continued sessions)
 	if err := sessionRepo.Create(ctx, session); err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
+
+	// Clear any existing quality data (stale after session continuation)
+	_ = qualityRepo.Delete(ctx, session.ID)
 
 	// Save metrics
 	if err := metricsRepo.Create(ctx, parsed.Metrics); err != nil {

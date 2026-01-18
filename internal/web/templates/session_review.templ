@@ -62,12 +62,22 @@ templ QualityReviewForm(sessionID string, quality SessionQuality) {
 		save() {
 			this.saving = true;
 			const form = this.$refs.form;
-			htmx.ajax('POST', form.action, {source: form, target: '#save-indicator', swap: 'innerHTML'});
-			setTimeout(() => {
+			const params = new URLSearchParams();
+			params.set('is_success', this.isSuccess === null ? '' : (this.isSuccess ? '1' : '0'));
+			params.set('overall_rating', this.overallRating);
+			params.set('accuracy_rating', this.accuracyRating);
+			params.set('helpfulness_rating', this.helpfulnessRating);
+			params.set('efficiency_rating', this.efficiencyRating);
+			params.set('notes', form.querySelector('[name=notes]').value || '');
+			fetch(form.action, {
+				method: 'POST',
+				headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+				body: params
+			}).then(() => {
 				this.saved = true;
 				this.saving = false;
 				setTimeout(() => this.saved = false, 2000);
-			}, 300);
+			});
 		}
 	}`, boolToJS(quality.IsSuccess), quality.OverallRating, quality.AccuracyRating, quality.HelpfulnessRating, quality.EfficiencyRating) }>
 		<h2>Quality Assessment</h2>

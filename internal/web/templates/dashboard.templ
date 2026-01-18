@@ -17,7 +17,7 @@ templ Dashboard(stats DashboardStats) {
 				@StatCard("Sessions", fmt.Sprintf("%d", stats.SessionCount), "Total sessions recorded")
 				@StatCard("Tokens", formatTokens(stats.TotalTokens), fmt.Sprintf("%s in / %s out", formatTokens(stats.TokenInput), formatTokens(stats.TokenOutput)))
 				@StatCard("Cost", fmt.Sprintf("$%.4f", stats.TotalCost), "Estimated total cost")
-				@StatCard("Turns", fmt.Sprintf("%d", stats.TotalTurns), "Total conversation turns")
+				@QualityDashboardCard(stats.ReviewedCount, stats.SuccessRate, stats.AvgOverall)
 			</div>
 
 			<!-- Usage Chart -->
@@ -76,5 +76,25 @@ templ StatCard(title, value, subtitle string) {
 		<dt class="text-sm font-medium text-gray-500 truncate">{ title }</dt>
 		<dd class="mt-1 text-3xl font-semibold text-gray-900">{ value }</dd>
 		<dd class="mt-1 text-sm text-gray-500">{ subtitle }</dd>
+	</div>
+}
+
+templ QualityDashboardCard(reviewedCount int64, successRate *float64, avgOverall *float64) {
+	<div class="card">
+		<dt class="text-sm font-medium text-gray-500 truncate">Quality</dt>
+		if reviewedCount == 0 {
+			<dd class="mt-1 text-3xl font-semibold text-gray-400">—</dd>
+			<dd class="mt-1 text-sm text-gray-500">No reviews yet</dd>
+		} else {
+			<dd class="mt-1 flex items-center gap-2">
+				if successRate != nil {
+					<span class="text-2xl font-bold text-green-600">{ formatPercent(*successRate) }</span>
+				}
+				if avgOverall != nil {
+					<span class="text-2xl font-bold text-yellow-500">{ formatRating(*avgOverall) }</span>
+				}
+			</dd>
+			<dd class="mt-1 text-sm text-gray-500">{ fmt.Sprintf("%d reviewed", reviewedCount) }</dd>
+		}
 	</div>
 }
