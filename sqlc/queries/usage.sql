@@ -1,21 +1,3 @@
--- name: CreateUsageLimit :exec
-INSERT INTO usage_limits (id, limit_value, warn_threshold, enabled, updated_at)
-VALUES (?, ?, ?, ?, datetime('now'))
-ON CONFLICT (id) DO UPDATE SET
-    limit_value = excluded.limit_value,
-    warn_threshold = excluded.warn_threshold,
-    enabled = excluded.enabled,
-    updated_at = datetime('now');
-
--- name: GetUsageLimit :one
-SELECT * FROM usage_limits WHERE id = ?;
-
--- name: ListUsageLimits :many
-SELECT * FROM usage_limits ORDER BY id;
-
--- name: DeleteUsageLimit :exec
-DELETE FROM usage_limits WHERE id = ?;
-
 -- name: GetRollingWindowUsage :one
 SELECT
     CAST(COALESCE(SUM(m.token_cache_read + m.token_cache_write), 0) AS REAL) as total_tokens,

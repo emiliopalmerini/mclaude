@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -66,27 +65,9 @@ Exit codes:
 	RunE: runLimitsCheck,
 }
 
-// Legacy commands (for manual limits)
-var limitsSetCmd = &cobra.Command{
-	Use:    "set <type> <value>",
-	Short:  "Set a manual usage limit (legacy)",
-	Hidden: true,
-	Args:   cobra.ExactArgs(2),
-	RunE:   runLimitsSet,
-}
-
-var limitsDeleteCmd = &cobra.Command{
-	Use:    "delete <type>",
-	Short:  "Delete a usage limit (legacy)",
-	Hidden: true,
-	Args:   cobra.ExactArgs(1),
-	RunE:   runLimitsDelete,
-}
-
 var (
-	limitsWarnThreshold float64
-	limitsCheckWarn     bool
-	limitsLearnWeekly   bool
+	limitsCheckWarn   bool
+	limitsLearnWeekly bool
 )
 
 func init() {
@@ -96,10 +77,7 @@ func init() {
 	limitsCmd.AddCommand(limitsPlanCmd)
 	limitsCmd.AddCommand(limitsLearnCmd)
 	limitsCmd.AddCommand(limitsCheckCmd)
-	limitsCmd.AddCommand(limitsSetCmd)
-	limitsCmd.AddCommand(limitsDeleteCmd)
 
-	limitsSetCmd.Flags().Float64Var(&limitsWarnThreshold, "warn", 0.8, "Warning threshold (0.0-1.0)")
 	limitsCheckCmd.Flags().BoolVar(&limitsCheckWarn, "warn", false, "Exit with code 2 if warning threshold reached")
 	limitsLearnCmd.Flags().BoolVar(&limitsLearnWeekly, "weekly", false, "Record weekly limit instead of 5-hour limit")
 }
@@ -396,74 +374,4 @@ func runLimitsCheck(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("\nOK")
 	return nil
-}
-
-// Legacy manual limit commands
-
-func runLimitsSet(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-	limitType := args[0]
-	valueStr := args[1]
-
-	if !isValidLimitType(limitType) {
-		return fmt.Errorf("invalid limit type: %s (valid: daily_tokens, weekly_tokens, daily_cost, weekly_cost)", limitType)
-	}
-
-	value, err := strconv.ParseFloat(valueStr, 64)
-	if err != nil {
-		return fmt.Errorf("invalid value: %w", err)
-	}
-
-	if value <= 0 {
-		return fmt.Errorf("limit value must be positive")
-	}
-
-	db, err := turso.NewDB()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
-
-	limitsRepo := turso.NewUsageLimitsRepository(db)
-
-	limit := &domain.UsageLimit{
-		ID:            limitType,
-		LimitValue:    value,
-		WarnThreshold: limitsWarnThreshold,
-		Enabled:       true,
-	}
-
-	if err := limitsRepo.Upsert(ctx, limit); err != nil {
-		return fmt.Errorf("failed to set limit: %w", err)
-	}
-
-	fmt.Printf("Set %s limit to %s\n", limitType, util.FormatTokens(value))
-	return nil
-}
-
-func runLimitsDelete(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-	limitType := args[0]
-
-	db, err := turso.NewDB()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
-
-	limitsRepo := turso.NewUsageLimitsRepository(db)
-
-	if err := limitsRepo.Delete(ctx, limitType); err != nil {
-		return fmt.Errorf("failed to delete limit: %w", err)
-	}
-
-	fmt.Printf("Deleted limit: %s\n", limitType)
-	return nil
-}
-
-func isValidLimitType(t string) bool {
-	return t == domain.LimitDailyTokens ||
-		t == domain.LimitWeeklyTokens ||
-		t == domain.LimitDailyCost ||
-		t == domain.LimitWeeklyCost
 }
