@@ -14,7 +14,7 @@ pkgs.mkShell {
 
   shellHook = ''
     export CGO_ENABLED=1
-    echo "Claude Watcher dev shell"
+    echo "mclaude dev shell"
     echo "Commands: make build, make test, make sqlc, make templ"
   '';
 }

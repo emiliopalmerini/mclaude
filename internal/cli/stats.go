@@ -207,7 +207,7 @@ func printStats(stats Stats, filterLabel, period, activeExp string, tools []sqlc
 	}
 
 	fmt.Println()
-	fmt.Printf("  Claude Watcher Stats\n")
+	fmt.Printf("  mclaude Stats\n")
 	fmt.Printf("  =====================\n")
 	fmt.Println()
 

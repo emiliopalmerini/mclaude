@@ -21,15 +21,30 @@ Track sessions, measure token consumption, estimate costs, and run experiments t
 
 ## Installation
 
+### Using Go
+
+```bash
+go install github.com/emiliopalmerini/mclaude/cmd/mclaude@latest
+```
+
 ### Build from source
 
 ```bash
+git clone https://github.com/emiliopalmerini/mclaude.git
+cd mclaude
 make build
 ```
 
 ### Using Nix
 
 ```bash
+# Run directly
+nix run github:emiliopalmerini/mclaude
+
+# Install to profile
+nix profile install github:emiliopalmerini/mclaude
+
+# Build locally
 nix build
 ```
 
@@ -95,11 +110,11 @@ mclaude serve
 
 ### Core
 
-| Command | Description |
-|---------|-------------|
-| `mclaude record` | Hook handler - captures session data from stdin |
-| `mclaude migrate [n]` | Run migrations (up to version n, or all if omitted) |
-| `mclaude serve [--port 8080]` | Start web dashboard |
+| Command                       | Description                                         |
+| ----------------------------- | --------------------------------------------------- |
+| `mclaude record`              | Hook handler - captures session data from stdin     |
+| `mclaude migrate [n]`         | Run migrations (up to version n, or all if omitted) |
+| `mclaude serve [--port 8080]` | Start web dashboard                                 |
 
 ### Experiments
 
@@ -137,6 +152,26 @@ mclaude stats --period week  # today, week, month, all
 
 # List sessions
 mclaude sessions list [--last 10]
+```
+
+### Usage Limits
+
+Track your usage against Claude's rate limits with dual-window monitoring (5-hour and weekly).
+
+```bash
+# Set your Claude plan type (pro, max_5x, max_20x)
+mclaude limits plan max_5x
+
+# View current usage vs limits
+mclaude limits list
+
+# Record actual limit when you hit it (replaces estimates)
+mclaude limits learn           # Learn 5-hour limit
+mclaude limits learn --weekly  # Learn weekly limit
+
+# Check limits (useful for scripts/automation)
+mclaude limits check           # Exit 1 if exceeded
+mclaude limits check --warn    # Exit 2 if at 80%+
 ```
 
 ### Cost Configuration
