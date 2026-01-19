@@ -17,6 +17,30 @@ func FormatNumber(n int64) string {
 	return fmt.Sprintf("%.1fM", float64(n)/1000000)
 }
 
+// FormatTokens formats a float64 token count with K/M suffix for readability.
+// Examples: 500 -> "500", 1500 -> "1.5K", 1500000 -> "1.5M"
+func FormatTokens(n float64) string {
+	if n < 1000 {
+		return fmt.Sprintf("%.0f", n)
+	}
+	if n < 1000000 {
+		return fmt.Sprintf("%.1fK", n/1000)
+	}
+	return fmt.Sprintf("%.1fM", n/1000000)
+}
+
+// FormatTokensInt formats an int64 token count with K/M suffix for readability.
+// Examples: 500 -> "500", 1500 -> "1.5K", 1500000 -> "1.5M"
+func FormatTokensInt(n int64) string {
+	if n < 1000 {
+		return fmt.Sprintf("%d", n)
+	}
+	if n < 1000000 {
+		return fmt.Sprintf("%.1fK", float64(n)/1000)
+	}
+	return fmt.Sprintf("%.1fM", float64(n)/1000000)
+}
+
 // FormatDateISO formats an RFC3339 timestamp string to ISO date format (2006-01-02).
 // Returns the original string if parsing fails.
 func FormatDateISO(s string) string {

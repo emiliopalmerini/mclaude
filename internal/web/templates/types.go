@@ -31,6 +31,12 @@ type UsageLimitStats struct {
 	Status       string  // OK, WARNING, EXCEEDED
 	IsLearned    bool    // true if limit is learned, false if estimated
 	MinutesLeft  int     // Minutes until window resets (approx)
+	// Weekly fields
+	WeeklyTokensUsed   float64 // Current tokens in weekly window
+	WeeklyTokenLimit   float64 // Weekly limit (learned or estimated)
+	WeeklyUsagePercent float64 // 0-100+
+	WeeklyStatus       string  // OK, WARNING, EXCEEDED
+	WeeklyIsLearned    bool    // true if weekly limit is learned
 }
 
 type ToolUsage struct {

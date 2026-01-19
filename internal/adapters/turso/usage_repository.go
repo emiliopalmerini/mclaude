@@ -11,73 +11,6 @@ import (
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
 
-type UsageLimitsRepository struct {
-	db      *sql.DB
-	queries *sqlc.Queries
-}
-
-func NewUsageLimitsRepository(db *sql.DB) *UsageLimitsRepository {
-	return &UsageLimitsRepository{
-		db:      db,
-		queries: sqlc.New(db),
-	}
-}
-
-func (r *UsageLimitsRepository) Upsert(ctx context.Context, limit *domain.UsageLimit) error {
-	enabled := int64(0)
-	if limit.Enabled {
-		enabled = 1
-	}
-	return r.queries.CreateUsageLimit(ctx, sqlc.CreateUsageLimitParams{
-		ID:            limit.ID,
-		LimitValue:    limit.LimitValue,
-		WarnThreshold: sql.NullFloat64{Float64: limit.WarnThreshold, Valid: true},
-		Enabled:       enabled,
-	})
-}
-
-func (r *UsageLimitsRepository) Get(ctx context.Context, id string) (*domain.UsageLimit, error) {
-	row, err := r.queries.GetUsageLimit(ctx, id)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get usage limit: %w", err)
-	}
-	return limitFromRow(row), nil
-}
-
-func (r *UsageLimitsRepository) List(ctx context.Context) ([]*domain.UsageLimit, error) {
-	rows, err := r.queries.ListUsageLimits(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list usage limits: %w", err)
-	}
-	limits := make([]*domain.UsageLimit, len(rows))
-	for i, row := range rows {
-		limits[i] = limitFromRow(row)
-	}
-	return limits, nil
-}
-
-func (r *UsageLimitsRepository) Delete(ctx context.Context, id string) error {
-	return r.queries.DeleteUsageLimit(ctx, id)
-}
-
-func limitFromRow(row sqlc.UsageLimit) *domain.UsageLimit {
-	limit := &domain.UsageLimit{
-		ID:            row.ID,
-		LimitValue:    row.LimitValue,
-		WarnThreshold: 0.8,
-		Enabled:       row.Enabled == 1,
-		CreatedAt:     util.ParseTimeRFC3339(row.CreatedAt),
-		UpdatedAt:     util.ParseTimeRFC3339(row.UpdatedAt),
-	}
-	if row.WarnThreshold.Valid {
-		limit.WarnThreshold = row.WarnThreshold.Float64
-	}
-	return limit
-}
-
 type PlanConfigRepository struct {
 	db      *sql.DB
 	queries *sqlc.Queries
@@ -154,6 +87,18 @@ func planConfigFromRow(row sqlc.PlanConfig) *domain.PlanConfig {
 		t := util.ParseTimeSQLite(row.WindowStartTime.String)
 		config.WindowStartTime = &t
 	}
+	// Weekly fields
+	if row.WeeklyLearnedTokenLimit.Valid {
+		config.WeeklyLearnedTokenLimit = &row.WeeklyLearnedTokenLimit.Float64
+	}
+	if row.WeeklyLearnedAt.Valid {
+		t := util.ParseTimeSQLite(row.WeeklyLearnedAt.String)
+		config.WeeklyLearnedAt = &t
+	}
+	if row.WeeklyWindowStartTime.Valid {
+		t := util.ParseTimeSQLite(row.WeeklyWindowStartTime.String)
+		config.WeeklyWindowStartTime = &t
+	}
 	return config
 }
 
@@ -167,15 +112,59 @@ func (r *PlanConfigRepository) ResetWindowIfExpired(ctx context.Context, session
 		return false, fmt.Errorf("failed to get plan config: %w", err)
 	}
 	if config == nil {
-		// No plan configured, nothing to reset
 		return false, nil
 	}
 
-	windowDuration := time.Duration(config.WindowHours) * time.Hour
+	windowHours := config.WindowHours
+	return r.resetWindowIfExpired(ctx, sessionStartTime, config.WindowStartTime, windowHours, r.UpdateWindowStartTime)
+}
 
-	// Reset if window_start_time is nil OR session started after window expired
-	if config.WindowStartTime == nil || sessionStartTime.After(config.WindowStartTime.Add(windowDuration)) {
-		if err := r.UpdateWindowStartTime(ctx, sessionStartTime); err != nil {
+// Weekly window methods
+
+func (r *PlanConfigRepository) GetWeeklyWindowSummary(ctx context.Context) (*domain.UsageSummary, error) {
+	row, err := r.queries.GetWeeklyWindowUsage(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get weekly window usage: %w", err)
+	}
+	return &domain.UsageSummary{
+		TotalTokens: row.TotalTokens,
+		TotalCost:   row.TotalCost,
+	}, nil
+}
+
+func (r *PlanConfigRepository) UpdateWeeklyWindowStartTime(ctx context.Context, t time.Time) error {
+	return r.queries.UpdateWeeklyWindowStartTime(ctx, sql.NullString{String: t.Format(time.RFC3339), Valid: true})
+}
+
+func (r *PlanConfigRepository) UpdateWeeklyLearnedLimit(ctx context.Context, limit float64) error {
+	return r.queries.UpdateWeeklyLearnedLimit(ctx, sql.NullFloat64{Float64: limit, Valid: true})
+}
+
+func (r *PlanConfigRepository) ResetWeeklyWindowIfExpired(ctx context.Context, sessionStartTime time.Time) (bool, error) {
+	config, err := r.Get(ctx)
+	if err != nil {
+		return false, fmt.Errorf("failed to get plan config: %w", err)
+	}
+	if config == nil {
+		return false, nil
+	}
+
+	return r.resetWindowIfExpired(ctx, sessionStartTime, config.WeeklyWindowStartTime, domain.WeeklyWindowHours, r.UpdateWeeklyWindowStartTime)
+}
+
+// resetWindowIfExpired is a helper that handles the common logic for resetting time windows.
+// It resets if windowStartTime is nil OR sessionStartTime is after the window expired.
+func (r *PlanConfigRepository) resetWindowIfExpired(
+	ctx context.Context,
+	sessionStartTime time.Time,
+	windowStartTime *time.Time,
+	windowHours int,
+	updateFn func(context.Context, time.Time) error,
+) (bool, error) {
+	windowDuration := time.Duration(windowHours) * time.Hour
+
+	if windowStartTime == nil || sessionStartTime.After(windowStartTime.Add(windowDuration)) {
+		if err := updateFn(ctx, sessionStartTime); err != nil {
 			return false, fmt.Errorf("failed to update window start time: %w", err)
 		}
 		return true, nil

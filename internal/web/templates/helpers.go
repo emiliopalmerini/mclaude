@@ -3,16 +3,12 @@ package templates
 import (
 	"fmt"
 	"time"
+
+	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
 func formatTokens(n int64) string {
-	if n < 1000 {
-		return fmt.Sprintf("%d", n)
-	}
-	if n < 1000000 {
-		return fmt.Sprintf("%.1fK", float64(n)/1000)
-	}
-	return fmt.Sprintf("%.1fM", float64(n)/1000000)
+	return util.FormatTokensInt(n)
 }
 
 func truncateID(id string) string {
@@ -63,13 +59,7 @@ func formatPercent(p float64) string {
 }
 
 func formatTokensFloat(n float64) string {
-	if n < 1000 {
-		return fmt.Sprintf("%.0f", n)
-	}
-	if n < 1000000 {
-		return fmt.Sprintf("%.1fK", n/1000)
-	}
-	return fmt.Sprintf("%.1fM", n/1000000)
+	return util.FormatTokens(n)
 }
 
 func formatUsagePercent(p float64) string {

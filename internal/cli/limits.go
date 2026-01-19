@@ -4,20 +4,19 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
-	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
 	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/domain"
+	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
 var limitsCmd = &cobra.Command{
 	Use:   "limits",
 	Short: "Manage usage limits",
-	Long:  `Configure and check usage limits with 5-hour rolling window support.`,
+	Long:  `Configure and check usage limits with 5-hour and weekly rolling window support.`,
 }
 
 var limitsListCmd = &cobra.Command{
@@ -48,7 +47,9 @@ var limitsLearnCmd = &cobra.Command{
 	Long: `Record current token usage as the learned limit.
 
 Run this when Claude Code shows you've hit your limit.
-The current usage will be saved as your actual limit.`,
+The current usage will be saved as your actual limit.
+
+Use --weekly to record the weekly limit instead of the 5-hour limit.`,
 	RunE: runLimitsLearn,
 }
 
@@ -64,26 +65,9 @@ Exit codes:
 	RunE: runLimitsCheck,
 }
 
-// Legacy commands (for manual limits)
-var limitsSetCmd = &cobra.Command{
-	Use:    "set <type> <value>",
-	Short:  "Set a manual usage limit (legacy)",
-	Hidden: true,
-	Args:   cobra.ExactArgs(2),
-	RunE:   runLimitsSet,
-}
-
-var limitsDeleteCmd = &cobra.Command{
-	Use:    "delete <type>",
-	Short:  "Delete a usage limit (legacy)",
-	Hidden: true,
-	Args:   cobra.ExactArgs(1),
-	RunE:   runLimitsDelete,
-}
-
 var (
-	limitsWarnThreshold float64
-	limitsCheckWarn     bool
+	limitsCheckWarn   bool
+	limitsLearnWeekly bool
 )
 
 func init() {
@@ -93,11 +77,9 @@ func init() {
 	limitsCmd.AddCommand(limitsPlanCmd)
 	limitsCmd.AddCommand(limitsLearnCmd)
 	limitsCmd.AddCommand(limitsCheckCmd)
-	limitsCmd.AddCommand(limitsSetCmd)
-	limitsCmd.AddCommand(limitsDeleteCmd)
 
-	limitsSetCmd.Flags().Float64Var(&limitsWarnThreshold, "warn", 0.8, "Warning threshold (0.0-1.0)")
 	limitsCheckCmd.Flags().BoolVar(&limitsCheckWarn, "warn", false, "Exit with code 2 if warning threshold reached")
+	limitsLearnCmd.Flags().BoolVar(&limitsLearnWeekly, "weekly", false, "Record weekly limit instead of 5-hour limit")
 }
 
 func runLimitsPlan(cmd *cobra.Command, args []string) error {
@@ -129,7 +111,7 @@ func runLimitsPlan(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Plan set to %s\n", preset.Name)
 	fmt.Printf("  Window: %d hours (rolling)\n", config.WindowHours)
 	fmt.Printf("  Estimated limit: ~%d messages (~%s tokens)\n",
-		preset.MessagesPerWindow, formatTokens(preset.TokenEstimate))
+		preset.MessagesPerWindow, util.FormatTokens(preset.TokenEstimate))
 	fmt.Println("\nRun 'mclaude limits learn' when you hit your limit to record the actual token limit.")
 	return nil
 }
@@ -153,21 +135,41 @@ func runLimitsLearn(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no plan configured. Run 'mclaude limits plan <type>' first")
 	}
 
-	summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
-	if err != nil {
-		return fmt.Errorf("failed to get usage: %w", err)
-	}
+	if limitsLearnWeekly {
+		// Learn weekly limit
+		summary, err := planRepo.GetWeeklyWindowSummary(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get weekly usage: %w", err)
+		}
 
-	if summary.TotalTokens == 0 {
-		return fmt.Errorf("no token usage recorded in the last %d hours", config.WindowHours)
-	}
+		if summary.TotalTokens == 0 {
+			return fmt.Errorf("no token usage recorded in the last 7 days")
+		}
 
-	if err := planRepo.UpdateLearnedLimit(ctx, summary.TotalTokens); err != nil {
-		return fmt.Errorf("failed to save learned limit: %w", err)
-	}
+		if err := planRepo.UpdateWeeklyLearnedLimit(ctx, summary.TotalTokens); err != nil {
+			return fmt.Errorf("failed to save weekly learned limit: %w", err)
+		}
 
-	fmt.Printf("Learned limit recorded: %s tokens\n", formatTokens(summary.TotalTokens))
-	fmt.Println("This will be used for future limit checks.")
+		fmt.Printf("Weekly learned limit recorded: %s tokens\n", util.FormatTokens(summary.TotalTokens))
+		fmt.Println("This will be used for future weekly limit checks.")
+	} else {
+		// Learn 5-hour limit
+		summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
+		if err != nil {
+			return fmt.Errorf("failed to get usage: %w", err)
+		}
+
+		if summary.TotalTokens == 0 {
+			return fmt.Errorf("no token usage recorded in the last %d hours", config.WindowHours)
+		}
+
+		if err := planRepo.UpdateLearnedLimit(ctx, summary.TotalTokens); err != nil {
+			return fmt.Errorf("failed to save learned limit: %w", err)
+		}
+
+		fmt.Printf("Learned limit recorded: %s tokens\n", util.FormatTokens(summary.TotalTokens))
+		fmt.Println("This will be used for future limit checks.")
+	}
 	return nil
 }
 
@@ -196,14 +198,22 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	preset, hasPreset := domain.PlanPresets[config.PlanType]
+	weeklyPreset, hasWeeklyPreset := domain.WeeklyPlanPresets[config.PlanType]
+
+	// Display plan name
+	planName := config.PlanType
+	if hasPreset {
+		planName = preset.Name
+	}
+	fmt.Printf("Plan: %s\n\n", planName)
+
+	// === 5-Hour Window ===
 	summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
 	if err != nil {
 		return fmt.Errorf("failed to get usage: %w", err)
 	}
 
-	preset, hasPreset := domain.PlanPresets[config.PlanType]
-
-	// Determine limit to use
 	var limit float64
 	var limitSource string
 	if config.LearnedTokenLimit != nil {
@@ -214,45 +224,62 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 		limitSource = "Estimated"
 	}
 
-	// Display
-	planName := config.PlanType
-	if hasPreset {
-		planName = preset.Name
-	}
-
-	fmt.Printf("Plan: %s (%d-hour rolling window)\n\n", planName, config.WindowHours)
-
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "METRIC\tCURRENT\tLIMIT\tUSAGE\tSTATUS")
-	fmt.Fprintln(w, "------\t-------\t-----\t-----\t------")
-
 	var percentage float64
 	if limit > 0 {
 		percentage = summary.TotalTokens / limit
 	}
-	status := getStatus(percentage, 0.8)
+	status := domain.GetStatus(percentage, 0.8)
 
-	limitStr := "N/A"
-	usageStr := "N/A"
+	fmt.Printf("5-Hour Window:\n")
+	fmt.Printf("  Tokens: %s", util.FormatTokens(summary.TotalTokens))
 	if limit > 0 {
-		limitStr = fmt.Sprintf("~%s", formatTokens(limit))
-		usageStr = fmt.Sprintf("%.0f%%", percentage*100)
+		fmt.Printf(" / ~%s (%.0f%%)", util.FormatTokens(limit), percentage*100)
+	}
+	fmt.Println()
+	fmt.Printf("  Status: %s", status)
+	if limit > 0 {
+		fmt.Printf(" [%s]", limitSource)
+	}
+	fmt.Println()
+
+	// === Weekly Window ===
+	weeklySummary, err := planRepo.GetWeeklyWindowSummary(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get weekly usage: %w", err)
 	}
 
-	fmt.Fprintf(w, "Tokens\t%s\t%s\t%s\t%s\n",
-		formatTokens(summary.TotalTokens), limitStr, usageStr, status)
-	fmt.Fprintf(w, "Cost\t$%.2f\t-\t-\t-\n", summary.TotalCost)
+	var weeklyLimit float64
+	var weeklyLimitSource string
+	if config.WeeklyLearnedTokenLimit != nil {
+		weeklyLimit = *config.WeeklyLearnedTokenLimit
+		weeklyLimitSource = "Learned"
+	} else if hasWeeklyPreset {
+		weeklyLimit = weeklyPreset.TokenEstimate
+		weeklyLimitSource = "Estimated"
+	}
 
-	w.Flush()
+	var weeklyPercentage float64
+	if weeklyLimit > 0 {
+		weeklyPercentage = weeklySummary.TotalTokens / weeklyLimit
+	}
+	weeklyStatus := domain.GetStatus(weeklyPercentage, 0.8)
 
-	if limit > 0 {
-		fmt.Printf("\nLimit source: %s", limitSource)
-		if config.LearnedAt != nil {
-			fmt.Printf(" (learned %s)", config.LearnedAt.Format("2006-01-02 15:04"))
-		}
-		fmt.Println()
-	} else {
-		fmt.Println("\nNo limit set. Run 'mclaude limits learn' when you hit your limit.")
+	fmt.Printf("\nWeekly Window (7 days):\n")
+	fmt.Printf("  Tokens: %s", util.FormatTokens(weeklySummary.TotalTokens))
+	if weeklyLimit > 0 {
+		fmt.Printf(" / ~%s (%.0f%%)", util.FormatTokens(weeklyLimit), weeklyPercentage*100)
+	}
+	fmt.Println()
+	fmt.Printf("  Status: %s", weeklyStatus)
+	if weeklyLimit > 0 {
+		fmt.Printf(" [%s]", weeklyLimitSource)
+	}
+	fmt.Println()
+
+	// Hints
+	if limit == 0 || weeklyLimit == 0 {
+		fmt.Println("\nTip: Run 'mclaude limits learn' when you hit your 5-hour limit.")
+		fmt.Println("     Run 'mclaude limits learn --weekly' when you hit your weekly limit.")
 	}
 
 	return nil
@@ -279,12 +306,12 @@ func runLimitsCheck(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Check 5-hour window
 	summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
 	if err != nil {
 		return fmt.Errorf("failed to get usage: %w", err)
 	}
 
-	// Determine limit
 	var limit float64
 	if config.LearnedTokenLimit != nil {
 		limit = *config.LearnedTokenLimit
@@ -292,120 +319,59 @@ func runLimitsCheck(cmd *cobra.Command, args []string) error {
 		limit = preset.TokenEstimate
 	}
 
-	if limit == 0 {
-		fmt.Printf("Tokens: %s (no limit configured)\n", formatTokens(summary.TotalTokens))
-		return nil
+	var percentage float64
+	if limit > 0 {
+		percentage = summary.TotalTokens / limit
+	}
+	status := domain.GetStatus(percentage, 0.8)
+
+	fmt.Printf("5-Hour: %s", util.FormatTokens(summary.TotalTokens))
+	if limit > 0 {
+		fmt.Printf(" / %s (%.0f%%) - %s", util.FormatTokens(limit), percentage*100, status)
+	}
+	fmt.Println()
+
+	// Check weekly window
+	weeklySummary, err := planRepo.GetWeeklyWindowSummary(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get weekly usage: %w", err)
 	}
 
-	percentage := summary.TotalTokens / limit
-	status := getStatus(percentage, 0.8)
+	var weeklyLimit float64
+	if config.WeeklyLearnedTokenLimit != nil {
+		weeklyLimit = *config.WeeklyLearnedTokenLimit
+	} else if preset, ok := domain.WeeklyPlanPresets[config.PlanType]; ok {
+		weeklyLimit = preset.TokenEstimate
+	}
 
-	fmt.Printf("Tokens: %s / %s (%.0f%%) - %s\n",
-		formatTokens(summary.TotalTokens),
-		formatTokens(limit),
-		percentage*100,
-		status)
+	var weeklyPercentage float64
+	if weeklyLimit > 0 {
+		weeklyPercentage = weeklySummary.TotalTokens / weeklyLimit
+	}
+	weeklyStatus := domain.GetStatus(weeklyPercentage, 0.8)
 
-	if percentage >= 1.0 {
-		fmt.Println("\nLimit exceeded!")
+	fmt.Printf("Weekly: %s", util.FormatTokens(weeklySummary.TotalTokens))
+	if weeklyLimit > 0 {
+		fmt.Printf(" / %s (%.0f%%) - %s", util.FormatTokens(weeklyLimit), weeklyPercentage*100, weeklyStatus)
+	}
+	fmt.Println()
+
+	// Exit codes: either limit exceeded = 1, either warning = 2 (with --warn)
+	if percentage >= 1.0 || weeklyPercentage >= 1.0 {
+		if percentage >= 1.0 {
+			fmt.Println("\n5-hour limit exceeded!")
+		}
+		if weeklyPercentage >= 1.0 {
+			fmt.Println("\nWeekly limit exceeded!")
+		}
 		os.Exit(1)
 	}
 
-	if percentage >= 0.8 && limitsCheckWarn {
+	if limitsCheckWarn && (percentage >= 0.8 || weeklyPercentage >= 0.8) {
 		fmt.Println("\nWarning threshold reached")
 		os.Exit(2)
 	}
 
 	fmt.Println("\nOK")
 	return nil
-}
-
-// Legacy manual limit commands
-
-func runLimitsSet(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-	limitType := args[0]
-	valueStr := args[1]
-
-	if !isValidLimitType(limitType) {
-		return fmt.Errorf("invalid limit type: %s (valid: daily_tokens, weekly_tokens, daily_cost, weekly_cost)", limitType)
-	}
-
-	value, err := strconv.ParseFloat(valueStr, 64)
-	if err != nil {
-		return fmt.Errorf("invalid value: %w", err)
-	}
-
-	if value <= 0 {
-		return fmt.Errorf("limit value must be positive")
-	}
-
-	db, err := turso.NewDB()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
-
-	limitsRepo := turso.NewUsageLimitsRepository(db)
-
-	limit := &domain.UsageLimit{
-		ID:            limitType,
-		LimitValue:    value,
-		WarnThreshold: limitsWarnThreshold,
-		Enabled:       true,
-	}
-
-	if err := limitsRepo.Upsert(ctx, limit); err != nil {
-		return fmt.Errorf("failed to set limit: %w", err)
-	}
-
-	fmt.Printf("Set %s limit to %s\n", limitType, formatTokens(value))
-	return nil
-}
-
-func runLimitsDelete(cmd *cobra.Command, args []string) error {
-	ctx := context.Background()
-	limitType := args[0]
-
-	db, err := turso.NewDB()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
-
-	limitsRepo := turso.NewUsageLimitsRepository(db)
-
-	if err := limitsRepo.Delete(ctx, limitType); err != nil {
-		return fmt.Errorf("failed to delete limit: %w", err)
-	}
-
-	fmt.Printf("Deleted limit: %s\n", limitType)
-	return nil
-}
-
-func isValidLimitType(t string) bool {
-	return t == domain.LimitDailyTokens ||
-		t == domain.LimitWeeklyTokens ||
-		t == domain.LimitDailyCost ||
-		t == domain.LimitWeeklyCost
-}
-
-func getStatus(percentage, warnThreshold float64) string {
-	if percentage >= 1.0 {
-		return "EXCEEDED"
-	}
-	if percentage >= warnThreshold {
-		return "WARNING"
-	}
-	return "OK"
-}
-
-func formatTokens(tokens float64) string {
-	if tokens >= 1_000_000 {
-		return fmt.Sprintf("%.1fM", tokens/1_000_000)
-	}
-	if tokens >= 1_000 {
-		return fmt.Sprintf("%.0fK", tokens/1_000)
-	}
-	return fmt.Sprintf("%.0f", tokens)
 }

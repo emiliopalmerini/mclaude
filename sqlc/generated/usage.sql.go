@@ -10,44 +10,8 @@ import (
 	"database/sql"
 )
 
-const createUsageLimit = `-- name: CreateUsageLimit :exec
-INSERT INTO usage_limits (id, limit_value, warn_threshold, enabled, updated_at)
-VALUES (?, ?, ?, ?, datetime('now'))
-ON CONFLICT (id) DO UPDATE SET
-    limit_value = excluded.limit_value,
-    warn_threshold = excluded.warn_threshold,
-    enabled = excluded.enabled,
-    updated_at = datetime('now')
-`
-
-type CreateUsageLimitParams struct {
-	ID            string          `json:"id"`
-	LimitValue    float64         `json:"limit_value"`
-	WarnThreshold sql.NullFloat64 `json:"warn_threshold"`
-	Enabled       int64           `json:"enabled"`
-}
-
-func (q *Queries) CreateUsageLimit(ctx context.Context, arg CreateUsageLimitParams) error {
-	_, err := q.db.ExecContext(ctx, createUsageLimit,
-		arg.ID,
-		arg.LimitValue,
-		arg.WarnThreshold,
-		arg.Enabled,
-	)
-	return err
-}
-
-const deleteUsageLimit = `-- name: DeleteUsageLimit :exec
-DELETE FROM usage_limits WHERE id = ?
-`
-
-func (q *Queries) DeleteUsageLimit(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteUsageLimit, id)
-	return err
-}
-
 const getPlanConfig = `-- name: GetPlanConfig :one
-SELECT id, plan_type, window_hours, learned_token_limit, learned_at, created_at, updated_at, window_start_time FROM plan_config WHERE id = 1
+SELECT id, plan_type, window_hours, learned_token_limit, learned_at, created_at, updated_at, window_start_time, weekly_window_start_time, weekly_learned_token_limit, weekly_learned_at FROM plan_config WHERE id = 1
 `
 
 func (q *Queries) GetPlanConfig(ctx context.Context) (PlanConfig, error) {
@@ -62,6 +26,9 @@ func (q *Queries) GetPlanConfig(ctx context.Context) (PlanConfig, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.WindowStartTime,
+		&i.WeeklyWindowStartTime,
+		&i.WeeklyLearnedTokenLimit,
+		&i.WeeklyLearnedAt,
 	)
 	return i, err
 }
@@ -90,56 +57,28 @@ func (q *Queries) GetRollingWindowUsage(ctx context.Context, dollar_1 sql.NullSt
 	return i, err
 }
 
-const getUsageLimit = `-- name: GetUsageLimit :one
-SELECT id, limit_value, warn_threshold, enabled, created_at, updated_at FROM usage_limits WHERE id = ?
+const getWeeklyWindowUsage = `-- name: GetWeeklyWindowUsage :one
+SELECT
+    CAST(COALESCE(SUM(m.token_cache_read + m.token_cache_write), 0) AS REAL) as total_tokens,
+    CAST(COALESCE(SUM(m.cost_estimate_usd), 0) AS REAL) as total_cost
+FROM sessions s
+JOIN session_metrics m ON s.id = m.session_id
+WHERE datetime(s.started_at) >= datetime((
+    SELECT COALESCE(weekly_window_start_time, datetime('now', '-168 hours'))
+    FROM plan_config WHERE id = 1
+))
 `
 
-func (q *Queries) GetUsageLimit(ctx context.Context, id string) (UsageLimit, error) {
-	row := q.db.QueryRowContext(ctx, getUsageLimit, id)
-	var i UsageLimit
-	err := row.Scan(
-		&i.ID,
-		&i.LimitValue,
-		&i.WarnThreshold,
-		&i.Enabled,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+type GetWeeklyWindowUsageRow struct {
+	TotalTokens float64 `json:"total_tokens"`
+	TotalCost   float64 `json:"total_cost"`
 }
 
-const listUsageLimits = `-- name: ListUsageLimits :many
-SELECT id, limit_value, warn_threshold, enabled, created_at, updated_at FROM usage_limits ORDER BY id
-`
-
-func (q *Queries) ListUsageLimits(ctx context.Context) ([]UsageLimit, error) {
-	rows, err := q.db.QueryContext(ctx, listUsageLimits)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []UsageLimit{}
-	for rows.Next() {
-		var i UsageLimit
-		if err := rows.Scan(
-			&i.ID,
-			&i.LimitValue,
-			&i.WarnThreshold,
-			&i.Enabled,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetWeeklyWindowUsage(ctx context.Context) (GetWeeklyWindowUsageRow, error) {
+	row := q.db.QueryRowContext(ctx, getWeeklyWindowUsage)
+	var i GetWeeklyWindowUsageRow
+	err := row.Scan(&i.TotalTokens, &i.TotalCost)
+	return i, err
 }
 
 const updateLearnedLimit = `-- name: UpdateLearnedLimit :exec
@@ -150,6 +89,26 @@ WHERE id = 1
 
 func (q *Queries) UpdateLearnedLimit(ctx context.Context, learnedTokenLimit sql.NullFloat64) error {
 	_, err := q.db.ExecContext(ctx, updateLearnedLimit, learnedTokenLimit)
+	return err
+}
+
+const updateWeeklyLearnedLimit = `-- name: UpdateWeeklyLearnedLimit :exec
+UPDATE plan_config
+SET weekly_learned_token_limit = ?, weekly_learned_at = datetime('now'), updated_at = datetime('now')
+WHERE id = 1
+`
+
+func (q *Queries) UpdateWeeklyLearnedLimit(ctx context.Context, weeklyLearnedTokenLimit sql.NullFloat64) error {
+	_, err := q.db.ExecContext(ctx, updateWeeklyLearnedLimit, weeklyLearnedTokenLimit)
+	return err
+}
+
+const updateWeeklyWindowStartTime = `-- name: UpdateWeeklyWindowStartTime :exec
+UPDATE plan_config SET weekly_window_start_time = ?, updated_at = datetime('now') WHERE id = 1
+`
+
+func (q *Queries) UpdateWeeklyWindowStartTime(ctx context.Context, weeklyWindowStartTime sql.NullString) error {
+	_, err := q.db.ExecContext(ctx, updateWeeklyWindowStartTime, weeklyWindowStartTime)
 	return err
 }
 
