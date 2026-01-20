@@ -1,0 +1,44 @@
+package templates
+
+// Breadcrumb represents a single breadcrumb item
+type BreadcrumbItem struct {
+	Label string
+	Href  string
+}
+
+// Breadcrumbs renders a breadcrumb navigation
+templ Breadcrumbs(items []BreadcrumbItem) {
+	<nav class="breadcrumbs" aria-label="Breadcrumb">
+		<ol class="breadcrumb-list">
+			for i, item := range items {
+				<li class="breadcrumb-item">
+					if i < len(items)-1 {
+						<a href={ templ.SafeURL(item.Href) } class="breadcrumb-link">{ item.Label }</a>
+						<span class="breadcrumb-separator" aria-hidden="true">/</span>
+					} else {
+						<span class="breadcrumb-current" aria-current="page">{ item.Label }</span>
+					}
+				</li>
+			}
+		</ol>
+	</nav>
+}
+
+// PageHeader renders a consistent page header with optional breadcrumbs and actions
+templ PageHeader(title string) {
+	<div class="page-header">
+		<div class="page-header-content">
+			<h1 class="page-title">{ title }</h1>
+		</div>
+	</div>
+}
+
+// PageHeaderWithBreadcrumbs renders a page header with breadcrumbs
+templ PageHeaderWithBreadcrumbs(title string, breadcrumbs []BreadcrumbItem) {
+	<div class="page-header">
+		@Breadcrumbs(breadcrumbs)
+		<div class="page-header-content">
+			<h1 class="page-title">{ title }</h1>
+		</div>
+	</div>
+}

@@ -4,15 +4,14 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 	@Layout("Experiment: " + exp.Name) {
 		<div class="space-y-6">
 			<!-- Header -->
-			<div class="flex items-center justify-between">
-				<div>
-					<div class="flex items-center gap-3">
-						<a href="/experiments" class="text-gray-500 hover:text-gray-700">
-							<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-							</svg>
-						</a>
-						<h1 class="text-2xl font-bold text-gray-900">{ exp.Name }</h1>
+			<div class="page-header">
+				@Breadcrumbs([]BreadcrumbItem{
+					{Label: "Experiments", Href: "/experiments"},
+					{Label: exp.Name, Href: ""},
+				})
+				<div class="page-header-content">
+					<div class="page-header-left">
+						<h1 class="page-title">{ exp.Name }</h1>
 						if exp.IsActive {
 							<span class="badge badge-green">Active</span>
 						} else if exp.EndedAt != "" {
@@ -21,29 +20,29 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 							<span class="badge badge-yellow">Inactive</span>
 						}
 					</div>
-					if exp.Description != "" {
-						<p class="text-gray-600 mt-2">{ exp.Description }</p>
-					}
-					if exp.Hypothesis != "" {
-						<p class="text-gray-500 text-sm mt-2 italic">"{ exp.Hypothesis }"</p>
-					}
+					<div class="page-header-actions">
+						if !exp.IsActive && exp.EndedAt == "" {
+							<button
+								class="btn btn-primary"
+								hx-post={ "/api/experiments/" + exp.ID + "/activate" }
+								hx-swap="none"
+							>Activate</button>
+						}
+						if exp.IsActive {
+							<button
+								class="btn btn-secondary"
+								hx-post={ "/api/experiments/" + exp.ID + "/deactivate" }
+								hx-swap="none"
+							>Deactivate</button>
+						}
+					</div>
 				</div>
-				<div class="flex gap-2">
-					if !exp.IsActive && exp.EndedAt == "" {
-						<button
-							class="btn btn-primary"
-							hx-post={ "/api/experiments/" + exp.ID + "/activate" }
-							hx-swap="none"
-						>Activate</button>
-					}
-					if exp.IsActive {
-						<button
-							class="btn btn-secondary"
-							hx-post={ "/api/experiments/" + exp.ID + "/deactivate" }
-							hx-swap="none"
-						>Deactivate</button>
-					}
-				</div>
+				if exp.Description != "" {
+					<p class="text-gray-600 mt-2">{ exp.Description }</p>
+				}
+				if exp.Hypothesis != "" {
+					<p class="text-gray-500 text-sm mt-1 italic">"{ exp.Hypothesis }"</p>
+				}
 			</div>
 
 			<!-- Date Range -->

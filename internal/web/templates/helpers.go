@@ -34,6 +34,14 @@ func formatDate(s string) string {
 	return t.Format("Jan 2, 2006")
 }
 
+func formatDateShort(s string) string {
+	t, err := time.Parse(time.RFC3339, s)
+	if err != nil {
+		return s
+	}
+	return t.Format("Jan 2")
+}
+
 func formatCost(c float64) string {
 	return fmt.Sprintf("$%.2f", c)
 }

@@ -5,7 +5,11 @@ import "fmt"
 templ Sessions(sessions []SessionSummary) {
 	@Layout("Sessions") {
 		<div class="space-y-6">
-			<h1 class="text-2xl font-bold text-gray-900">Sessions</h1>
+			<div class="page-header">
+				<div class="page-header-content">
+					<h1 class="page-title">Sessions</h1>
+				</div>
+			</div>
 
 			<div class="card overflow-hidden">
 				<table class="min-w-full divide-y divide-gray-200">
@@ -51,16 +55,21 @@ templ Sessions(sessions []SessionSummary) {
 templ SessionDetailPage(session SessionDetail) {
 	@Layout("Session Detail") {
 		<div class="space-y-6">
-			<div class="flex items-center justify-between">
-				<div>
-					<a href="/sessions" class="text-sm text-blue-600 hover:underline">&larr; Back to Sessions</a>
-					<h1 class="text-2xl font-bold text-gray-900 mt-2 font-mono">{ truncateID(session.ID) }</h1>
-				</div>
-				<div class="flex items-center gap-3">
-					<a href={ templ.SafeURL("/sessions/" + session.ID + "/review") } class="btn btn-primary">
-						Review Session
-					</a>
-					<span class={ "badge", exitReasonBadge(session.ExitReason) }>{ session.ExitReason }</span>
+			<div class="page-header">
+				@Breadcrumbs([]BreadcrumbItem{
+					{Label: "Sessions", Href: "/sessions"},
+					{Label: truncateID(session.ID), Href: ""},
+				})
+				<div class="page-header-content">
+					<div class="page-header-left">
+						<h1 class="page-title font-mono">{ truncateID(session.ID) }</h1>
+						<span class={ "badge", exitReasonBadge(session.ExitReason) }>{ session.ExitReason }</span>
+					</div>
+					<div class="page-header-actions">
+						<a href={ templ.SafeURL("/sessions/" + session.ID + "/review") } class="btn btn-primary">
+							Review Session
+						</a>
+					</div>
 				</div>
 			</div>
 
