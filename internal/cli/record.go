@@ -134,17 +134,17 @@ func processRecordInput(hookInput *domain.HookInput) error {
 	}
 	defer db.Close()
 
-	// Initialize repositories
-	projectRepo := turso.NewProjectRepository(db)
-	experimentRepo := turso.NewExperimentRepository(db)
-	sessionRepo := turso.NewSessionRepository(db)
-	metricsRepo := turso.NewSessionMetricsRepository(db)
-	toolRepo := turso.NewSessionToolRepository(db)
-	fileRepo := turso.NewSessionFileRepository(db)
-	commandRepo := turso.NewSessionCommandRepository(db)
-	pricingRepo := turso.NewPricingRepository(db)
-	qualityRepo := turso.NewSessionQualityRepository(db)
-	planConfigRepo := turso.NewPlanConfigRepository(db)
+	// Initialize repositories (pass embedded *sql.DB to constructors)
+	projectRepo := turso.NewProjectRepository(db.DB)
+	experimentRepo := turso.NewExperimentRepository(db.DB)
+	sessionRepo := turso.NewSessionRepository(db.DB)
+	metricsRepo := turso.NewSessionMetricsRepository(db.DB)
+	toolRepo := turso.NewSessionToolRepository(db.DB)
+	fileRepo := turso.NewSessionFileRepository(db.DB)
+	commandRepo := turso.NewSessionCommandRepository(db.DB)
+	pricingRepo := turso.NewPricingRepository(db.DB)
+	qualityRepo := turso.NewSessionQualityRepository(db.DB)
+	planConfigRepo := turso.NewPlanConfigRepository(db.DB)
 
 	// Initialize transcript storage
 	transcriptStorage, err := storage.NewTranscriptStorage()
@@ -280,6 +280,11 @@ func processRecordInput(hookInput *domain.HookInput) error {
 		if err := commandRepo.CreateBatch(ctx, parsed.Commands); err != nil {
 			return fmt.Errorf("failed to create session commands: %w", err)
 		}
+	}
+
+	// Sync to remote if enabled
+	if err := db.Sync(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: sync failed: %v\n", err)
 	}
 
 	// Output success message (goes to stdout, visible in hook output)

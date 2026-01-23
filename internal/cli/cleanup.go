@@ -59,7 +59,7 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Initialize transcript storage for cleanup
 	transcriptStorage, err := storage.NewTranscriptStorage()

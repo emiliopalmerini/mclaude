@@ -51,7 +51,7 @@ func runConfigModel(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// No argument: show current default
 	if len(args) == 0 {

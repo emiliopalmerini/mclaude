@@ -58,7 +58,7 @@ func runSessionsList(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	var sessions []sqlc.Session
 

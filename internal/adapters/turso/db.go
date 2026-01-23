@@ -4,30 +4,179 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"path/filepath"
+	"sync"
 
-	_ "github.com/tursodatabase/libsql-client-go/libsql"
+	"github.com/tursodatabase/go-libsql"
+
+	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
-func NewDB() (*sql.DB, error) {
-	dbURL := os.Getenv("MCLAUDE_DATABASE_URL")
-	if dbURL == "" {
-		return nil, fmt.Errorf("MCLAUDE_DATABASE_URL environment variable is required")
+// SyncMode indicates the database synchronization mode.
+type SyncMode int
+
+const (
+	// SyncModeLocalOnly indicates no remote sync (credentials not available).
+	SyncModeLocalOnly SyncMode = iota
+	// SyncModeEnabled indicates sync with remote Turso database.
+	SyncModeEnabled
+)
+
+// DB wraps the database connection and optional sync connector.
+type DB struct {
+	*sql.DB
+	connector *libsql.Connector
+	syncMode  SyncMode
+	mu        sync.Mutex
+}
+
+// DBConfig holds configuration for database connection.
+type DBConfig struct {
+	// LocalPath is the path to the local database file.
+	// If empty, defaults to XDG data directory.
+	LocalPath string
+
+	// RemoteURL is the Turso database URL (optional).
+	// If empty, operates in local-only mode.
+	RemoteURL string
+
+	// AuthToken is the Turso authentication token (optional).
+	// Required if RemoteURL is set.
+	AuthToken string
+}
+
+// NewDB creates a database connection with configuration from environment variables.
+// If MCLAUDE_DATABASE_URL and MCLAUDE_AUTH_TOKEN are set, enables sync.
+// Otherwise, operates in local-only mode.
+func NewDB() (*DB, error) {
+	cfg := DBConfig{
+		RemoteURL: os.Getenv("MCLAUDE_DATABASE_URL"),
+		AuthToken: os.Getenv("MCLAUDE_AUTH_TOKEN"),
+	}
+	return NewDBWithConfig(cfg)
+}
+
+// NewDBWithConfig creates a database connection with explicit configuration.
+func NewDBWithConfig(cfg DBConfig) (*DB, error) {
+	// Determine local database path
+	localPath := cfg.LocalPath
+	if localPath == "" {
+		dataDir, err := util.GetXDGDataDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get data directory: %w", err)
+		}
+
+		// Ensure directory exists
+		if err := os.MkdirAll(dataDir, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create data directory: %w", err)
+		}
+
+		localPath = filepath.Join(dataDir, "mclaude.db")
 	}
 
-	authToken := os.Getenv("MCLAUDE_AUTH_TOKEN")
-	if authToken == "" {
-		return nil, fmt.Errorf("MCLAUDE_AUTH_TOKEN environment variable is required")
+	// Determine sync mode
+	syncEnabled := cfg.RemoteURL != "" && cfg.AuthToken != ""
+
+	var db *sql.DB
+	var connector *libsql.Connector
+	var err error
+
+	if syncEnabled {
+		// Create embedded replica with sync
+		connector, err = libsql.NewEmbeddedReplicaConnector(
+			localPath,
+			cfg.RemoteURL,
+			libsql.WithAuthToken(cfg.AuthToken),
+			libsql.WithReadYourWrites(true),
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create embedded replica connector: %w", err)
+		}
+
+		db = sql.OpenDB(connector)
+
+		// Initial sync to pull latest data
+		if _, err := connector.Sync(); err != nil {
+			// Log warning but don't fail - local data is still usable
+			fmt.Fprintf(os.Stderr, "warning: initial sync failed: %v\n", err)
+		}
+	} else {
+		// Local-only mode using file path connection
+		db, err = sql.Open("libsql", "file:"+localPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open local database: %w", err)
+		}
 	}
 
-	connStr := fmt.Sprintf("%s?authToken=%s", dbURL, authToken)
-	db, err := sql.Open("libsql", connStr)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
-	}
-
+	// Verify connection
 	if err := db.Ping(); err != nil {
+		if connector != nil {
+			connector.Close()
+		}
+		db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	return db, nil
+	syncMode := SyncModeLocalOnly
+	if syncEnabled {
+		syncMode = SyncModeEnabled
+	}
+
+	return &DB{
+		DB:        db,
+		connector: connector,
+		syncMode:  syncMode,
+	}, nil
+}
+
+// Sync triggers an immediate sync with the remote database.
+// Returns nil if sync is not enabled.
+func (d *DB) Sync() error {
+	if d.syncMode != SyncModeEnabled || d.connector == nil {
+		return nil
+	}
+
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	_, err := d.connector.Sync()
+	if err != nil {
+		return fmt.Errorf("sync failed: %w", err)
+	}
+	return nil
+}
+
+// SyncMode returns the current synchronization mode.
+func (d *DB) SyncMode() SyncMode {
+	return d.syncMode
+}
+
+// IsSyncEnabled returns true if remote sync is enabled.
+func (d *DB) IsSyncEnabled() bool {
+	return d.syncMode == SyncModeEnabled
+}
+
+// Close closes the database connection and connector.
+func (d *DB) Close() error {
+	// Sync before closing if enabled
+	if d.syncMode == SyncModeEnabled && d.connector != nil {
+		d.mu.Lock()
+		_, _ = d.connector.Sync() // Best-effort final sync
+		d.mu.Unlock()
+	}
+
+	var errs []error
+	if err := d.DB.Close(); err != nil {
+		errs = append(errs, err)
+	}
+	if d.connector != nil {
+		if err := d.connector.Close(); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("errors closing database: %v", errs)
+	}
+	return nil
 }

@@ -52,12 +52,12 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 	defer db.Close()
 
 	// Ensure schema_migrations table exists
-	if err := ensureMigrationsTable(ctx, db); err != nil {
+	if err := ensureMigrationsTable(ctx, db.DB); err != nil {
 		return fmt.Errorf("failed to create migrations table: %w", err)
 	}
 
 	// Get current version
-	currentVersion, dirty, err := getCurrentVersion(ctx, db)
+	currentVersion, dirty, err := getCurrentVersion(ctx, db.DB)
 	if err != nil {
 		return fmt.Errorf("failed to get current version: %w", err)
 	}
@@ -74,25 +74,32 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Current version: %d\n", currentVersion)
 
+	var migrateErr error
 	if len(args) == 0 {
 		// Run all pending migrations (up)
-		return migrateUp(ctx, db, allMigrations, currentVersion)
+		migrateErr = migrateUp(ctx, db.DB, allMigrations, currentVersion)
+	} else {
+		// Migrate to specific version
+		targetVersion, err := strconv.Atoi(args[0])
+		if err != nil {
+			return fmt.Errorf("invalid version number: %s", args[0])
+		}
+
+		if targetVersion > currentVersion {
+			migrateErr = migrateUpTo(ctx, db.DB, allMigrations, currentVersion, targetVersion)
+		} else if targetVersion < currentVersion {
+			migrateErr = migrateDownTo(ctx, db.DB, allMigrations, currentVersion, targetVersion)
+		} else {
+			fmt.Println("Already at target version")
+		}
 	}
 
-	// Migrate to specific version
-	targetVersion, err := strconv.Atoi(args[0])
-	if err != nil {
-		return fmt.Errorf("invalid version number: %s", args[0])
+	// Sync schema changes to remote
+	if err := db.Sync(); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to sync migrations to remote: %v\n", err)
 	}
 
-	if targetVersion > currentVersion {
-		return migrateUpTo(ctx, db, allMigrations, currentVersion, targetVersion)
-	} else if targetVersion < currentVersion {
-		return migrateDownTo(ctx, db, allMigrations, currentVersion, targetVersion)
-	}
-
-	fmt.Println("Already at target version")
-	return nil
+	return migrateErr
 }
 
 func ensureMigrationsTable(ctx context.Context, db *sql.DB) error {

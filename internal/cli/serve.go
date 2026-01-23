@@ -58,6 +58,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	server := web.NewServer(db, servePort, transcriptStorage)
+	server := web.NewServer(db.DB, servePort, transcriptStorage)
 	return server.Start(ctx)
 }

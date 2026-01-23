@@ -64,7 +64,7 @@ func runStats(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Calculate start date based on period
 	startDate := getStartDate(statsPeriod)

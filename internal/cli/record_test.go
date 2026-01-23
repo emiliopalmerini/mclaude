@@ -34,7 +34,7 @@ func TestRecordCommand_Integration(t *testing.T) {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Generate unique session ID for this test
 	sessionID := "test-record-" + randomID()

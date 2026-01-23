@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
 type TranscriptStorage struct {
@@ -14,7 +16,7 @@ type TranscriptStorage struct {
 }
 
 func NewTranscriptStorage() (*TranscriptStorage, error) {
-	baseDir, err := getXDGDataDir()
+	baseDir, err := util.GetXDGDataDir()
 	if err != nil {
 		return nil, err
 	}
@@ -108,17 +110,3 @@ func (s *TranscriptStorage) getPath(sessionID string) string {
 	return filepath.Join(s.baseDir, sessionID+".jsonl.gz")
 }
 
-func getXDGDataDir() (string, error) {
-	// Check XDG_DATA_HOME first
-	if dataHome := os.Getenv("XDG_DATA_HOME"); dataHome != "" {
-		return filepath.Join(dataHome, "mclaude"), nil
-	}
-
-	// Fall back to ~/.local/share
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	return filepath.Join(homeDir, ".local", "share", "mclaude"), nil
-}

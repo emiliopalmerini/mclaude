@@ -144,7 +144,7 @@ func runExperimentCreate(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Check if experiment with this name already exists
 	existing, err := queries.GetExperimentByName(ctx, name)
@@ -186,7 +186,7 @@ func runExperimentList(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Get experiments with stats
 	expStats, err := queries.GetStatsForAllExperiments(ctx)
@@ -257,7 +257,7 @@ func runExperimentActivate(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Find experiment by name
 	exp, err := queries.GetExperimentByName(ctx, name)
@@ -293,7 +293,7 @@ func runExperimentDeactivate(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	if len(args) == 0 {
 		// Deactivate the currently active experiment
@@ -341,7 +341,7 @@ func runExperimentEnd(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Find experiment by name
 	exp, err := queries.GetExperimentByName(ctx, name)
@@ -381,7 +381,7 @@ func runExperimentDelete(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Find experiment by name
 	exp, err := queries.GetExperimentByName(ctx, name)
@@ -415,7 +415,7 @@ func runExperimentStats(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Get experiment by name
 	exp, err := queries.GetExperimentByName(ctx, name)
@@ -504,7 +504,7 @@ func runExperimentCompare(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Collect stats for each experiment
 	var experiments []expData

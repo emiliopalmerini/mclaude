@@ -26,34 +26,35 @@ generate: sqlc templ
 # === Build ===
 
 # Build the binary (depends on generated code)
+# CGO_ENABLED=1 required for go-libsql embedded database
 build: generate
-	go build -o $(BINARY_NAME) ./cmd/mclaude
+	CGO_ENABLED=1 go build -o $(BINARY_NAME) ./cmd/mclaude
 
 # Build with version info
 build-release: generate
-	go build -ldflags="-s -w" -o $(BINARY_NAME) ./cmd/mclaude
+	CGO_ENABLED=1 go build -ldflags="-s -w" -o $(BINARY_NAME) ./cmd/mclaude
 
 # Install to GOPATH/bin
 install: generate
-	go install ./cmd/mclaude
+	CGO_ENABLED=1 go install ./cmd/mclaude
 
 # === Testing ===
 
 # Run all tests (depends on generated code)
 test: generate
-	go test -v ./...
+	CGO_ENABLED=1 go test -v ./...
 
 # Run unit tests only (skip integration tests)
 test-unit: generate
-	go test -v -short ./...
+	CGO_ENABLED=1 go test -v -short ./...
 
 # Run integration tests (requires MCLAUDE_* env vars)
 test-integration: generate
-	go test -v -run Integration ./...
+	CGO_ENABLED=1 go test -v -run Integration ./...
 
 # Run tests with coverage
 test-coverage: generate
-	go test -coverprofile=coverage.out ./...
+	CGO_ENABLED=1 go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 
 # === Code Quality ===

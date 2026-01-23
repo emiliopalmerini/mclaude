@@ -87,7 +87,7 @@ func runCostList(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	pricing, err := queries.ListModelPricing(ctx)
 	if err != nil {
@@ -137,7 +137,7 @@ func runCostSet(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	displayName := costName
 	if displayName == "" {
@@ -207,7 +207,7 @@ func runCostDefault(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	// Check if exists
 	existing, err := queries.GetModelPricingByID(ctx, modelID)
@@ -233,7 +233,7 @@ func runCostDelete(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	queries := sqlc.New(db)
+	queries := sqlc.New(db.DB)
 
 	if err := queries.DeleteModelPricing(ctx, modelID); err != nil {
 		return fmt.Errorf("failed to delete pricing: %w", err)

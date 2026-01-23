@@ -97,7 +97,7 @@ func runLimitsPlan(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	planRepo := turso.NewPlanConfigRepository(db)
+	planRepo := turso.NewPlanConfigRepository(db.DB)
 
 	config := &domain.PlanConfig{
 		PlanType:    planType,
@@ -126,7 +126,7 @@ func runLimitsLearn(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	planRepo := turso.NewPlanConfigRepository(db)
+	planRepo := turso.NewPlanConfigRepository(db.DB)
 
 	config, err := planRepo.Get(ctx)
 	if err != nil {
@@ -183,7 +183,7 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	planRepo := turso.NewPlanConfigRepository(db)
+	planRepo := turso.NewPlanConfigRepository(db.DB)
 
 	config, err := planRepo.Get(ctx)
 	if err != nil {
@@ -306,7 +306,7 @@ func runLimitsCheck(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	planRepo := turso.NewPlanConfigRepository(db)
+	planRepo := turso.NewPlanConfigRepository(db.DB)
 
 	config, err := planRepo.Get(ctx)
 	if err != nil {
