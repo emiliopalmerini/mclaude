@@ -3,22 +3,31 @@
 pkgs.buildGoModule {
   pname = "mclaude";
   version = "0.1.0";
-  src = pkgs.lib.cleanSource ../.;
+  src = pkgs.lib.cleanSourceWith {
+    src = ../.;
+    filter = path: type:
+      let baseName = baseNameOf path;
+      in !(baseName == "vendor" && type == "directory");
+  };
 
-  vendorHash = "sha256-3sxuNh6XNmh8ifYI++vnXhFZW7XTfTTbKrYR0IQnil4=";
+  vendorHash = "sha256-xStCHnB40v/bI0Dkuj7YgEMc4EhMiNA3MTdhxncq/dU=";
+
+  # Use proxy mode to preserve native library files in go-libsql
+  proxyVendor = true;
 
   subPackages = [ "cmd/mclaude" ];
 
   # Enable CGO for libsql support
   env.CGO_ENABLED = "1";
 
-  # Build dependencies for libsql
+  # Build dependencies
   nativeBuildInputs = with pkgs; [
     pkg-config
   ];
 
   buildInputs = with pkgs; [
-    sqlite
+  ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isDarwin [
+    pkgs.apple-sdk_15
   ];
 
   # Copy migrations for embedded use
