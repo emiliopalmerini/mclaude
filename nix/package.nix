@@ -5,7 +5,7 @@ pkgs.buildGoModule {
   version = "0.1.0";
   src = pkgs.lib.cleanSource ../.;
 
-  vendorHash = "sha256-NcNXCDR7BG44Fw096EFl6eEeZ/SlPdzPtWb2Dr54WXc=";
+  vendorHash = "sha256-3sxuNh6XNmh8ifYI++vnXhFZW7XTfTTbKrYR0IQnil4=";
 
   subPackages = [ "cmd/mclaude" ];
 
