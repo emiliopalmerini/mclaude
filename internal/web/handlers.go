@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -657,7 +658,14 @@ func (s *Server) handleAPIChartTokens(w http.ResponseWriter, r *http.Request) {
 	sessions := make([]int64, len(stats))
 
 	for i, stat := range stats {
-		labels[i] = stat.Date.(string)
+		switch d := stat.Date.(type) {
+		case time.Time:
+			labels[i] = d.Format("2006-01-02")
+		case string:
+			labels[i] = d
+		default:
+			labels[i] = fmt.Sprintf("%v", stat.Date)
+		}
 		tokens[i] = util.ToInt64(stat.TotalTokens)
 		sessions[i] = stat.SessionCount
 	}
@@ -689,7 +697,14 @@ func (s *Server) handleAPIChartCost(w http.ResponseWriter, r *http.Request) {
 	costs := make([]float64, len(stats))
 
 	for i, stat := range stats {
-		labels[i] = stat.Date.(string)
+		switch d := stat.Date.(type) {
+		case time.Time:
+			labels[i] = d.Format("2006-01-02")
+		case string:
+			labels[i] = d
+		default:
+			labels[i] = fmt.Sprintf("%v", stat.Date)
+		}
 		costs[i] = util.ToFloat64(stat.TotalCost)
 	}
 
