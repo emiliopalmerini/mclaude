@@ -39,6 +39,22 @@ type UsageLimitStats struct {
 	WeeklyIsLearned    bool    // true if weekly limit is learned
 }
 
+// RealtimeUsageStats contains real-time usage from Prometheus.
+type RealtimeUsageStats struct {
+	Available        bool    // true if Prometheus data is available
+	Source           string  // "prometheus" or "local"
+	FiveHourTokens   float64 // Tokens in 5-hour window
+	FiveHourCost     float64 // Cost in 5-hour window
+	WeeklyTokens     float64 // Tokens in 7-day window
+	WeeklyCost       float64 // Cost in 7-day window
+	FiveHourPercent  float64 // 0-100+ based on limit
+	WeeklyPercent    float64 // 0-100+ based on limit
+	FiveHourStatus   string  // OK, WARNING, EXCEEDED
+	WeeklyStatus     string  // OK, WARNING, EXCEEDED
+	FiveHourLimit    float64 // Token limit for 5-hour window
+	WeeklyLimit      float64 // Token limit for weekly window
+}
+
 type ToolUsage struct {
 	Name  string
 	Count int64

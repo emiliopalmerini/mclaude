@@ -12,10 +12,12 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/emiliopalmerini/mclaude/internal/adapters/otel"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/storage"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/parser"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 )
 
 var recordBackgroundFile string
@@ -287,6 +289,9 @@ func processRecordInput(hookInput *domain.HookInput) error {
 		fmt.Fprintf(os.Stderr, "warning: sync failed: %v\n", err)
 	}
 
+	// Export to OTEL if configured
+	exportOTELMetrics(ctx, session, project, activeExperiment, parsed, costEstimate)
+
 	// Output success message (goes to stdout, visible in hook output)
 	fmt.Printf("Session %s recorded: %d input tokens, %d output tokens",
 		hookInput.SessionID[:8],
@@ -299,4 +304,63 @@ func processRecordInput(hookInput *domain.HookInput) error {
 	fmt.Println()
 
 	return nil
+}
+
+// exportOTELMetrics exports enriched session metrics to OTEL Collector.
+func exportOTELMetrics(
+	ctx context.Context,
+	session *domain.Session,
+	project *domain.Project,
+	experiment *domain.Experiment,
+	parsed *parser.ParsedTranscript,
+	costEstimate *float64,
+) {
+	cfg := otel.LoadConfig()
+	if !cfg.Enabled || cfg.Endpoint == "" {
+		return
+	}
+
+	exporter, err := otel.NewExporter(ctx, cfg)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: OTEL exporter init failed: %v\n", err)
+		return
+	}
+	defer exporter.Close(ctx)
+
+	metrics := &ports.EnrichedMetrics{
+		SessionID:       session.ID,
+		ProjectID:       project.ID,
+		ProjectName:     project.Name,
+		TokenInput:      parsed.Metrics.TokenInput,
+		TokenOutput:     parsed.Metrics.TokenOutput,
+		TokenCacheRead:  parsed.Metrics.TokenCacheRead,
+		TokenCacheWrite: parsed.Metrics.TokenCacheWrite,
+		TurnCount:       parsed.Metrics.TurnCount,
+		ErrorCount:      parsed.Metrics.ErrorCount,
+		ExitReason:      session.ExitReason,
+	}
+
+	if experiment != nil {
+		metrics.ExperimentID = &experiment.ID
+		metrics.ExperimentName = &experiment.Name
+	}
+
+	if costEstimate != nil {
+		metrics.CostEstimateUSD = *costEstimate
+	}
+
+	if session.DurationSeconds != nil {
+		metrics.DurationSeconds = *session.DurationSeconds
+	}
+
+	if session.StartedAt != nil {
+		metrics.StartedAt = *session.StartedAt
+	}
+	if session.EndedAt != nil {
+		metrics.EndedAt = *session.EndedAt
+	}
+
+	if err := exporter.ExportSessionMetrics(ctx, metrics); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: OTEL export failed: %v\n", err)
+	}
 }

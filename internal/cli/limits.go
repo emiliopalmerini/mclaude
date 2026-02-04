@@ -9,8 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/emiliopalmerini/mclaude/internal/adapters/prometheus"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/domain"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
@@ -69,6 +71,7 @@ Exit codes:
 var (
 	limitsCheckWarn   bool
 	limitsLearnWeekly bool
+	limitsSource      string // "local", "prometheus", "auto"
 )
 
 func init() {
@@ -81,6 +84,10 @@ func init() {
 
 	limitsCheckCmd.Flags().BoolVar(&limitsCheckWarn, "warn", false, "Exit with code 2 if warning threshold reached")
 	limitsLearnCmd.Flags().BoolVar(&limitsLearnWeekly, "weekly", false, "Record weekly limit instead of 5-hour limit")
+
+	// Add --source flag to list and check commands
+	limitsListCmd.Flags().StringVar(&limitsSource, "source", "auto", "Data source: local, prometheus, auto (default auto)")
+	limitsCheckCmd.Flags().StringVar(&limitsSource, "source", "auto", "Data source: local, prometheus, auto (default auto)")
 }
 
 func runLimitsPlan(cmd *cobra.Command, args []string) error {
@@ -218,46 +225,91 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 	if hasPreset {
 		planName = preset.Name
 	}
-	fmt.Printf("Plan: %s\n\n", planName)
+
+	// Initialize Prometheus client for real-time data
+	promClient := getPrometheusClient()
+
+	// Try Prometheus first for real-time data if source allows
+	var promUsage *ports.UsageWindow
+	var promSource bool
+	if limitsSource != "local" && promClient.IsAvailable(ctx) {
+		usage, err := promClient.GetRollingWindowUsage(ctx, config.WindowHours)
+		if err == nil && usage.Available {
+			promUsage = usage
+			promSource = true
+		}
+	}
+
+	fmt.Printf("Plan: %s", planName)
+	if promSource {
+		fmt.Printf(" [Source: Prometheus]")
+	} else {
+		fmt.Printf(" [Source: Local DB]")
+	}
+	fmt.Println()
+	fmt.Println()
 
 	// === 5-Hour Window ===
-	summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
-	if err != nil {
-		return fmt.Errorf("failed to get usage: %w", err)
+	var fiveHourTokens float64
+	if promSource && promUsage != nil {
+		fiveHourTokens = promUsage.TotalTokens
+	} else {
+		summary, err := planRepo.GetRollingWindowSummary(ctx, config.WindowHours)
+		if err != nil {
+			return fmt.Errorf("failed to get usage: %w", err)
+		}
+		fiveHourTokens = summary.TotalTokens
 	}
 
 	var limit float64
-	var limitSource string
+	var tokenLimitSource string
 	if config.LearnedTokenLimit != nil {
 		limit = *config.LearnedTokenLimit
-		limitSource = "Learned"
+		tokenLimitSource = "Learned"
 	} else if hasPreset {
 		limit = preset.TokenEstimate
-		limitSource = "Estimated"
+		tokenLimitSource = "Estimated"
 	}
 
 	var percentage float64
 	if limit > 0 {
-		percentage = summary.TotalTokens / limit
+		percentage = fiveHourTokens / limit
 	}
 	status := domain.GetStatus(percentage, 0.8)
 
 	fmt.Printf("5-Hour Window:\n")
-	fmt.Printf("  Tokens: %s", util.FormatTokens(summary.TotalTokens))
+	fmt.Printf("  Tokens: %s", util.FormatTokens(fiveHourTokens))
 	if limit > 0 {
 		fmt.Printf(" / ~%s (%.0f%%)", util.FormatTokens(limit), percentage*100)
 	}
 	fmt.Println()
 	fmt.Printf("  Status: %s", status)
 	if limit > 0 {
-		fmt.Printf(" [%s]", limitSource)
+		fmt.Printf(" [%s]", tokenLimitSource)
 	}
 	fmt.Println()
 
 	// === Weekly Window ===
-	weeklySummary, err := planRepo.GetWeeklyWindowSummary(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get weekly usage: %w", err)
+	var weeklyTokens float64
+	if promSource {
+		// Query Prometheus for 7-day window
+		weeklyUsage, err := promClient.GetRollingWindowUsage(ctx, 168) // 7 days = 168 hours
+		if err == nil && weeklyUsage.Available {
+			weeklyTokens = weeklyUsage.TotalTokens
+		} else {
+			// Fall back to local DB for weekly
+			weeklySummary, err := planRepo.GetWeeklyWindowSummary(ctx)
+			if err != nil {
+				return fmt.Errorf("failed to get weekly usage: %w", err)
+			}
+			weeklyTokens = weeklySummary.TotalTokens
+		}
+	} else {
+		weeklySummary, err := planRepo.GetWeeklyWindowSummary(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to get weekly usage: %w", err)
+		}
+		weeklyTokens = weeklySummary.TotalTokens
 	}
 
 	var weeklyLimit float64
@@ -272,12 +324,12 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 
 	var weeklyPercentage float64
 	if weeklyLimit > 0 {
-		weeklyPercentage = weeklySummary.TotalTokens / weeklyLimit
+		weeklyPercentage = weeklyTokens / weeklyLimit
 	}
 	weeklyStatus := domain.GetStatus(weeklyPercentage, 0.8)
 
 	fmt.Printf("\nWeekly Window (7 days):\n")
-	fmt.Printf("  Tokens: %s", util.FormatTokens(weeklySummary.TotalTokens))
+	fmt.Printf("  Tokens: %s", util.FormatTokens(weeklyTokens))
 	if weeklyLimit > 0 {
 		fmt.Printf(" / ~%s (%.0f%%)", util.FormatTokens(weeklyLimit), weeklyPercentage*100)
 	}
@@ -295,6 +347,16 @@ func runLimitsList(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+// getPrometheusClient returns a Prometheus client (real or noop).
+func getPrometheusClient() ports.PrometheusClient {
+	cfg := prometheus.LoadConfig()
+	client, err := prometheus.NewClient(cfg)
+	if err != nil {
+		return prometheus.NewNoOpClient()
+	}
+	return client
 }
 
 func runLimitsCheck(cmd *cobra.Command, args []string) error {

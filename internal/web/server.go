@@ -9,8 +9,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/emiliopalmerini/mclaude/internal/adapters/prometheus"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/storage"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 )
 
 //go:embed static/*
@@ -23,9 +25,19 @@ type Server struct {
 	transcriptStorage *storage.TranscriptStorage
 	qualityRepo       *turso.SessionQualityRepository
 	planConfigRepo    *turso.PlanConfigRepository
+	promClient        ports.PrometheusClient
 }
 
 func NewServer(db *sql.DB, port int, ts *storage.TranscriptStorage) *Server {
+	// Initialize Prometheus client (graceful degradation if not configured)
+	var promClient ports.PrometheusClient
+	promCfg := prometheus.LoadConfig()
+	if client, err := prometheus.NewClient(promCfg); err == nil {
+		promClient = client
+	} else {
+		promClient = prometheus.NewNoOpClient()
+	}
+
 	s := &Server{
 		db:                db,
 		router:            http.NewServeMux(),
@@ -33,6 +45,7 @@ func NewServer(db *sql.DB, port int, ts *storage.TranscriptStorage) *Server {
 		transcriptStorage: ts,
 		qualityRepo:       turso.NewSessionQualityRepository(db),
 		planConfigRepo:    turso.NewPlanConfigRepository(db),
+		promClient:        promClient,
 	}
 	s.setupRoutes()
 	return s
@@ -73,6 +86,9 @@ func (s *Server) setupRoutes() {
 
 	// Quality review endpoints
 	s.router.HandleFunc("POST /api/sessions/{id}/quality", s.handleAPISaveQuality)
+
+	// Real-time usage endpoint (for HTMX auto-refresh)
+	s.router.HandleFunc("GET /api/realtime/usage", s.handleAPIRealtimeUsage)
 }
 
 func (s *Server) Start(ctx context.Context) error {

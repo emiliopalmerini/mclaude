@@ -51,8 +51,18 @@ nix build
 ## Environment Variables
 
 ```bash
+# Database
 export MCLAUDE_DATABASE_URL="libsql://your-database.turso.io"
 export MCLAUDE_AUTH_TOKEN="your-auth-token"
+
+# OpenTelemetry (optional)
+export MCLAUDE_OTEL_ENABLED=true
+export MCLAUDE_OTEL_ENDPOINT="localhost:4317"
+export MCLAUDE_OTEL_INSECURE=true  # For local development
+
+# Prometheus (optional)
+export MCLAUDE_PROMETHEUS_ENABLED=true
+export MCLAUDE_PROMETHEUS_URL="http://localhost:9090"
 ```
 
 ## Quick Start
@@ -172,6 +182,11 @@ mclaude limits learn --weekly  # Learn weekly limit
 # Check limits (useful for scripts/automation)
 mclaude limits check           # Exit 1 if exceeded
 mclaude limits check --warn    # Exit 2 if at 80%+
+
+# Data source selection (when Prometheus is configured)
+mclaude limits list --source=auto        # Try Prometheus, fall back to local (default)
+mclaude limits list --source=prometheus  # Use Prometheus only
+mclaude limits list --source=local       # Use local database only
 ```
 
 ### Cost Configuration
@@ -231,6 +246,30 @@ Open http://localhost:8080 to view:
 - **Projects**: Aggregate stats by project
 - **Settings**: Configure model pricing, manage active experiment
 
+## OpenTelemetry Integration
+
+mclaude can export session metrics to an OpenTelemetry Collector for integration with your observability stack.
+
+### Metrics Exported
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `mclaude_session_tokens_total` | Counter | Total tokens used |
+| `mclaude_session_cost_usd` | Counter | Estimated cost in USD |
+| `mclaude_session_duration_seconds` | Histogram | Session duration |
+| `mclaude_session_turns` | Histogram | Turns per session |
+| `mclaude_sessions_total` | Counter | Total session count |
+
+Labels: `project_id`, `project_name`, `experiment_id`, `experiment_name`, `exit_reason`
+
+### Prometheus Queries
+
+When Prometheus is configured, mclaude can query real-time usage metrics:
+
+- `limits list` shows live data from Prometheus (with local DB fallback)
+- Dashboard auto-refreshes usage stats every 30 seconds
+- Data source indicator shows whether data comes from Prometheus or local DB
+
 ## Data Storage
 
 ### Database (Turso)
@@ -287,7 +326,9 @@ internal/
 ├── ports/                  # Repository interfaces
 ├── adapters/
 │   ├── turso/              # Database implementations
-│   └── storage/            # Transcript storage
+│   ├── storage/            # Transcript storage
+│   ├── otel/               # OpenTelemetry metrics exporter
+│   └── prometheus/         # Prometheus query client
 ├── parser/                 # Transcript JSONL parser
 ├── cli/                    # Cobra commands
 └── web/

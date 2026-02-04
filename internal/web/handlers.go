@@ -948,6 +948,114 @@ func convertViewerMessagesToTemplate(messages []parser.ViewerMessage) []template
 	return result
 }
 
+// Real-time API
+
+func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get plan config for limits
+	planConfig, err := s.planConfigRepo.Get(ctx)
+	if err != nil || planConfig == nil {
+		// No plan configured
+		if r.Header.Get("HX-Request") == "true" {
+			// HTMX request - return HTML
+			templates.UsageLimitContent(nil).Render(ctx, w)
+			return
+		}
+		// JSON API request
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(templates.RealtimeUsageStats{Available: false})
+		return
+	}
+
+	// Build UsageLimitStats for template rendering
+	usageStats := &templates.UsageLimitStats{
+		PlanType:    planConfig.PlanType,
+		WindowHours: planConfig.WindowHours,
+	}
+
+	// Get 5-hour limit
+	if planConfig.LearnedTokenLimit != nil {
+		usageStats.TokenLimit = *planConfig.LearnedTokenLimit
+		usageStats.IsLearned = true
+	} else if preset, ok := domain.PlanPresets[planConfig.PlanType]; ok {
+		usageStats.TokenLimit = preset.TokenEstimate
+	}
+
+	// Get weekly limit
+	if planConfig.WeeklyLearnedTokenLimit != nil {
+		usageStats.WeeklyTokenLimit = *planConfig.WeeklyLearnedTokenLimit
+		usageStats.WeeklyIsLearned = true
+	} else if preset, ok := domain.WeeklyPlanPresets[planConfig.PlanType]; ok {
+		usageStats.WeeklyTokenLimit = preset.TokenEstimate
+	}
+
+	// Try Prometheus first for real-time data
+	promAvailable := false
+	if s.promClient.IsAvailable(ctx) {
+		// 5-hour window
+		if usage, err := s.promClient.GetRollingWindowUsage(ctx, planConfig.WindowHours); err == nil && usage.Available {
+			usageStats.TokensUsed = usage.TotalTokens
+			promAvailable = true
+		}
+
+		// 7-day window (168 hours)
+		if usage, err := s.promClient.GetRollingWindowUsage(ctx, 168); err == nil && usage.Available {
+			usageStats.WeeklyTokensUsed = usage.TotalTokens
+		}
+	}
+
+	// Fall back to local DB if Prometheus not available
+	if !promAvailable {
+		if summary, err := s.planConfigRepo.GetRollingWindowSummary(ctx, planConfig.WindowHours); err == nil {
+			usageStats.TokensUsed = summary.TotalTokens
+		}
+		if summary, err := s.planConfigRepo.GetWeeklyWindowSummary(ctx); err == nil {
+			usageStats.WeeklyTokensUsed = summary.TotalTokens
+		}
+	}
+
+	// Calculate percentages and status
+	if usageStats.TokenLimit > 0 {
+		usageStats.UsagePercent = (usageStats.TokensUsed / usageStats.TokenLimit) * 100
+		usageStats.Status = domain.GetStatusFromPercent(usageStats.UsagePercent)
+	}
+
+	if usageStats.WeeklyTokenLimit > 0 {
+		usageStats.WeeklyUsagePercent = (usageStats.WeeklyTokensUsed / usageStats.WeeklyTokenLimit) * 100
+		usageStats.WeeklyStatus = domain.GetStatusFromPercent(usageStats.WeeklyUsagePercent)
+	}
+
+	usageStats.MinutesLeft = planConfig.WindowHours * 60
+
+	// Check if this is an HTMX request
+	if r.Header.Get("HX-Request") == "true" {
+		// HTMX request - return HTML
+		templates.UsageLimitContent(usageStats).Render(ctx, w)
+		return
+	}
+
+	// JSON API request - convert to RealtimeUsageStats
+	realtimeStats := templates.RealtimeUsageStats{
+		Available:       true,
+		Source:          "local",
+		FiveHourTokens:  usageStats.TokensUsed,
+		WeeklyTokens:    usageStats.WeeklyTokensUsed,
+		FiveHourPercent: usageStats.UsagePercent,
+		WeeklyPercent:   usageStats.WeeklyUsagePercent,
+		FiveHourStatus:  usageStats.Status,
+		WeeklyStatus:    usageStats.WeeklyStatus,
+		FiveHourLimit:   usageStats.TokenLimit,
+		WeeklyLimit:     usageStats.WeeklyTokenLimit,
+	}
+	if promAvailable {
+		realtimeStats.Source = "prometheus"
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(realtimeStats)
+}
+
 // Helpers
 
 func splitIDs(s string) []string {
