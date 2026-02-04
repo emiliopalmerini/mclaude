@@ -10,7 +10,7 @@ pkgs.buildGoModule {
       in !(baseName == "vendor" && type == "directory");
   };
 
-  vendorHash = "sha256-xStCHnB40v/bI0Dkuj7YgEMc4EhMiNA3MTdhxncq/dU=";
+  vendorHash = "sha256-7UPm6qGac+LZUeW/FlBYs9V5PUyz2Jun6EH3DSDyCY0=";
 
   # Use proxy mode to preserve native library files in go-libsql
   proxyVendor = true;
