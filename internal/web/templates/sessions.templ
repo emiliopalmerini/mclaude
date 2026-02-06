@@ -2,13 +2,48 @@ package templates
 
 import "fmt"
 
-templ Sessions(sessions []SessionSummary) {
+templ SessionsPage(data SessionsPageData) {
 	@Layout("Sessions") {
 		<div class="space-y-6">
 			<div class="page-header">
 				<div class="page-header-content">
 					<h1 class="page-title">Sessions</h1>
+					<div class="page-header-actions">
+						<a href={ buildSessionsExportURL("json", data.FilterExperiment, data.FilterLimit) } class="btn btn-sm btn-secondary">Export JSON</a>
+						<a href={ buildSessionsExportURL("csv", data.FilterExperiment, data.FilterLimit) } class="btn btn-sm btn-secondary">Export CSV</a>
+					</div>
 				</div>
+			</div>
+
+			<!-- Filters -->
+			<div class="card">
+				<form method="GET" action="/sessions" class="flex flex-wrap items-center gap-4">
+					<!-- Experiment -->
+					if len(data.Experiments) > 0 {
+						<select name="experiment" class="text-sm border border-gray-300 rounded-md px-2 py-1" onchange="this.form.submit()">
+							<option value="">All Experiments</option>
+							for _, exp := range data.Experiments {
+								<option value={ exp.ID } selected?={ exp.ID == data.FilterExperiment }>{ exp.Name }</option>
+							}
+						</select>
+					}
+					<!-- Project -->
+					if len(data.Projects) > 0 {
+						<select name="project" class="text-sm border border-gray-300 rounded-md px-2 py-1" onchange="this.form.submit()">
+							<option value="">All Projects</option>
+							for _, proj := range data.Projects {
+								<option value={ proj.ID } selected?={ proj.ID == data.FilterProject }>{ proj.Name }</option>
+							}
+						</select>
+					}
+					<!-- Limit -->
+					<select name="limit" class="text-sm border border-gray-300 rounded-md px-2 py-1" onchange="this.form.submit()">
+						<option value="25" selected?={ data.FilterLimit == 25 }>25</option>
+						<option value="50" selected?={ data.FilterLimit == 50 }>50</option>
+						<option value="100" selected?={ data.FilterLimit == 100 }>100</option>
+					</select>
+					<span class="text-sm text-gray-500">{ fmt.Sprintf("%d sessions", len(data.Sessions)) }</span>
+				</form>
 			</div>
 
 			<div class="card overflow-hidden">
@@ -22,10 +57,11 @@ templ Sessions(sessions []SessionSummary) {
 							<th class="table-header">Cost</th>
 							<th class="table-header">Quality</th>
 							<th class="table-header">Exit</th>
+							<th class="table-header"></th>
 						</tr>
 					</thead>
 					<tbody class="bg-white divide-y divide-gray-200">
-						for _, s := range sessions {
+						for _, s := range data.Sessions {
 							<tr class="hover:bg-gray-50">
 								<td class="table-cell font-mono">
 									<a href={ templ.SafeURL("/sessions/" + s.ID) } class="text-blue-600 hover:underline">{ truncateID(s.ID) }</a>
@@ -40,16 +76,76 @@ templ Sessions(sessions []SessionSummary) {
 								<td class="table-cell">
 									<span class={ "badge", exitReasonBadge(s.ExitReason) }>{ s.ExitReason }</span>
 								</td>
+								<td class="table-cell">
+									<button
+										class="text-red-400 hover:text-red-600"
+										hx-delete={ "/api/sessions/" + s.ID }
+										hx-confirm="Delete this session and its transcript?"
+										hx-swap="none"
+										title="Delete session"
+									>
+										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+										</svg>
+									</button>
+								</td>
 							</tr>
 						}
 					</tbody>
 				</table>
-				if len(sessions) == 0 {
+				if len(data.Sessions) == 0 {
 					<div class="p-8 text-center text-gray-500">No sessions found</div>
 				}
 			</div>
+
+			<!-- Cleanup -->
+			@SessionCleanup(data)
 		</div>
 	}
+}
+
+templ SessionCleanup(data SessionsPageData) {
+	<div class="card" x-data="{ showCleanup: false }">
+		<button class="btn btn-sm btn-ghost text-red-600" x-on:click="showCleanup = !showCleanup">Cleanup Sessions...</button>
+		<form
+			hx-post="/api/sessions/cleanup"
+			hx-swap="none"
+			hx-confirm="Are you sure? This will permanently delete sessions and their transcripts."
+			class="mt-4 space-y-4"
+			x-show="showCleanup"
+			x-cloak
+		>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Before Date</label>
+					<input type="date" name="before_date" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"/>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Project</label>
+					<select name="project" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+						<option value="">—</option>
+						for _, proj := range data.Projects {
+							<option value={ proj.ID }>{ proj.Name }</option>
+						}
+					</select>
+				</div>
+				<div>
+					<label class="block text-sm font-medium text-gray-700 mb-1">Experiment</label>
+					<select name="experiment" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+						<option value="">—</option>
+						for _, exp := range data.Experiments {
+							<option value={ exp.ID }>{ exp.Name }</option>
+						}
+					</select>
+				</div>
+			</div>
+			<button type="submit" class="btn btn-sm bg-red-600 text-white hover:bg-red-700">Delete Matching Sessions</button>
+		</form>
+	</div>
+}
+
+templ Sessions(sessions []SessionSummary) {
+	@SessionsPage(SessionsPageData{Sessions: sessions, FilterLimit: 50})
 }
 
 templ SessionDetailPage(session SessionDetail) {
@@ -69,6 +165,12 @@ templ SessionDetailPage(session SessionDetail) {
 						<a href={ templ.SafeURL("/sessions/" + session.ID + "/review") } class="btn btn-primary">
 							Review Session
 						</a>
+						<button
+							class="btn btn-secondary text-red-600 border-red-300 hover:bg-red-50"
+							hx-delete={ "/api/sessions/" + session.ID }
+							hx-confirm="Delete this session and its transcript?"
+							hx-swap="none"
+						>Delete</button>
 					</div>
 				</div>
 			</div>

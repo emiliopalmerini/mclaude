@@ -23,6 +23,12 @@ type Server struct {
 	qualityRepo       ports.SessionQualityRepository
 	planConfigRepo    ports.PlanConfigRepository
 	promClient        ports.PrometheusClient
+	experimentRepo    ports.ExperimentRepository
+	pricingRepo       ports.PricingRepository
+	sessionRepo       ports.SessionRepository
+	metricsRepo       ports.SessionMetricsRepository
+	statsRepo         ports.StatsRepository
+	projectRepo       ports.ProjectRepository
 }
 
 func NewServer(
@@ -32,6 +38,12 @@ func NewServer(
 	qr ports.SessionQualityRepository,
 	pcr ports.PlanConfigRepository,
 	prom ports.PrometheusClient,
+	er ports.ExperimentRepository,
+	pr ports.PricingRepository,
+	sr ports.SessionRepository,
+	mr ports.SessionMetricsRepository,
+	str ports.StatsRepository,
+	projr ports.ProjectRepository,
 ) *Server {
 	s := &Server{
 		db:                db,
@@ -41,6 +53,12 @@ func NewServer(
 		qualityRepo:       qr,
 		planConfigRepo:    pcr,
 		promClient:        prom,
+		experimentRepo:    er,
+		pricingRepo:       pr,
+		sessionRepo:       sr,
+		metricsRepo:       mr,
+		statsRepo:         str,
+		projectRepo:       projr,
 	}
 	s.setupRoutes()
 	return s
@@ -79,8 +97,27 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("POST /api/experiments/{id}/deactivate", s.handleAPIDeactivateExperiment)
 	s.router.HandleFunc("DELETE /api/experiments/{id}", s.handleAPIDeleteExperiment)
 
+	s.router.HandleFunc("POST /api/experiments/{id}/end", s.handleAPIEndExperiment)
+
 	// Quality review endpoints
 	s.router.HandleFunc("POST /api/sessions/{id}/quality", s.handleAPISaveQuality)
+
+	// Session management
+	s.router.HandleFunc("DELETE /api/sessions/{id}", s.handleAPIDeleteSession)
+	s.router.HandleFunc("POST /api/sessions/cleanup", s.handleAPICleanupSessions)
+
+	// Pricing management
+	s.router.HandleFunc("POST /api/pricing", s.handleAPICreatePricing)
+	s.router.HandleFunc("POST /api/pricing/{id}/default", s.handleAPISetDefaultPricing)
+	s.router.HandleFunc("DELETE /api/pricing/{id}", s.handleAPIDeletePricing)
+
+	// Limits management
+	s.router.HandleFunc("POST /api/limits/plan", s.handleAPISetPlan)
+	s.router.HandleFunc("POST /api/limits/learn", s.handleAPILearnLimit)
+	s.router.HandleFunc("POST /api/limits/learn-weekly", s.handleAPILearnWeeklyLimit)
+
+	// Export
+	s.router.HandleFunc("GET /api/export/sessions", s.handleAPIExportSessions)
 
 	// Real-time usage endpoint (for HTMX auto-refresh)
 	s.router.HandleFunc("GET /api/realtime/usage", s.handleAPIRealtimeUsage)

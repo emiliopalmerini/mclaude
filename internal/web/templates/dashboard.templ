@@ -14,6 +14,9 @@ templ Dashboard(stats DashboardStats) {
 				</div>
 			</div>
 
+			<!-- Filters -->
+			@DashboardFilters(stats)
+
 			<!-- Stats Cards -->
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
 				@StatCard("Sessions", fmt.Sprintf("%d", stats.SessionCount), "Total sessions recorded")
@@ -72,6 +75,42 @@ templ Dashboard(stats DashboardStats) {
 			</div>
 		</div>
 	}
+}
+
+templ DashboardFilters(stats DashboardStats) {
+	<div class="card">
+		<form method="GET" action="/" class="flex flex-wrap items-center gap-4">
+			<span class="text-sm font-medium text-gray-500">Filter:</span>
+			<!-- Period -->
+			<div class="flex items-center gap-1">
+				<a href={ buildDashboardURL("", stats.FilterExperiment, stats.FilterProject) } class={ "btn btn-sm", templ.KV("btn-primary", stats.FilterPeriod == ""), templ.KV("btn-ghost", stats.FilterPeriod != "") }>All Time</a>
+				<a href={ buildDashboardURL("today", stats.FilterExperiment, stats.FilterProject) } class={ "btn btn-sm", templ.KV("btn-primary", stats.FilterPeriod == "today"), templ.KV("btn-ghost", stats.FilterPeriod != "today") }>Today</a>
+				<a href={ buildDashboardURL("week", stats.FilterExperiment, stats.FilterProject) } class={ "btn btn-sm", templ.KV("btn-primary", stats.FilterPeriod == "week"), templ.KV("btn-ghost", stats.FilterPeriod != "week") }>This Week</a>
+				<a href={ buildDashboardURL("month", stats.FilterExperiment, stats.FilterProject) } class={ "btn btn-sm", templ.KV("btn-primary", stats.FilterPeriod == "month"), templ.KV("btn-ghost", stats.FilterPeriod != "month") }>This Month</a>
+			</div>
+			<!-- Experiment -->
+			if len(stats.Experiments) > 0 {
+				<select name="experiment" class="text-sm border border-gray-300 rounded-md px-2 py-1" onchange="this.form.submit()">
+					<option value="">All Experiments</option>
+					for _, exp := range stats.Experiments {
+						<option value={ exp.ID } selected?={ exp.ID == stats.FilterExperiment }>{ exp.Name }</option>
+					}
+				</select>
+			}
+			<!-- Project -->
+			if len(stats.Projects) > 0 {
+				<select name="project" class="text-sm border border-gray-300 rounded-md px-2 py-1" onchange="this.form.submit()">
+					<option value="">All Projects</option>
+					for _, proj := range stats.Projects {
+						<option value={ proj.ID } selected?={ proj.ID == stats.FilterProject }>{ proj.Name }</option>
+					}
+				</select>
+			}
+			if stats.FilterPeriod != "" {
+				<input type="hidden" name="period" value={ stats.FilterPeriod }/>
+			}
+		</form>
+	</div>
 }
 
 templ StatCard(title, value, subtitle string) {

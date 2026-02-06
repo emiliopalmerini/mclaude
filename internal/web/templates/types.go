@@ -20,6 +20,42 @@ type DashboardStats struct {
 	AvgOverall    *float64
 	// Usage limits
 	UsageStats *UsageLimitStats
+	// Filters
+	FilterPeriod     string
+	FilterExperiment string
+	FilterProject    string
+	Experiments      []FilterOption
+	Projects         []FilterOption
+}
+
+// FilterOption for dropdown population.
+type FilterOption struct {
+	ID   string
+	Name string
+}
+
+// SessionsPageData wraps session list with filter state.
+type SessionsPageData struct {
+	Sessions         []SessionSummary
+	FilterExperiment string
+	FilterProject    string
+	FilterLimit      int
+	Experiments      []FilterOption
+	Projects         []FilterOption
+}
+
+// SettingsPageData wraps pricing and plan config for the settings page.
+type SettingsPageData struct {
+	Pricing    []ModelPricing
+	PlanConfig *PlanConfigView
+}
+
+// PlanConfigView for displaying plan config in settings.
+type PlanConfigView struct {
+	PlanType                string
+	WindowHours             int
+	LearnedTokenLimit       *float64
+	WeeklyLearnedTokenLimit *float64
 }
 
 type UsageLimitStats struct {

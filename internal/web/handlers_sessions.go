@@ -7,6 +7,7 @@ import (
 
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/parser"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 	"github.com/emiliopalmerini/mclaude/internal/web/templates"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
@@ -16,8 +17,28 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	queries := sqlc.New(s.db)
 
-	// Get sessions with metrics in single query
-	sessions, _ := queries.ListSessionsWithMetrics(ctx, 50)
+	// Read filter params
+	experimentFilter := r.URL.Query().Get("experiment")
+	projectFilter := r.URL.Query().Get("project")
+	limitStr := r.URL.Query().Get("limit")
+
+	limit := 50
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 500 {
+			limit = l
+		}
+	}
+
+	// List sessions with port interface for filtered queries
+	opts := ports.ListSessionsOptions{Limit: limit}
+	if experimentFilter != "" {
+		opts.ExperimentID = &experimentFilter
+	}
+	if projectFilter != "" {
+		opts.ProjectID = &projectFilter
+	}
+
+	domainSessions, _ := s.sessionRepo.List(ctx, opts)
 
 	// Build quality lookup map
 	qualityMap := make(map[string]sqlc.ListSessionQualitiesForSessionsRow)
@@ -27,22 +48,27 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sessionList := make([]templates.SessionSummary, 0, len(sessions))
-	for _, sess := range sessions {
+	sessionList := make([]templates.SessionSummary, 0, len(domainSessions))
+	for _, sess := range domainSessions {
 		summary := templates.SessionSummary{
 			ID:         sess.ID,
-			CreatedAt:  sess.CreatedAt,
-			ExitReason: sess.ExitReason,
 			ProjectID:  sess.ProjectID,
-			Turns:      sess.TurnCount,
-			Tokens:     sess.TotalTokens,
+			CreatedAt:  sess.CreatedAt.Format(time.RFC3339),
+			ExitReason: sess.ExitReason,
 		}
-		if sess.ExperimentID.Valid {
-			summary.ExperimentID = sess.ExperimentID.String
+		if sess.ExperimentID != nil {
+			summary.ExperimentID = *sess.ExperimentID
 		}
-		if sess.CostEstimateUsd.Valid {
-			summary.Cost = sess.CostEstimateUsd.Float64
+
+		// Get metrics
+		if m, err := s.metricsRepo.GetBySessionID(ctx, sess.ID); err == nil && m != nil {
+			summary.Turns = m.TurnCount
+			summary.Tokens = m.TokenInput + m.TokenOutput
+			if m.CostEstimateUSD != nil {
+				summary.Cost = *m.CostEstimateUSD
+			}
 		}
+
 		// Add quality data
 		if q, ok := qualityMap[sess.ID]; ok {
 			summary.IsReviewed = true
@@ -57,7 +83,26 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		sessionList = append(sessionList, summary)
 	}
 
-	templates.Sessions(sessionList).Render(ctx, w)
+	// Populate filter dropdowns
+	pageData := templates.SessionsPageData{
+		Sessions:         sessionList,
+		FilterExperiment: experimentFilter,
+		FilterProject:    projectFilter,
+		FilterLimit:      limit,
+	}
+
+	if experiments, err := s.experimentRepo.List(ctx); err == nil {
+		for _, e := range experiments {
+			pageData.Experiments = append(pageData.Experiments, templates.FilterOption{ID: e.ID, Name: e.Name})
+		}
+	}
+	if projects, err := s.projectRepo.List(ctx); err == nil {
+		for _, p := range projects {
+			pageData.Projects = append(pageData.Projects, templates.FilterOption{ID: p.ID, Name: p.Name})
+		}
+	}
+
+	templates.SessionsPage(pageData).Render(ctx, w)
 }
 
 func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +292,68 @@ func (s *Server) handleAPISaveQuality(w http.ResponseWriter, r *http.Request) {
 
 	// Return success indicator for HTMX
 	templates.QualitySavedIndicator().Render(ctx, w)
+}
+
+func (s *Server) handleAPIDeleteSession(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+
+	// Delete transcript file
+	if s.transcriptStorage != nil {
+		s.transcriptStorage.Delete(ctx, id)
+	}
+
+	// Delete session from database
+	if err := s.sessionRepo.Delete(ctx, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Redirect", "/sessions")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleAPICleanupSessions(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	beforeDate := r.FormValue("before_date")
+	projectFilter := r.FormValue("project")
+	experimentFilter := r.FormValue("experiment")
+
+	if beforeDate == "" && projectFilter == "" && experimentFilter == "" {
+		http.Error(w, "At least one filter is required", http.StatusBadRequest)
+		return
+	}
+
+	var sessionsToDelete []domain.TranscriptPathInfo
+
+	if beforeDate != "" {
+		parsed, err := time.Parse("2006-01-02", beforeDate)
+		if err != nil {
+			http.Error(w, "Invalid date format (use YYYY-MM-DD)", http.StatusBadRequest)
+			return
+		}
+		sessionsToDelete, _ = s.sessionRepo.GetTranscriptPathsBefore(ctx, parsed.Format(time.RFC3339))
+	} else if projectFilter != "" {
+		sessionsToDelete, _ = s.sessionRepo.GetTranscriptPathsByProject(ctx, projectFilter)
+	} else if experimentFilter != "" {
+		sessionsToDelete, _ = s.sessionRepo.GetTranscriptPathsByExperiment(ctx, experimentFilter)
+	}
+
+	for _, sess := range sessionsToDelete {
+		if sess.TranscriptPath != "" && s.transcriptStorage != nil {
+			s.transcriptStorage.Delete(ctx, sess.ID)
+		}
+		s.sessionRepo.Delete(ctx, sess.ID)
+	}
+
+	w.Header().Set("HX-Redirect", "/sessions")
+	w.WriteHeader(http.StatusOK)
 }
 
 func convertDomainQualityToTemplate(q *domain.SessionQuality) templates.SessionQuality {

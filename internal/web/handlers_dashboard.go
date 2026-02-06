@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/util"
@@ -14,20 +13,51 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	queries := sqlc.New(s.db)
 
-	// Get stats
-	startDate := time.Unix(0, 0).Format(time.RFC3339) // All time
-	statsRow, _ := queries.GetAggregateStats(ctx, startDate)
+	// Read filter params
+	period := r.URL.Query().Get("period")
+	experimentFilter := r.URL.Query().Get("experiment")
+	projectFilter := r.URL.Query().Get("project")
+
+	startDate := util.GetStartDateForPeriod(period)
+
+	// Get aggregate stats based on filters
+	var aggStats *domain.AggregateStats
+	if experimentFilter != "" {
+		aggStats, _ = s.statsRepo.GetAggregateByExperiment(ctx, experimentFilter, startDate)
+	} else if projectFilter != "" {
+		aggStats, _ = s.statsRepo.GetAggregateByProject(ctx, projectFilter, startDate)
+	} else {
+		aggStats, _ = s.statsRepo.GetAggregate(ctx, startDate)
+	}
 
 	stats := templates.DashboardStats{
-		SessionCount: statsRow.SessionCount,
-		TotalTokens:  util.ToInt64(statsRow.TotalTokenInput) + util.ToInt64(statsRow.TotalTokenOutput),
-		TotalCost:    util.ToFloat64(statsRow.TotalCostUsd),
-		TotalTurns:   util.ToInt64(statsRow.TotalTurns),
-		TokenInput:   util.ToInt64(statsRow.TotalTokenInput),
-		TokenOutput:  util.ToInt64(statsRow.TotalTokenOutput),
-		CacheRead:    util.ToInt64(statsRow.TotalTokenCacheRead),
-		CacheWrite:   util.ToInt64(statsRow.TotalTokenCacheWrite),
-		TotalErrors:  util.ToInt64(statsRow.TotalErrors),
+		FilterPeriod:     period,
+		FilterExperiment: experimentFilter,
+		FilterProject:    projectFilter,
+	}
+
+	if aggStats != nil {
+		stats.SessionCount = aggStats.SessionCount
+		stats.TotalTokens = aggStats.TotalTokenInput + aggStats.TotalTokenOutput
+		stats.TotalCost = aggStats.TotalCostUsd
+		stats.TotalTurns = aggStats.TotalTurns
+		stats.TokenInput = aggStats.TotalTokenInput
+		stats.TokenOutput = aggStats.TotalTokenOutput
+		stats.CacheRead = aggStats.TotalTokenCacheRead
+		stats.CacheWrite = aggStats.TotalTokenCacheWrite
+		stats.TotalErrors = aggStats.TotalErrors
+	}
+
+	// Populate filter dropdowns
+	if experiments, err := s.experimentRepo.List(ctx); err == nil {
+		for _, e := range experiments {
+			stats.Experiments = append(stats.Experiments, templates.FilterOption{ID: e.ID, Name: e.Name})
+		}
+	}
+	if projects, err := s.projectRepo.List(ctx); err == nil {
+		for _, p := range projects {
+			stats.Projects = append(stats.Projects, templates.FilterOption{ID: p.ID, Name: p.Name})
+		}
 	}
 
 	// Get usage limit stats
@@ -37,7 +67,6 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			WindowHours: planConfig.WindowHours,
 		}
 
-		// Get the 5-hour token limit (learned or estimated)
 		if planConfig.LearnedTokenLimit != nil {
 			usageStats.TokenLimit = *planConfig.LearnedTokenLimit
 			usageStats.IsLearned = true
@@ -45,23 +74,15 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			usageStats.TokenLimit = preset.TokenEstimate
 		}
 
-		// Get 5-hour rolling window usage
 		if summary, err := s.planConfigRepo.GetRollingWindowSummary(ctx, planConfig.WindowHours); err == nil {
 			usageStats.TokensUsed = summary.TotalTokens
-
-			// Calculate percentage
 			if usageStats.TokenLimit > 0 {
 				usageStats.UsagePercent = (summary.TotalTokens / usageStats.TokenLimit) * 100
 			}
-
-			// Determine status
 			usageStats.Status = domain.GetStatusFromPercent(usageStats.UsagePercent)
-
-			// Approximate minutes left (rolling window refreshes continuously)
 			usageStats.MinutesLeft = planConfig.WindowHours * 60
 		}
 
-		// Get the weekly token limit (learned or estimated)
 		if planConfig.WeeklyLearnedTokenLimit != nil {
 			usageStats.WeeklyTokenLimit = *planConfig.WeeklyLearnedTokenLimit
 			usageStats.WeeklyIsLearned = true
@@ -69,16 +90,11 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			usageStats.WeeklyTokenLimit = preset.TokenEstimate
 		}
 
-		// Get weekly rolling window usage
 		if weeklySummary, err := s.planConfigRepo.GetWeeklyWindowSummary(ctx); err == nil {
 			usageStats.WeeklyTokensUsed = weeklySummary.TotalTokens
-
-			// Calculate percentage
 			if usageStats.WeeklyTokenLimit > 0 {
 				usageStats.WeeklyUsagePercent = (weeklySummary.TotalTokens / usageStats.WeeklyTokenLimit) * 100
 			}
-
-			// Determine status
 			usageStats.WeeklyStatus = domain.GetStatusFromPercent(usageStats.WeeklyUsagePercent)
 		}
 

@@ -2,11 +2,15 @@ package templates
 
 templ Experiments(experiments []Experiment) {
 	@Layout("Experiments") {
-		<div class="space-y-6" x-data="{ selected: [] }">
+		<div class="space-y-6" x-data="{ selected: [], showCreate: false }">
 			<div class="page-header">
 				<div class="page-header-content">
 					<h1 class="page-title">Experiments</h1>
 					<div class="page-header-actions">
+						<button
+							class="btn btn-primary"
+							x-on:click="showCreate = !showCreate"
+						>New Experiment</button>
 						<a
 							class="btn btn-primary"
 							x-show="selected.length >= 2"
@@ -17,6 +21,29 @@ templ Experiments(experiments []Experiment) {
 						</a>
 					</div>
 				</div>
+			</div>
+
+			<!-- Create Experiment Form -->
+			<div class="card" x-show="showCreate" x-cloak>
+				<h2 class="text-lg font-semibold mb-4">Create New Experiment</h2>
+				<form hx-post="/api/experiments" hx-swap="none" class="space-y-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+						<input type="text" name="name" required class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="e.g. minimal-prompts"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+						<input type="text" name="description" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="What are you testing?"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Hypothesis</label>
+						<input type="text" name="hypothesis" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm" placeholder="What do you expect to happen?"/>
+					</div>
+					<div class="flex gap-2">
+						<button type="submit" class="btn btn-primary">Create &amp; Activate</button>
+						<button type="button" class="btn btn-secondary" x-on:click="showCreate = false">Cancel</button>
+					</div>
+				</form>
 			</div>
 
 			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -105,6 +132,15 @@ templ Experiments(experiments []Experiment) {
 										title="Deactivate experiment"
 									>Pause</button>
 								}
+								if exp.EndedAt == "" {
+									<button
+										class="btn btn-sm btn-secondary text-orange-600 hover:bg-orange-50"
+										hx-post={ "/api/experiments/" + exp.ID + "/end" }
+										hx-confirm="Are you sure you want to end this experiment? This cannot be undone."
+										hx-swap="none"
+										title="End experiment"
+									>End</button>
+								}
 								<button
 									class="btn btn-sm btn-ghost text-red-600 hover:bg-red-50"
 									hx-delete={ "/api/experiments/" + exp.ID }
@@ -126,7 +162,7 @@ templ Experiments(experiments []Experiment) {
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
 						</svg>
 						<p class="text-gray-500 font-medium">No experiments yet</p>
-						<p class="text-sm text-gray-400 mt-1">Create one with: <code class="bg-gray-100 px-2 py-0.5 rounded">mclaude experiment create "name"</code></p>
+						<p class="text-sm text-gray-400 mt-1">Click "New Experiment" above to create one</p>
 					</div>
 				}
 			</div>

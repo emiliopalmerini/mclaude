@@ -2,7 +2,7 @@ package templates
 
 import "fmt"
 
-templ Settings(pricing []ModelPricing) {
+templ SettingsPage(data SettingsPageData) {
 	@Layout("Settings") {
 		<div class="space-y-6">
 			<div class="page-header">
@@ -11,60 +11,199 @@ templ Settings(pricing []ModelPricing) {
 				</div>
 			</div>
 
-			<div class="card">
-				<h2 class="text-lg font-semibold mb-4">Model Pricing</h2>
-				<p class="text-gray-600 text-sm mb-4">Configure pricing for cost estimation (USD per 1M tokens)</p>
+			<!-- Usage Limits Section -->
+			@LimitsSection(data.PlanConfig)
 
-				<table class="min-w-full divide-y divide-gray-200">
-					<thead class="bg-gray-50">
-						<tr>
-							<th class="table-header">Model</th>
-							<th class="table-header">Input</th>
-							<th class="table-header">Output</th>
-							<th class="table-header">Cache Read</th>
-							<th class="table-header">Cache Write</th>
-							<th class="table-header">Default</th>
-						</tr>
-					</thead>
-					<tbody class="bg-white divide-y divide-gray-200">
-						for _, p := range pricing {
-							<tr>
-								<td class="table-cell">
-									<div class="font-medium">{ p.DisplayName }</div>
-									<div class="text-xs text-gray-500 font-mono">{ p.ID }</div>
-								</td>
-								<td class="table-cell">{ fmt.Sprintf("$%.2f", p.InputPerMillion) }</td>
-								<td class="table-cell">{ fmt.Sprintf("$%.2f", p.OutputPerMillion) }</td>
-								<td class="table-cell">
-									if p.CacheReadPerMillion > 0 {
-										{ fmt.Sprintf("$%.2f", p.CacheReadPerMillion) }
-									} else {
-										<span class="text-gray-400">-</span>
-									}
-								</td>
-								<td class="table-cell">
-									if p.CacheWritePerMillion > 0 {
-										{ fmt.Sprintf("$%.2f", p.CacheWritePerMillion) }
-									} else {
-										<span class="text-gray-400">-</span>
-									}
-								</td>
-								<td class="table-cell">
-									if p.IsDefault {
-										<span class="badge badge-green">Default</span>
-									}
-								</td>
-							</tr>
-						}
-					</tbody>
-				</table>
-				if len(pricing) == 0 {
-					<div class="p-8 text-center text-gray-500">No pricing configured</div>
-				}
-				<p class="text-gray-500 text-sm mt-4">
-					Use CLI to manage: <code class="bg-gray-100 px-1 rounded">mclaude cost set &lt;model-id&gt; --input X --output Y</code>
-				</p>
-			</div>
+			<!-- Model Pricing Section -->
+			@PricingSection(data.Pricing)
 		</div>
 	}
+}
+
+templ LimitsSection(config *PlanConfigView) {
+	<div class="card">
+		<h2 class="text-lg font-semibold mb-4">Usage Limits</h2>
+		<p class="text-gray-600 text-sm mb-4">Configure your Claude plan for usage limit tracking</p>
+
+		<!-- Plan Selection -->
+		<div class="mb-6">
+			<h3 class="text-sm font-medium text-gray-700 mb-3">Plan Type</h3>
+			<div class="flex flex-wrap gap-3">
+				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
+					<input type="hidden" name="plan_type" value="pro"/>
+					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "pro"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "pro") }>
+						<div class="font-semibold">Pro</div>
+						<div class="text-xs text-gray-500 mt-1">~45 msgs / 5hr</div>
+					</button>
+				</form>
+				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
+					<input type="hidden" name="plan_type" value="max_5x"/>
+					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "max_5x"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "max_5x") }>
+						<div class="font-semibold">Max 5x</div>
+						<div class="text-xs text-gray-500 mt-1">~225 msgs / 5hr</div>
+					</button>
+				</form>
+				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
+					<input type="hidden" name="plan_type" value="max_20x"/>
+					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "max_20x"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "max_20x") }>
+						<div class="font-semibold">Max 20x</div>
+						<div class="text-xs text-gray-500 mt-1">~900 msgs / 5hr</div>
+					</button>
+				</form>
+			</div>
+		</div>
+
+		<!-- Learn Limits -->
+		if config != nil {
+			<div class="border-t pt-4">
+				<h3 class="text-sm font-medium text-gray-700 mb-3">Learned Limits</h3>
+				<p class="text-xs text-gray-500 mb-3">Run when you hit your limit to record the actual token threshold.</p>
+				<div class="flex flex-wrap items-center gap-4">
+					<div>
+						<span class="text-sm text-gray-600">5-Hour: </span>
+						if config.LearnedTokenLimit != nil {
+							<span class="text-sm font-medium text-blue-600">{ formatTokensFloat(*config.LearnedTokenLimit) } tokens</span>
+						} else {
+							<span class="text-sm text-gray-400">Not learned</span>
+						}
+					</div>
+					<form hx-post="/api/limits/learn" hx-swap="none" hx-confirm="Record current 5-hour usage as your token limit?" class="inline">
+						<button type="submit" class="btn btn-sm btn-secondary">Learn 5-Hour Limit</button>
+					</form>
+				</div>
+				<div class="flex flex-wrap items-center gap-4 mt-3">
+					<div>
+						<span class="text-sm text-gray-600">Weekly: </span>
+						if config.WeeklyLearnedTokenLimit != nil {
+							<span class="text-sm font-medium text-blue-600">{ formatTokensFloat(*config.WeeklyLearnedTokenLimit) } tokens</span>
+						} else {
+							<span class="text-sm text-gray-400">Not learned</span>
+						}
+					</div>
+					<form hx-post="/api/limits/learn-weekly" hx-swap="none" hx-confirm="Record current weekly usage as your token limit?" class="inline">
+						<button type="submit" class="btn btn-sm btn-secondary">Learn Weekly Limit</button>
+					</form>
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ PricingSection(pricing []ModelPricing) {
+	<div class="card" x-data="{ showForm: false }">
+		<div class="flex items-center justify-between mb-4">
+			<div>
+				<h2 class="text-lg font-semibold">Model Pricing</h2>
+				<p class="text-gray-600 text-sm">Configure pricing for cost estimation (USD per 1M tokens)</p>
+			</div>
+			<button class="btn btn-sm btn-primary" x-on:click="showForm = !showForm">Add Model</button>
+		</div>
+
+		<!-- Add/Edit Form -->
+		<div x-show="showForm" x-cloak class="mb-6 p-4 bg-gray-50 rounded-lg">
+			<form hx-post="/api/pricing" hx-swap="none" class="space-y-4">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Model ID *</label>
+						<input type="text" name="model_id" required class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="claude-sonnet-4-20250514"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
+						<input type="text" name="display_name" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Claude Sonnet 4"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Input / 1M *</label>
+						<input type="number" name="input" required step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="3.00"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Output / 1M *</label>
+						<input type="number" name="output" required step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="15.00"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Cache Read / 1M</label>
+						<input type="number" name="cache_read" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="0.30"/>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-1">Cache Write / 1M</label>
+						<input type="number" name="cache_write" step="0.01" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="3.75"/>
+					</div>
+				</div>
+				<div class="flex gap-2">
+					<button type="submit" class="btn btn-primary">Save</button>
+					<button type="button" class="btn btn-secondary" x-on:click="showForm = false">Cancel</button>
+				</div>
+			</form>
+		</div>
+
+		<table class="min-w-full divide-y divide-gray-200">
+			<thead class="bg-gray-50">
+				<tr>
+					<th class="table-header">Model</th>
+					<th class="table-header">Input</th>
+					<th class="table-header">Output</th>
+					<th class="table-header">Cache Read</th>
+					<th class="table-header">Cache Write</th>
+					<th class="table-header">Default</th>
+					<th class="table-header">Actions</th>
+				</tr>
+			</thead>
+			<tbody class="bg-white divide-y divide-gray-200">
+				for _, p := range pricing {
+					<tr>
+						<td class="table-cell">
+							<div class="font-medium">{ p.DisplayName }</div>
+							<div class="text-xs text-gray-500 font-mono">{ p.ID }</div>
+						</td>
+						<td class="table-cell">{ fmt.Sprintf("$%.2f", p.InputPerMillion) }</td>
+						<td class="table-cell">{ fmt.Sprintf("$%.2f", p.OutputPerMillion) }</td>
+						<td class="table-cell">
+							if p.CacheReadPerMillion > 0 {
+								{ fmt.Sprintf("$%.2f", p.CacheReadPerMillion) }
+							} else {
+								<span class="text-gray-400">-</span>
+							}
+						</td>
+						<td class="table-cell">
+							if p.CacheWritePerMillion > 0 {
+								{ fmt.Sprintf("$%.2f", p.CacheWritePerMillion) }
+							} else {
+								<span class="text-gray-400">-</span>
+							}
+						</td>
+						<td class="table-cell">
+							if p.IsDefault {
+								<span class="badge badge-green">Default</span>
+							} else {
+								<button
+									class="btn btn-sm btn-ghost text-blue-600"
+									hx-post={ "/api/pricing/" + p.ID + "/default" }
+									hx-swap="none"
+								>Set Default</button>
+							}
+						</td>
+						<td class="table-cell">
+							<button
+								class="text-red-400 hover:text-red-600"
+								hx-delete={ "/api/pricing/" + p.ID }
+								hx-confirm="Delete pricing for this model?"
+								hx-swap="none"
+								title="Delete pricing"
+							>
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+								</svg>
+							</button>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+		if len(pricing) == 0 {
+			<div class="p-8 text-center text-gray-500">No pricing configured</div>
+		}
+	</div>
+}
+
+templ Settings(pricing []ModelPricing) {
+	@SettingsPage(SettingsPageData{Pricing: pricing})
 }

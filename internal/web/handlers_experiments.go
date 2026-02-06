@@ -1,9 +1,14 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
+	"github.com/google/uuid"
+
+	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 	"github.com/emiliopalmerini/mclaude/internal/web/templates"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
@@ -256,8 +261,83 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) handleAPICreateExperiment(w http.ResponseWriter, r *http.Request) {
-	// TODO: implement
-	http.Error(w, "Not implemented", http.StatusNotImplemented)
+	ctx := r.Context()
+
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Invalid form data", http.StatusBadRequest)
+		return
+	}
+
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		http.Error(w, "Name is required", http.StatusBadRequest)
+		return
+	}
+
+	existing, err := s.experimentRepo.GetByName(ctx, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if existing != nil {
+		http.Error(w, fmt.Sprintf("Experiment %q already exists", name), http.StatusConflict)
+		return
+	}
+
+	if err := s.experimentRepo.DeactivateAll(ctx); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	now := time.Now().UTC()
+	exp := &domain.Experiment{
+		ID:        uuid.New().String(),
+		Name:      name,
+		StartedAt: now,
+		IsActive:  true,
+		CreatedAt: now,
+	}
+	if desc := strings.TrimSpace(r.FormValue("description")); desc != "" {
+		exp.Description = &desc
+	}
+	if hyp := strings.TrimSpace(r.FormValue("hypothesis")); hyp != "" {
+		exp.Hypothesis = &hyp
+	}
+
+	if err := s.experimentRepo.Create(ctx, exp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Redirect", "/experiments")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (s *Server) handleAPIEndExperiment(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := r.PathValue("id")
+
+	exp, err := s.experimentRepo.GetByID(ctx, id)
+	if err != nil {
+		http.Error(w, "Experiment not found", http.StatusNotFound)
+		return
+	}
+	if exp.EndedAt != nil {
+		http.Error(w, "Experiment already ended", http.StatusBadRequest)
+		return
+	}
+
+	now := time.Now().UTC()
+	exp.EndedAt = &now
+	exp.IsActive = false
+
+	if err := s.experimentRepo.Update(ctx, exp); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("HX-Redirect", "/experiments")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (s *Server) handleAPIActivateExperiment(w http.ResponseWriter, r *http.Request) {

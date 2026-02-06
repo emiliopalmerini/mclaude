@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
@@ -72,6 +73,35 @@ func formatTokensFloat(n float64) string {
 
 func formatUsagePercent(p float64) string {
 	return fmt.Sprintf("%.0f%%", p)
+}
+
+func buildSessionsExportURL(format, experiment string, limit int) templ.SafeURL {
+	url := fmt.Sprintf("/api/export/sessions?format=%s&limit=%d", format, limit)
+	if experiment != "" {
+		url += "&experiment=" + experiment
+	}
+	return templ.SafeURL(url)
+}
+
+func buildDashboardURL(period, experiment, project string) templ.SafeURL {
+	url := "/?"
+	params := []string{}
+	if period != "" {
+		params = append(params, "period="+period)
+	}
+	if experiment != "" {
+		params = append(params, "experiment="+experiment)
+	}
+	if project != "" {
+		params = append(params, "project="+project)
+	}
+	for i, p := range params {
+		if i > 0 {
+			url += "&"
+		}
+		url += p
+	}
+	return templ.SafeURL(url)
 }
 
 func planDisplayName(planType string) string {

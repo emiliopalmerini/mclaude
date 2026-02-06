@@ -35,6 +35,14 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 								hx-swap="none"
 							>Deactivate</button>
 						}
+						if exp.EndedAt == "" {
+							<button
+								class="btn btn-secondary text-orange-600 border-orange-300 hover:bg-orange-50"
+								hx-post={ "/api/experiments/" + exp.ID + "/end" }
+								hx-confirm="Are you sure you want to end this experiment? This cannot be undone."
+								hx-swap="none"
+							>End Experiment</button>
+						}
 					</div>
 				</div>
 				if exp.Description != "" {
