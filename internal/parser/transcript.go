@@ -18,15 +18,17 @@ type ParsedTranscript struct {
 	Tools     []*domain.SessionTool
 	Files     []*domain.SessionFile
 	Commands  []*domain.SessionCommand
+	Subagents []*domain.SessionSubagent
 }
 
 type TranscriptEntry struct {
-	Type      string          `json:"type"`
-	Timestamp string          `json:"timestamp,omitempty"`
-	Model     string          `json:"model,omitempty"`
-	Message   *Message        `json:"message,omitempty"`
-	Usage     *Usage          `json:"usage,omitempty"`
-	Result    json.RawMessage `json:"result,omitempty"`
+	Type              string          `json:"type"`
+	Timestamp         string          `json:"timestamp,omitempty"`
+	Model             string          `json:"model,omitempty"`
+	Message           *Message        `json:"message,omitempty"`
+	Usage             *Usage          `json:"usage,omitempty"`
+	Result            json.RawMessage `json:"result,omitempty"`
+	ToolUseResultData json.RawMessage `json:"toolUseResult,omitempty"`
 }
 
 type Message struct {
@@ -36,11 +38,12 @@ type Message struct {
 }
 
 type Content struct {
-	Type      string          `json:"type"`
-	Text      string          `json:"text,omitempty"`
-	ToolUseID string          `json:"id,omitempty"`
-	Name      string          `json:"name,omitempty"`
-	Input     json.RawMessage `json:"input,omitempty"`
+	Type         string          `json:"type"`
+	Text         string          `json:"text,omitempty"`
+	ToolUseID    string          `json:"id,omitempty"`
+	ToolUseIDRef string          `json:"tool_use_id,omitempty"` // In tool_result entries
+	Name         string          `json:"name,omitempty"`
+	Input        json.RawMessage `json:"input,omitempty"`
 }
 
 type Usage struct {
@@ -59,6 +62,30 @@ type ToolResult struct {
 	ExitCode *int `json:"exit_code,omitempty"`
 }
 
+type SubagentToolInput struct {
+	Description  string `json:"description,omitempty"`
+	SubagentType string `json:"subagent_type,omitempty"`
+	Model        string `json:"model,omitempty"`
+	Prompt       string `json:"prompt,omitempty"`
+	Skill        string `json:"skill,omitempty"`
+	Args         string `json:"args,omitempty"`
+}
+
+type ToolUseResult struct {
+	Status            string `json:"status,omitempty"`
+	TotalDurationMs   *int64 `json:"totalDurationMs,omitempty"`
+	TotalTokens       int64  `json:"totalTokens,omitempty"`
+	TotalToolUseCount int64  `json:"totalToolUseCount,omitempty"`
+	Usage             *Usage `json:"usage,omitempty"`
+}
+
+type pendingSubagent struct {
+	agentType   string
+	agentKind   string // "task" or "skill"
+	description *string
+	model       *string
+}
+
 func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -70,13 +97,15 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 		Metrics: &domain.SessionMetrics{
 			SessionID: sessionID,
 		},
-		Tools:    make([]*domain.SessionTool, 0),
-		Files:    make([]*domain.SessionFile, 0),
-		Commands: make([]*domain.SessionCommand, 0),
+		Tools:     make([]*domain.SessionTool, 0),
+		Files:     make([]*domain.SessionFile, 0),
+		Commands:  make([]*domain.SessionCommand, 0),
+		Subagents: make([]*domain.SessionSubagent, 0),
 	}
 
 	toolCounts := make(map[string]*domain.SessionTool)
 	fileCounts := make(map[string]*domain.SessionFile) // key: filepath:operation
+	pendingSubagents := make(map[string]*pendingSubagent)
 
 	scanner := bufio.NewScanner(file)
 	// Increase buffer size for large lines
@@ -113,6 +142,10 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 		switch entry.Type {
 		case "user", "human":
 			result.Metrics.MessageCountUser++
+			// Check for toolUseResult (sub-agent completion data)
+			if len(entry.ToolUseResultData) > 0 && entry.Message != nil {
+				processSubagentResult(entry, sessionID, pendingSubagents, result)
+			}
 		case "assistant":
 			result.Metrics.MessageCountAssistant++
 			// Capture model ID from assistant messages (use first occurrence)
@@ -121,7 +154,7 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 				modelID = &m
 			}
 			if entry.Message != nil {
-				processAssistantMessage(entry.Message, sessionID, toolCounts, fileCounts, result)
+				processAssistantMessage(entry.Message, sessionID, toolCounts, fileCounts, pendingSubagents, result)
 			}
 		case "result":
 			// Tool results - check for errors
@@ -164,7 +197,7 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 	return result, nil
 }
 
-func processAssistantMessage(msg *Message, sessionID string, toolCounts map[string]*domain.SessionTool, fileCounts map[string]*domain.SessionFile, result *ParsedTranscript) {
+func processAssistantMessage(msg *Message, sessionID string, toolCounts map[string]*domain.SessionTool, fileCounts map[string]*domain.SessionFile, pendingSubs map[string]*pendingSubagent, result *ParsedTranscript) {
 	for _, content := range msg.Content {
 		if content.Type != "tool_use" {
 			continue
@@ -183,6 +216,36 @@ func processAssistantMessage(msg *Message, sessionID string, toolCounts map[stri
 				SessionID:       sessionID,
 				ToolName:        toolName,
 				InvocationCount: 1,
+			}
+		}
+
+		// Detect sub-agent invocations (Task or Skill tool_use)
+		if (toolName == "Task" || toolName == "Skill") && len(content.Input) > 0 && content.ToolUseID != "" {
+			var subInput SubagentToolInput
+			if err := json.Unmarshal(content.Input, &subInput); err == nil {
+				pending := &pendingSubagent{}
+				if toolName == "Task" {
+					pending.agentKind = "task"
+					pending.agentType = subInput.SubagentType
+					if pending.agentType == "" {
+						pending.agentType = "unknown"
+					}
+					if subInput.Description != "" {
+						desc := subInput.Description
+						pending.description = &desc
+					}
+					if subInput.Model != "" {
+						m := subInput.Model
+						pending.model = &m
+					}
+				} else { // Skill
+					pending.agentKind = "skill"
+					pending.agentType = subInput.Skill
+					if pending.agentType == "" {
+						pending.agentType = "unknown"
+					}
+				}
+				pendingSubs[content.ToolUseID] = pending
 			}
 		}
 
@@ -218,6 +281,73 @@ func processAssistantMessage(msg *Message, sessionID string, toolCounts map[stri
 			}
 		}
 	}
+}
+
+func processSubagentResult(entry TranscriptEntry, sessionID string, pendingSubs map[string]*pendingSubagent, result *ParsedTranscript) {
+	// Parse the toolUseResult
+	var toolUseResult ToolUseResult
+	if err := json.Unmarshal(entry.ToolUseResultData, &toolUseResult); err != nil {
+		return
+	}
+
+	// Find matching tool_use_id from the user message content
+	var matchedToolUseID string
+	if entry.Message != nil {
+		for _, content := range entry.Message.Content {
+			if content.Type == "tool_result" && content.ToolUseIDRef != "" {
+				if _, ok := pendingSubs[content.ToolUseIDRef]; ok {
+					matchedToolUseID = content.ToolUseIDRef
+					break
+				}
+			}
+		}
+	}
+
+	// If no match found via content, try to match with the most recent pending sub-agent
+	if matchedToolUseID == "" {
+		for id := range pendingSubs {
+			matchedToolUseID = id
+			break
+		}
+	}
+
+	if matchedToolUseID == "" {
+		return
+	}
+
+	pending, ok := pendingSubs[matchedToolUseID]
+	if !ok {
+		return
+	}
+
+	subagent := &domain.SessionSubagent{
+		SessionID:   sessionID,
+		AgentType:   pending.agentType,
+		AgentKind:   pending.agentKind,
+		Description: pending.description,
+		Model:       pending.model,
+		TotalTokens: toolUseResult.TotalTokens,
+		ToolUseCount: toolUseResult.TotalToolUseCount,
+		TotalDurationMs: toolUseResult.TotalDurationMs,
+	}
+
+	if toolUseResult.Usage != nil {
+		subagent.TokenInput = toolUseResult.Usage.InputTokens
+		subagent.TokenOutput = toolUseResult.Usage.OutputTokens
+		subagent.TokenCacheRead = toolUseResult.Usage.CacheReadInputTokens
+		subagent.TokenCacheWrite = toolUseResult.Usage.CacheCreationInputTokens
+
+		// Accumulate sub-agent tokens into session totals
+		result.Metrics.TokenInput += toolUseResult.Usage.InputTokens
+		result.Metrics.TokenOutput += toolUseResult.Usage.OutputTokens
+		result.Metrics.TokenCacheRead += toolUseResult.Usage.CacheReadInputTokens
+		result.Metrics.TokenCacheWrite += toolUseResult.Usage.CacheCreationInputTokens
+	}
+
+	result.Subagents = append(result.Subagents, subagent)
+
+	// Remove from pending
+	delete(pendingSubs, matchedToolUseID)
 }
 
 func processToolResult(entry TranscriptEntry, result *ParsedTranscript) {
