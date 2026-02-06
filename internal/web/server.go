@@ -9,9 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/emiliopalmerini/mclaude/internal/adapters/prometheus"
-	"github.com/emiliopalmerini/mclaude/internal/adapters/storage"
-	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/ports"
 )
 
@@ -22,30 +19,28 @@ type Server struct {
 	db                *sql.DB
 	router            *http.ServeMux
 	port              int
-	transcriptStorage *storage.TranscriptStorage
-	qualityRepo       *turso.SessionQualityRepository
-	planConfigRepo    *turso.PlanConfigRepository
+	transcriptStorage ports.TranscriptStorage
+	qualityRepo       ports.SessionQualityRepository
+	planConfigRepo    ports.PlanConfigRepository
 	promClient        ports.PrometheusClient
 }
 
-func NewServer(db *sql.DB, port int, ts *storage.TranscriptStorage) *Server {
-	// Initialize Prometheus client (graceful degradation if not configured)
-	var promClient ports.PrometheusClient
-	promCfg := prometheus.LoadConfig()
-	if client, err := prometheus.NewClient(promCfg); err == nil {
-		promClient = client
-	} else {
-		promClient = prometheus.NewNoOpClient()
-	}
-
+func NewServer(
+	db *sql.DB,
+	port int,
+	ts ports.TranscriptStorage,
+	qr ports.SessionQualityRepository,
+	pcr ports.PlanConfigRepository,
+	prom ports.PrometheusClient,
+) *Server {
 	s := &Server{
 		db:                db,
 		router:            http.NewServeMux(),
 		port:              port,
 		transcriptStorage: ts,
-		qualityRepo:       turso.NewSessionQualityRepository(db),
-		planConfigRepo:    turso.NewPlanConfigRepository(db),
-		promClient:        promClient,
+		qualityRepo:       qr,
+		planConfigRepo:    pcr,
+		promClient:        prom,
 	}
 	s.setupRoutes()
 	return s

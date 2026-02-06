@@ -9,8 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/emiliopalmerini/mclaude/internal/adapters/prometheus"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/storage"
 	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 	"github.com/emiliopalmerini/mclaude/internal/web"
 )
 
@@ -39,17 +41,25 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	defer db.Close()
 
-	// Initialize transcript storage for review page
 	transcriptStorage, err := storage.NewTranscriptStorage()
 	if err != nil {
 		return fmt.Errorf("failed to initialize transcript storage: %w", err)
 	}
 
-	// Create context that cancels on interrupt
+	qualityRepo := turso.NewSessionQualityRepository(db.DB)
+	planConfigRepo := turso.NewPlanConfigRepository(db.DB)
+
+	var promClient ports.PrometheusClient
+	promCfg := prometheus.LoadConfig()
+	if client, err := prometheus.NewClient(promCfg); err == nil {
+		promClient = client
+	} else {
+		promClient = prometheus.NewNoOpClient()
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Handle shutdown signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -58,6 +68,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 		cancel()
 	}()
 
-	server := web.NewServer(db.DB, servePort, transcriptStorage)
+	server := web.NewServer(db.DB, servePort, transcriptStorage, qualityRepo, planConfigRepo, promClient)
 	return server.Start(ctx)
 }
