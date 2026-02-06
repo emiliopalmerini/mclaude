@@ -100,6 +100,28 @@ func (s *Server) handleAPIChartCost(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (s *Server) handleAPIChartHeatmap(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	queries := sqlc.New(s.db)
+
+	// Get daily stats for the current year
+	startDate := time.Now().AddDate(0, 0, -365).Format(time.RFC3339)
+	stats, _ := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
+		CreatedAt: startDate,
+		Limit:     366,
+	})
+
+	data := make([][2]any, len(stats))
+	for i, stat := range stats {
+		data[i] = [2]any{formatChartDate(stat.Date), stat.SessionCount}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"data": data,
+	})
+}
+
 func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

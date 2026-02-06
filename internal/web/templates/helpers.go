@@ -104,6 +104,14 @@ func buildDashboardURL(period, experiment, project string) templ.SafeURL {
 	return templ.SafeURL(url)
 }
 
+func tokenBarWidth(tokens, maxTokens int64) string {
+	if maxTokens == 0 {
+		return "width: 0%"
+	}
+	pct := float64(tokens) / float64(maxTokens) * 100
+	return fmt.Sprintf("width: %.0f%%", pct)
+}
+
 func planDisplayName(planType string) string {
 	switch planType {
 	case "pro":

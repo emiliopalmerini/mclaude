@@ -1,8 +1,8 @@
 package templates
 
 templ Experiments(experiments []Experiment) {
-	@Layout("Experiments") {
-		<div class="space-y-6" x-data="{ selected: [], showCreate: false }">
+	@Layout("Experiments", "/experiments") {
+		<div class="space-y-4" x-data="{ selected: [], showCreate: false }">
 			<div class="page-header">
 				<div class="page-header-content">
 					<h1 class="page-title">Experiments</h1>

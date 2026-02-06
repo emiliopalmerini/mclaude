@@ -3,8 +3,8 @@ package templates
 import "fmt"
 
 templ Dashboard(stats DashboardStats) {
-	@Layout("Dashboard") {
-		<div class="space-y-6">
+	@Layout("Dashboard", "/") {
+		<div class="space-y-4">
 			<div class="page-header">
 				<div class="page-header-content">
 					<h1 class="page-title">Dashboard</h1>
@@ -26,16 +26,39 @@ templ Dashboard(stats DashboardStats) {
 				@UsageLimitCard(stats.UsageStats)
 			</div>
 
+			<!-- Token Breakdown Donut -->
+			if stats.TotalTokens > 0 {
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div class="card" x-data={ fmt.Sprintf("tokenDonutChart('token-donut-dashboard')") } x-init="init()">
+						<h2 class="text-sm font-semibold mb-2">Token Breakdown</h2>
+						<div
+							id="token-donut-dashboard"
+							style="height: 200px;"
+							data-input={ fmt.Sprintf("%d", stats.TokenInput) }
+							data-output={ fmt.Sprintf("%d", stats.TokenOutput) }
+							data-cache-read={ fmt.Sprintf("%d", stats.CacheRead) }
+							data-cache-write={ fmt.Sprintf("%d", stats.CacheWrite) }
+						></div>
+					</div>
+				</div>
+			}
+
 			<!-- Usage Chart -->
 			<div class="card" x-data="usageChart()" x-init="init()">
-				<h2 class="text-lg font-semibold mb-4">Daily Usage (Last 30 Days)</h2>
-				<div id="usage-chart" style="height: 300px;"></div>
+				<h2 class="text-sm font-semibold mb-2">Daily Usage (Last 30 Days)</h2>
+				<div id="usage-chart" style="height: 250px;"></div>
 			</div>
 
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<!-- Activity Heatmap -->
+			<div class="card" x-data="heatmapChart()" x-init="init()">
+				<h2 class="text-sm font-semibold mb-2">Activity Heatmap</h2>
+				<div id="heatmap-chart" style="height: 160px;"></div>
+			</div>
+
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 				<!-- Top Tools -->
 				<div class="card">
-					<h2 class="text-lg font-semibold mb-4">Top Tools</h2>
+					<h2 class="text-sm font-semibold mb-2">Top Tools</h2>
 					if len(stats.TopTools) > 0 {
 						<div class="space-y-2">
 							for _, tool := range stats.TopTools {
@@ -52,7 +75,7 @@ templ Dashboard(stats DashboardStats) {
 
 				<!-- Recent Sessions -->
 				<div class="card">
-					<h2 class="text-lg font-semibold mb-4">Recent Sessions</h2>
+					<h2 class="text-sm font-semibold mb-2">Recent Sessions</h2>
 					if len(stats.RecentSessions) > 0 {
 						<div class="space-y-2">
 							for _, session := range stats.RecentSessions {

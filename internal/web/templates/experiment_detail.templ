@@ -1,8 +1,10 @@
 package templates
 
+import "fmt"
+
 templ ExperimentDetailPage(exp ExperimentDetail) {
-	@Layout("Experiment: " + exp.Name) {
-		<div class="space-y-6">
+	@Layout("Experiment: " + exp.Name, "/experiments") {
+		<div class="space-y-4">
 			<!-- Header -->
 			<div class="page-header">
 				@Breadcrumbs([]BreadcrumbItem{
@@ -136,11 +138,19 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 			}
 
 			<!-- Token Breakdown & Tools -->
-			<div class="grid md:grid-cols-2 gap-6">
-				<!-- Token Breakdown -->
-				<div class="card">
-					<h3 class="text-lg font-semibold mb-4">Token Breakdown</h3>
-					<div class="space-y-3">
+			<div class="grid md:grid-cols-2 gap-4">
+				<!-- Token Breakdown Donut -->
+				<div class="card" x-data={ fmt.Sprintf("tokenDonutChart('token-donut-exp')") } x-init="init()">
+					<h3 class="text-sm font-semibold mb-2">Token Breakdown</h3>
+					<div
+						id="token-donut-exp"
+						style="height: 200px;"
+						data-input={ fmt.Sprintf("%d", exp.TokenInput) }
+						data-output={ fmt.Sprintf("%d", exp.TokenOutput) }
+						data-cache-read={ fmt.Sprintf("%d", exp.CacheRead) }
+						data-cache-write={ fmt.Sprintf("%d", exp.CacheWrite) }
+					></div>
+					<div class="space-y-1 mt-2 text-sm">
 						<div class="flex justify-between">
 							<span class="text-gray-600">Input</span>
 							<span class="font-medium">{ formatTokens(exp.TokenInput) }</span>
@@ -168,7 +178,7 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 
 				<!-- Top Tools -->
 				<div class="card">
-					<h3 class="text-lg font-semibold mb-4">Top Tools</h3>
+					<h3 class="text-sm font-semibold mb-2">Top Tools</h3>
 					if len(exp.TopTools) > 0 {
 						<div class="space-y-3">
 							for _, tool := range exp.TopTools {

@@ -8,7 +8,7 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-func Layout(title string) templ.Component {
+func Layout(title, currentPath string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -42,7 +42,183 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - mclaude</title><script src=\"/static/js/htmx.min.js\"></script><script src=\"/static/js/alpine.min.js\" defer></script><script src=\"/static/js/echarts.min.js\"></script><script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"></head><body class=\"bg-gray-50 min-h-screen\"><nav class=\"bg-white shadow-sm border-b\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\"><div class=\"flex justify-between h-16\"><div class=\"flex\"><div class=\"flex-shrink-0 flex items-center\"><span class=\"text-xl font-bold text-gray-900\">mclaude</span></div><div class=\"hidden sm:ml-6 sm:flex sm:space-x-8\"><a href=\"/\" class=\"nav-link\">Dashboard</a> <a href=\"/sessions\" class=\"nav-link\">Sessions</a> <a href=\"/experiments\" class=\"nav-link\">Experiments</a> <a href=\"/settings\" class=\"nav-link\">Settings</a></div></div></div></div></nav><main class=\"max-w-7xl mx-auto py-6 sm:px-6 lg:px-8\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " - mclaude</title><script src=\"/static/js/htmx.min.js\"></script><script src=\"/static/js/alpine.min.js\" defer></script><script src=\"/static/js/echarts.min.js\"></script><script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script><link rel=\"stylesheet\" href=\"/static/css/style.css\"></head><body class=\"bg-gray-50 min-h-screen\"><nav class=\"bg-white shadow-sm border-b\" x-data=\"{ mobileOpen: false }\"><div class=\"max-w-7xl mx-auto px-4 sm:px-6 lg:px-8\"><div class=\"flex justify-between h-14\"><div class=\"flex\"><div class=\"flex-shrink-0 flex items-center\"><span class=\"text-xl font-bold text-gray-900\">mclaude</span></div><div class=\"hidden sm:ml-6 sm:flex sm:space-x-8\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 = []any{"nav-link", templ.KV("active", currentPath == "/")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var3...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<a href=\"/\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var3).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\">Dashboard</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 = []any{"nav-link", templ.KV("active", currentPath == "/sessions")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var5...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<a href=\"/sessions\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var5).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">Sessions</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 = []any{"nav-link", templ.KV("active", currentPath == "/experiments")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var7...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<a href=\"/experiments\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var7).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\">Experiments</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 = []any{"nav-link", templ.KV("active", currentPath == "/settings")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var9...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<a href=\"/settings\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var9).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">Settings</a></div></div><!-- Mobile hamburger --><div class=\"flex items-center sm:hidden\"><button @click=\"mobileOpen = !mobileOpen\" class=\"mobile-menu-btn\" aria-label=\"Toggle menu\"><svg x-show=\"!mobileOpen\" class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M4 6h16M4 12h16M4 18h16\"></path></svg> <svg x-show=\"mobileOpen\" x-cloak class=\"w-5 h-5\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M6 18L18 6M6 6l12 12\"></path></svg></button></div></div></div><!-- Mobile menu --><div class=\"sm:hidden\" x-show=\"mobileOpen\" x-cloak><div class=\"mobile-nav\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 = []any{"mobile-nav-link", templ.KV("active", currentPath == "/")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var11...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<a href=\"/\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 string
+		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var11).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\">Dashboard</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var13 = []any{"mobile-nav-link", templ.KV("active", currentPath == "/sessions")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var13...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<a href=\"/sessions\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var14 string
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var13).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\">Sessions</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 = []any{"mobile-nav-link", templ.KV("active", currentPath == "/experiments")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var15...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<a href=\"/experiments\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var16 string
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var15).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\">Experiments</a> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var17 = []any{"mobile-nav-link", templ.KV("active", currentPath == "/settings")}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var17...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a href=\"/settings\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var18 string
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var17).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/web/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\">Settings</a></div></div></nav><main class=\"max-w-7xl mx-auto py-4 sm:px-6 lg:px-8\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -50,7 +226,7 @@ func Layout(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</main><script>\n\t\t\t\tfunction usageChart() {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tthis.chart = echarts.init(document.getElementById('usage-chart'));\n\t\t\t\t\t\t\tthis.fetchData();\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t},\n\t\t\t\t\t\tasync fetchData() {\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tconst [tokensRes, costRes] = await Promise.all([\n\t\t\t\t\t\t\t\t\tfetch('/api/charts/tokens'),\n\t\t\t\t\t\t\t\t\tfetch('/api/charts/cost')\n\t\t\t\t\t\t\t\t]);\n\t\t\t\t\t\t\t\tconst tokensData = await tokensRes.json();\n\t\t\t\t\t\t\t\tconst costData = await costRes.json();\n\t\t\t\t\t\t\t\tthis.renderChart(tokensData, costData);\n\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\tconsole.error('Failed to fetch chart data:', e);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t},\n\t\t\t\t\t\trenderChart(tokensData, costData) {\n\t\t\t\t\t\t\tconst option = {\n\t\t\t\t\t\t\t\ttooltip: {\n\t\t\t\t\t\t\t\t\ttrigger: 'axis',\n\t\t\t\t\t\t\t\t\taxisPointer: { type: 'shadow' }\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tlegend: {\n\t\t\t\t\t\t\t\t\tdata: ['Tokens', 'Cost ($)']\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tgrid: {\n\t\t\t\t\t\t\t\t\tleft: '3%',\n\t\t\t\t\t\t\t\t\tright: '4%',\n\t\t\t\t\t\t\t\t\tbottom: '3%',\n\t\t\t\t\t\t\t\t\tcontainLabel: true\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\txAxis: {\n\t\t\t\t\t\t\t\t\ttype: 'category',\n\t\t\t\t\t\t\t\t\tdata: tokensData.labels || [],\n\t\t\t\t\t\t\t\t\taxisLabel: { rotate: 45 }\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tyAxis: [\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\ttype: 'value',\n\t\t\t\t\t\t\t\t\t\tname: 'Tokens',\n\t\t\t\t\t\t\t\t\t\tposition: 'left',\n\t\t\t\t\t\t\t\t\t\taxisLabel: { formatter: val => val >= 1000 ? (val/1000)+'k' : val }\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\ttype: 'value',\n\t\t\t\t\t\t\t\t\t\tname: 'Cost ($)',\n\t\t\t\t\t\t\t\t\t\tposition: 'right',\n\t\t\t\t\t\t\t\t\t\taxisLabel: { formatter: '${value}' }\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t],\n\t\t\t\t\t\t\t\tseries: [\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\tname: 'Tokens',\n\t\t\t\t\t\t\t\t\t\ttype: 'bar',\n\t\t\t\t\t\t\t\t\t\tdata: tokensData.tokens || [],\n\t\t\t\t\t\t\t\t\t\titemStyle: { color: '#3b82f6' }\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\tname: 'Cost ($)',\n\t\t\t\t\t\t\t\t\t\ttype: 'line',\n\t\t\t\t\t\t\t\t\t\tyAxisIndex: 1,\n\t\t\t\t\t\t\t\t\t\tdata: costData.costs || [],\n\t\t\t\t\t\t\t\t\t\titemStyle: { color: '#10b981' },\n\t\t\t\t\t\t\t\t\t\tsmooth: true\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\t\t};\n\t\t\t\t\t\t\tthis.chart.setOption(option);\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\t\t\t</script></body></html>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</main><script>\n\t\t\t\tfunction usageChart() {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tthis.chart = echarts.init(document.getElementById('usage-chart'));\n\t\t\t\t\t\t\tthis.fetchData();\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t},\n\t\t\t\t\t\tasync fetchData() {\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tconst [tokensRes, costRes] = await Promise.all([\n\t\t\t\t\t\t\t\t\tfetch('/api/charts/tokens'),\n\t\t\t\t\t\t\t\t\tfetch('/api/charts/cost')\n\t\t\t\t\t\t\t\t]);\n\t\t\t\t\t\t\t\tconst tokensData = await tokensRes.json();\n\t\t\t\t\t\t\t\tconst costData = await costRes.json();\n\t\t\t\t\t\t\t\tthis.renderChart(tokensData, costData);\n\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\tconsole.error('Failed to fetch chart data:', e);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t},\n\t\t\t\t\t\trenderChart(tokensData, costData) {\n\t\t\t\t\t\t\tconst option = {\n\t\t\t\t\t\t\t\ttooltip: {\n\t\t\t\t\t\t\t\t\ttrigger: 'axis',\n\t\t\t\t\t\t\t\t\taxisPointer: { type: 'shadow' }\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tlegend: {\n\t\t\t\t\t\t\t\t\tdata: ['Tokens', 'Cost ($)']\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tgrid: {\n\t\t\t\t\t\t\t\t\tleft: '3%',\n\t\t\t\t\t\t\t\t\tright: '4%',\n\t\t\t\t\t\t\t\t\tbottom: '3%',\n\t\t\t\t\t\t\t\t\tcontainLabel: true\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\txAxis: {\n\t\t\t\t\t\t\t\t\ttype: 'category',\n\t\t\t\t\t\t\t\t\tdata: tokensData.labels || [],\n\t\t\t\t\t\t\t\t\taxisLabel: { rotate: 45 }\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tyAxis: [\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\ttype: 'value',\n\t\t\t\t\t\t\t\t\t\tname: 'Tokens',\n\t\t\t\t\t\t\t\t\t\tposition: 'left',\n\t\t\t\t\t\t\t\t\t\taxisLabel: { formatter: val => val >= 1000 ? (val/1000)+'k' : val }\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\ttype: 'value',\n\t\t\t\t\t\t\t\t\t\tname: 'Cost ($)',\n\t\t\t\t\t\t\t\t\t\tposition: 'right',\n\t\t\t\t\t\t\t\t\t\taxisLabel: { formatter: '${value}' }\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t],\n\t\t\t\t\t\t\t\tseries: [\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\tname: 'Tokens',\n\t\t\t\t\t\t\t\t\t\ttype: 'bar',\n\t\t\t\t\t\t\t\t\t\tdata: tokensData.tokens || [],\n\t\t\t\t\t\t\t\t\t\titemStyle: { color: '#3b82f6' }\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\t{\n\t\t\t\t\t\t\t\t\t\tname: 'Cost ($)',\n\t\t\t\t\t\t\t\t\t\ttype: 'line',\n\t\t\t\t\t\t\t\t\t\tyAxisIndex: 1,\n\t\t\t\t\t\t\t\t\t\tdata: costData.costs || [],\n\t\t\t\t\t\t\t\t\t\titemStyle: { color: '#10b981' },\n\t\t\t\t\t\t\t\t\t\tsmooth: true\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\t\t};\n\t\t\t\t\t\t\tthis.chart.setOption(option);\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\tfunction tokenDonutChart(elId) {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tconst el = document.getElementById(elId);\n\t\t\t\t\t\t\tif (!el) return;\n\t\t\t\t\t\t\tthis.chart = echarts.init(el);\n\t\t\t\t\t\t\tconst input = parseInt(el.dataset.input || '0');\n\t\t\t\t\t\t\tconst output = parseInt(el.dataset.output || '0');\n\t\t\t\t\t\t\tconst cacheRead = parseInt(el.dataset.cacheRead || '0');\n\t\t\t\t\t\t\tconst cacheWrite = parseInt(el.dataset.cacheWrite || '0');\n\t\t\t\t\t\t\tconst data = [\n\t\t\t\t\t\t\t\t{ value: input, name: 'Input', itemStyle: { color: '#3b82f6' } },\n\t\t\t\t\t\t\t\t{ value: output, name: 'Output', itemStyle: { color: '#10b981' } },\n\t\t\t\t\t\t\t\t{ value: cacheRead, name: 'Cache Read', itemStyle: { color: '#f59e0b' } },\n\t\t\t\t\t\t\t\t{ value: cacheWrite, name: 'Cache Write', itemStyle: { color: '#8b5cf6' } }\n\t\t\t\t\t\t\t].filter(d => d.value > 0);\n\t\t\t\t\t\t\tthis.chart.setOption({\n\t\t\t\t\t\t\t\ttooltip: {\n\t\t\t\t\t\t\t\t\ttrigger: 'item',\n\t\t\t\t\t\t\t\t\tformatter: p => {\n\t\t\t\t\t\t\t\t\t\tconst v = p.value >= 1000 ? (p.value/1000).toFixed(1)+'k' : p.value;\n\t\t\t\t\t\t\t\t\t\treturn p.name + ': ' + v + ' (' + p.percent + '%)';\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tseries: [{\n\t\t\t\t\t\t\t\t\ttype: 'pie',\n\t\t\t\t\t\t\t\t\tradius: ['45%', '75%'],\n\t\t\t\t\t\t\t\t\tcenter: ['50%', '50%'],\n\t\t\t\t\t\t\t\t\tavoidLabelOverlap: false,\n\t\t\t\t\t\t\t\t\tlabel: { show: false },\n\t\t\t\t\t\t\t\t\temphasis: {\n\t\t\t\t\t\t\t\t\t\tlabel: { show: true, fontSize: 12, fontWeight: 'bold' }\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\tdata: data\n\t\t\t\t\t\t\t\t}]\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\tfunction heatmapChart() {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tconst el = document.getElementById('heatmap-chart');\n\t\t\t\t\t\t\tif (!el) return;\n\t\t\t\t\t\t\tthis.chart = echarts.init(el);\n\t\t\t\t\t\t\tthis.fetchData();\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t},\n\t\t\t\t\t\tasync fetchData() {\n\t\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\t\tconst res = await fetch('/api/charts/heatmap');\n\t\t\t\t\t\t\t\tconst data = await res.json();\n\t\t\t\t\t\t\t\tthis.renderChart(data);\n\t\t\t\t\t\t\t} catch (e) {\n\t\t\t\t\t\t\t\tconsole.error('Failed to fetch heatmap data:', e);\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t},\n\t\t\t\t\t\trenderChart(data) {\n\t\t\t\t\t\t\tconst maxVal = Math.max(...(data.data || []).map(d => d[1]), 1);\n\t\t\t\t\t\t\tconst year = new Date().getFullYear();\n\t\t\t\t\t\t\tconst rangeStart = year + '-01-01';\n\t\t\t\t\t\t\tconst rangeEnd = year + '-12-31';\n\t\t\t\t\t\t\tthis.chart.setOption({\n\t\t\t\t\t\t\t\ttooltip: {\n\t\t\t\t\t\t\t\t\tformatter: p => p.data ? p.data[0] + ': ' + p.data[1] + ' sessions' : ''\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tvisualMap: {\n\t\t\t\t\t\t\t\t\tmin: 0,\n\t\t\t\t\t\t\t\t\tmax: maxVal,\n\t\t\t\t\t\t\t\t\tshow: false,\n\t\t\t\t\t\t\t\t\tinRange: {\n\t\t\t\t\t\t\t\t\t\tcolor: ['var(--bg-tertiary, #EEEEE8)', '#c6e48b', '#7bc96f', '#239a3b', '#196127']\n\t\t\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tcalendar: {\n\t\t\t\t\t\t\t\t\ttop: 20,\n\t\t\t\t\t\t\t\t\tleft: 40,\n\t\t\t\t\t\t\t\t\tright: 10,\n\t\t\t\t\t\t\t\t\tcellSize: [13, 13],\n\t\t\t\t\t\t\t\t\trange: [rangeStart, rangeEnd],\n\t\t\t\t\t\t\t\t\titemStyle: {\n\t\t\t\t\t\t\t\t\t\tborderWidth: 2,\n\t\t\t\t\t\t\t\t\t\tborderColor: 'var(--bg-secondary, #F5F5F0)'\n\t\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\t\tyearLabel: { show: false },\n\t\t\t\t\t\t\t\t\tdayLabel: { fontSize: 10 },\n\t\t\t\t\t\t\t\t\tmonthLabel: { fontSize: 10 }\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tseries: [{\n\t\t\t\t\t\t\t\t\ttype: 'heatmap',\n\t\t\t\t\t\t\t\t\tcoordinateSystem: 'calendar',\n\t\t\t\t\t\t\t\t\tdata: data.data || []\n\t\t\t\t\t\t\t\t}]\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\tfunction comparisonBarChart(elId, experiments) {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tconst el = document.getElementById(elId);\n\t\t\t\t\t\t\tif (!el || !experiments || experiments.length < 2) return;\n\t\t\t\t\t\t\tthis.chart = echarts.init(el);\n\t\t\t\t\t\t\tconst names = experiments.map(e => e.name);\n\t\t\t\t\t\t\tthis.chart.setOption({\n\t\t\t\t\t\t\t\ttooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },\n\t\t\t\t\t\t\t\tlegend: { data: names },\n\t\t\t\t\t\t\t\tgrid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },\n\t\t\t\t\t\t\t\txAxis: {\n\t\t\t\t\t\t\t\t\ttype: 'category',\n\t\t\t\t\t\t\t\t\tdata: ['Sessions', 'Total Tokens', 'Total Cost', 'Tok/Session', '$/Session']\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tyAxis: { type: 'value' },\n\t\t\t\t\t\t\t\tseries: experiments.map((exp, i) => ({\n\t\t\t\t\t\t\t\t\tname: exp.name,\n\t\t\t\t\t\t\t\t\ttype: 'bar',\n\t\t\t\t\t\t\t\t\tdata: [\n\t\t\t\t\t\t\t\t\t\texp.sessions,\n\t\t\t\t\t\t\t\t\t\texp.totalTokens,\n\t\t\t\t\t\t\t\t\t\texp.totalCost * 1000,\n\t\t\t\t\t\t\t\t\t\texp.tokensPerSession,\n\t\t\t\t\t\t\t\t\t\texp.costPerSession * 1000\n\t\t\t\t\t\t\t\t\t]\n\t\t\t\t\t\t\t\t}))\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\n\t\t\t\tfunction comparisonRadarChart(elId, experiments) {\n\t\t\t\t\treturn {\n\t\t\t\t\t\tchart: null,\n\t\t\t\t\t\tinit() {\n\t\t\t\t\t\t\tconst el = document.getElementById(elId);\n\t\t\t\t\t\t\tif (!el || !experiments || experiments.length < 2) return;\n\t\t\t\t\t\t\tthis.chart = echarts.init(el);\n\t\t\t\t\t\t\t// Find max for each metric to normalize\n\t\t\t\t\t\t\tconst metrics = ['tokensPerSession', 'costPerSession', 'totalTurns', 'successRate', 'avgRating'];\n\t\t\t\t\t\t\tconst labels = ['Tok/Session', '$/Session', 'Turns', 'Success%', 'Avg Rating'];\n\t\t\t\t\t\t\tconst maxVals = metrics.map(m => Math.max(...experiments.map(e => e[m] || 0), 1));\n\t\t\t\t\t\t\tthis.chart.setOption({\n\t\t\t\t\t\t\t\ttooltip: {},\n\t\t\t\t\t\t\t\tlegend: { data: experiments.map(e => e.name) },\n\t\t\t\t\t\t\t\tradar: {\n\t\t\t\t\t\t\t\t\tindicator: labels.map((l, i) => ({ name: l, max: maxVals[i] }))\n\t\t\t\t\t\t\t\t},\n\t\t\t\t\t\t\t\tseries: [{\n\t\t\t\t\t\t\t\t\ttype: 'radar',\n\t\t\t\t\t\t\t\t\tdata: experiments.map(exp => ({\n\t\t\t\t\t\t\t\t\t\tname: exp.name,\n\t\t\t\t\t\t\t\t\t\tvalue: metrics.map(m => exp[m] || 0)\n\t\t\t\t\t\t\t\t\t}))\n\t\t\t\t\t\t\t\t}]\n\t\t\t\t\t\t\t});\n\t\t\t\t\t\t\twindow.addEventListener('resize', () => this.chart.resize());\n\t\t\t\t\t\t}\n\t\t\t\t\t};\n\t\t\t\t}\n\t\t\t</script></body></html>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

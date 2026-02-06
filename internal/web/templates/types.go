@@ -42,6 +42,7 @@ type SessionsPageData struct {
 	FilterLimit      int
 	Experiments      []FilterOption
 	Projects         []FilterOption
+	MaxTokens        int64
 }
 
 // SettingsPageData wraps pricing and plan config for the settings page.
@@ -97,14 +98,16 @@ type ToolUsage struct {
 }
 
 type SessionSummary struct {
-	ID           string
-	ProjectID    string
-	ExperimentID string
-	CreatedAt    string
-	ExitReason   string
-	Turns        int64
-	Tokens       int64
-	Cost         float64
+	ID             string
+	ProjectID      string
+	ProjectName    string
+	ExperimentID   string
+	ExperimentName string
+	CreatedAt      string
+	ExitReason     string
+	Turns          int64
+	Tokens         int64
+	Cost           float64
 	// Quality (nil if not reviewed)
 	IsReviewed    bool
 	OverallRating int

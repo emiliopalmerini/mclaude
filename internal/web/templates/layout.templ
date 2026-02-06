@@ -1,6 +1,6 @@
 package templates
 
-templ Layout(title string) {
+templ Layout(title, currentPath string) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -14,24 +14,44 @@ templ Layout(title string) {
 			<link rel="stylesheet" href="/static/css/style.css"/>
 		</head>
 		<body class="bg-gray-50 min-h-screen">
-			<nav class="bg-white shadow-sm border-b">
+			<nav class="bg-white shadow-sm border-b" x-data="{ mobileOpen: false }">
 				<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-					<div class="flex justify-between h-16">
+					<div class="flex justify-between h-14">
 						<div class="flex">
 							<div class="flex-shrink-0 flex items-center">
 								<span class="text-xl font-bold text-gray-900">mclaude</span>
 							</div>
 							<div class="hidden sm:ml-6 sm:flex sm:space-x-8">
-								<a href="/" class="nav-link">Dashboard</a>
-								<a href="/sessions" class="nav-link">Sessions</a>
-								<a href="/experiments" class="nav-link">Experiments</a>
-								<a href="/settings" class="nav-link">Settings</a>
+								<a href="/" class={ "nav-link", templ.KV("active", currentPath == "/") }>Dashboard</a>
+								<a href="/sessions" class={ "nav-link", templ.KV("active", currentPath == "/sessions") }>Sessions</a>
+								<a href="/experiments" class={ "nav-link", templ.KV("active", currentPath == "/experiments") }>Experiments</a>
+								<a href="/settings" class={ "nav-link", templ.KV("active", currentPath == "/settings") }>Settings</a>
 							</div>
+						</div>
+						<!-- Mobile hamburger -->
+						<div class="flex items-center sm:hidden">
+							<button @click="mobileOpen = !mobileOpen" class="mobile-menu-btn" aria-label="Toggle menu">
+								<svg x-show="!mobileOpen" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+								</svg>
+								<svg x-show="mobileOpen" x-cloak class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+								</svg>
+							</button>
 						</div>
 					</div>
 				</div>
+				<!-- Mobile menu -->
+				<div class="sm:hidden" x-show="mobileOpen" x-cloak>
+					<div class="mobile-nav">
+						<a href="/" class={ "mobile-nav-link", templ.KV("active", currentPath == "/") }>Dashboard</a>
+						<a href="/sessions" class={ "mobile-nav-link", templ.KV("active", currentPath == "/sessions") }>Sessions</a>
+						<a href="/experiments" class={ "mobile-nav-link", templ.KV("active", currentPath == "/experiments") }>Experiments</a>
+						<a href="/settings" class={ "mobile-nav-link", templ.KV("active", currentPath == "/settings") }>Settings</a>
+					</div>
+				</div>
 			</nav>
-			<main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+			<main class="max-w-7xl mx-auto py-4 sm:px-6 lg:px-8">
 				{ children... }
 			</main>
 			<script>
@@ -108,6 +128,172 @@ templ Layout(title string) {
 								]
 							};
 							this.chart.setOption(option);
+						}
+					};
+				}
+
+				function tokenDonutChart(elId) {
+					return {
+						chart: null,
+						init() {
+							const el = document.getElementById(elId);
+							if (!el) return;
+							this.chart = echarts.init(el);
+							const input = parseInt(el.dataset.input || '0');
+							const output = parseInt(el.dataset.output || '0');
+							const cacheRead = parseInt(el.dataset.cacheRead || '0');
+							const cacheWrite = parseInt(el.dataset.cacheWrite || '0');
+							const data = [
+								{ value: input, name: 'Input', itemStyle: { color: '#3b82f6' } },
+								{ value: output, name: 'Output', itemStyle: { color: '#10b981' } },
+								{ value: cacheRead, name: 'Cache Read', itemStyle: { color: '#f59e0b' } },
+								{ value: cacheWrite, name: 'Cache Write', itemStyle: { color: '#8b5cf6' } }
+							].filter(d => d.value > 0);
+							this.chart.setOption({
+								tooltip: {
+									trigger: 'item',
+									formatter: p => {
+										const v = p.value >= 1000 ? (p.value/1000).toFixed(1)+'k' : p.value;
+										return p.name + ': ' + v + ' (' + p.percent + '%)';
+									}
+								},
+								series: [{
+									type: 'pie',
+									radius: ['45%', '75%'],
+									center: ['50%', '50%'],
+									avoidLabelOverlap: false,
+									label: { show: false },
+									emphasis: {
+										label: { show: true, fontSize: 12, fontWeight: 'bold' }
+									},
+									data: data
+								}]
+							});
+							window.addEventListener('resize', () => this.chart.resize());
+						}
+					};
+				}
+
+				function heatmapChart() {
+					return {
+						chart: null,
+						init() {
+							const el = document.getElementById('heatmap-chart');
+							if (!el) return;
+							this.chart = echarts.init(el);
+							this.fetchData();
+							window.addEventListener('resize', () => this.chart.resize());
+						},
+						async fetchData() {
+							try {
+								const res = await fetch('/api/charts/heatmap');
+								const data = await res.json();
+								this.renderChart(data);
+							} catch (e) {
+								console.error('Failed to fetch heatmap data:', e);
+							}
+						},
+						renderChart(data) {
+							const maxVal = Math.max(...(data.data || []).map(d => d[1]), 1);
+							const year = new Date().getFullYear();
+							const rangeStart = year + '-01-01';
+							const rangeEnd = year + '-12-31';
+							this.chart.setOption({
+								tooltip: {
+									formatter: p => p.data ? p.data[0] + ': ' + p.data[1] + ' sessions' : ''
+								},
+								visualMap: {
+									min: 0,
+									max: maxVal,
+									show: false,
+									inRange: {
+										color: ['var(--bg-tertiary, #EEEEE8)', '#c6e48b', '#7bc96f', '#239a3b', '#196127']
+									}
+								},
+								calendar: {
+									top: 20,
+									left: 40,
+									right: 10,
+									cellSize: [13, 13],
+									range: [rangeStart, rangeEnd],
+									itemStyle: {
+										borderWidth: 2,
+										borderColor: 'var(--bg-secondary, #F5F5F0)'
+									},
+									yearLabel: { show: false },
+									dayLabel: { fontSize: 10 },
+									monthLabel: { fontSize: 10 }
+								},
+								series: [{
+									type: 'heatmap',
+									coordinateSystem: 'calendar',
+									data: data.data || []
+								}]
+							});
+						}
+					};
+				}
+
+				function comparisonBarChart(elId, experiments) {
+					return {
+						chart: null,
+						init() {
+							const el = document.getElementById(elId);
+							if (!el || !experiments || experiments.length < 2) return;
+							this.chart = echarts.init(el);
+							const names = experiments.map(e => e.name);
+							this.chart.setOption({
+								tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+								legend: { data: names },
+								grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+								xAxis: {
+									type: 'category',
+									data: ['Sessions', 'Total Tokens', 'Total Cost', 'Tok/Session', '$/Session']
+								},
+								yAxis: { type: 'value' },
+								series: experiments.map((exp, i) => ({
+									name: exp.name,
+									type: 'bar',
+									data: [
+										exp.sessions,
+										exp.totalTokens,
+										exp.totalCost * 1000,
+										exp.tokensPerSession,
+										exp.costPerSession * 1000
+									]
+								}))
+							});
+							window.addEventListener('resize', () => this.chart.resize());
+						}
+					};
+				}
+
+				function comparisonRadarChart(elId, experiments) {
+					return {
+						chart: null,
+						init() {
+							const el = document.getElementById(elId);
+							if (!el || !experiments || experiments.length < 2) return;
+							this.chart = echarts.init(el);
+							// Find max for each metric to normalize
+							const metrics = ['tokensPerSession', 'costPerSession', 'totalTurns', 'successRate', 'avgRating'];
+							const labels = ['Tok/Session', '$/Session', 'Turns', 'Success%', 'Avg Rating'];
+							const maxVals = metrics.map(m => Math.max(...experiments.map(e => e[m] || 0), 1));
+							this.chart.setOption({
+								tooltip: {},
+								legend: { data: experiments.map(e => e.name) },
+								radar: {
+									indicator: labels.map((l, i) => ({ name: l, max: maxVals[i] }))
+								},
+								series: [{
+									type: 'radar',
+									data: experiments.map(exp => ({
+										name: exp.name,
+										value: metrics.map(m => exp[m] || 0)
+									}))
+								}]
+							});
+							window.addEventListener('resize', () => this.chart.resize());
 						}
 					};
 				}

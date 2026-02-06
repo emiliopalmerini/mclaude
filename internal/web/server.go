@@ -92,6 +92,7 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("GET /api/stats", s.handleAPIStats)
 	s.router.HandleFunc("GET /api/charts/tokens", s.handleAPIChartTokens)
 	s.router.HandleFunc("GET /api/charts/cost", s.handleAPIChartCost)
+	s.router.HandleFunc("GET /api/charts/heatmap", s.handleAPIChartHeatmap)
 	s.router.HandleFunc("POST /api/experiments", s.handleAPICreateExperiment)
 	s.router.HandleFunc("POST /api/experiments/{id}/activate", s.handleAPIActivateExperiment)
 	s.router.HandleFunc("POST /api/experiments/{id}/deactivate", s.handleAPIDeactivateExperiment)

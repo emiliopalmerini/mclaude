@@ -3,8 +3,8 @@ package templates
 import "fmt"
 
 templ SessionReviewPage(data SessionReviewData) {
-	@Layout("Review Session") {
-		<div class="space-y-6">
+	@Layout("Review Session", "/sessions") {
+		<div class="space-y-4">
 			<!-- Header -->
 			<div class="page-header">
 				@Breadcrumbs([]BreadcrumbItem{

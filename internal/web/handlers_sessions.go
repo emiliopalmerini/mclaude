@@ -48,16 +48,33 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Build project and experiment name lookup maps
+	projectNameMap := make(map[string]string)
+	if projects, err := s.projectRepo.List(ctx); err == nil {
+		for _, p := range projects {
+			projectNameMap[p.ID] = p.Name
+		}
+	}
+	experimentNameMap := make(map[string]string)
+	if experiments, err := s.experimentRepo.List(ctx); err == nil {
+		for _, e := range experiments {
+			experimentNameMap[e.ID] = e.Name
+		}
+	}
+
+	var maxTokens int64
 	sessionList := make([]templates.SessionSummary, 0, len(domainSessions))
 	for _, sess := range domainSessions {
 		summary := templates.SessionSummary{
-			ID:         sess.ID,
-			ProjectID:  sess.ProjectID,
-			CreatedAt:  sess.CreatedAt.Format(time.RFC3339),
-			ExitReason: sess.ExitReason,
+			ID:          sess.ID,
+			ProjectID:   sess.ProjectID,
+			ProjectName: projectNameMap[sess.ProjectID],
+			CreatedAt:   sess.CreatedAt.Format(time.RFC3339),
+			ExitReason:  sess.ExitReason,
 		}
 		if sess.ExperimentID != nil {
 			summary.ExperimentID = *sess.ExperimentID
+			summary.ExperimentName = experimentNameMap[*sess.ExperimentID]
 		}
 
 		// Get metrics
@@ -67,6 +84,10 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 			if m.CostEstimateUSD != nil {
 				summary.Cost = *m.CostEstimateUSD
 			}
+		}
+
+		if summary.Tokens > maxTokens {
+			maxTokens = summary.Tokens
 		}
 
 		// Add quality data
@@ -89,17 +110,14 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		FilterExperiment: experimentFilter,
 		FilterProject:    projectFilter,
 		FilterLimit:      limit,
+		MaxTokens:        maxTokens,
 	}
 
-	if experiments, err := s.experimentRepo.List(ctx); err == nil {
-		for _, e := range experiments {
-			pageData.Experiments = append(pageData.Experiments, templates.FilterOption{ID: e.ID, Name: e.Name})
-		}
+	for id, name := range experimentNameMap {
+		pageData.Experiments = append(pageData.Experiments, templates.FilterOption{ID: id, Name: name})
 	}
-	if projects, err := s.projectRepo.List(ctx); err == nil {
-		for _, p := range projects {
-			pageData.Projects = append(pageData.Projects, templates.FilterOption{ID: p.ID, Name: p.Name})
-		}
+	for id, name := range projectNameMap {
+		pageData.Projects = append(pageData.Projects, templates.FilterOption{ID: id, Name: name})
 	}
 
 	templates.SessionsPage(pageData).Render(ctx, w)

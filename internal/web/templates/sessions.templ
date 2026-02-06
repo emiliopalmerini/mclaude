@@ -3,8 +3,8 @@ package templates
 import "fmt"
 
 templ SessionsPage(data SessionsPageData) {
-	@Layout("Sessions") {
-		<div class="space-y-6">
+	@Layout("Sessions", "/sessions") {
+		<div class="space-y-4">
 			<div class="page-header">
 				<div class="page-header-content">
 					<h1 class="page-title">Sessions</h1>
@@ -47,52 +47,77 @@ templ SessionsPage(data SessionsPageData) {
 			</div>
 
 			<div class="card overflow-hidden">
-				<table class="min-w-full divide-y divide-gray-200">
-					<thead class="bg-gray-50">
-						<tr>
-							<th class="table-header">ID</th>
-							<th class="table-header">Date</th>
-							<th class="table-header">Turns</th>
-							<th class="table-header">Tokens</th>
-							<th class="table-header">Cost</th>
-							<th class="table-header">Quality</th>
-							<th class="table-header">Exit</th>
-							<th class="table-header"></th>
-						</tr>
-					</thead>
-					<tbody class="bg-white divide-y divide-gray-200">
-						for _, s := range data.Sessions {
-							<tr class="hover:bg-gray-50">
-								<td class="table-cell font-mono">
-									<a href={ templ.SafeURL("/sessions/" + s.ID) } class="text-blue-600 hover:underline">{ truncateID(s.ID) }</a>
-								</td>
-								<td class="table-cell">{ formatDateTime(s.CreatedAt) }</td>
-								<td class="table-cell">{ fmt.Sprintf("%d", s.Turns) }</td>
-								<td class="table-cell">{ formatTokens(s.Tokens) }</td>
-								<td class="table-cell text-green-600">{ fmt.Sprintf("$%.4f", s.Cost) }</td>
-								<td class="table-cell">
-									@QualityIndicator(s.IsReviewed, s.OverallRating, s.IsSuccess)
-								</td>
-								<td class="table-cell">
-									<span class={ "badge", exitReasonBadge(s.ExitReason) }>{ s.ExitReason }</span>
-								</td>
-								<td class="table-cell">
-									<button
-										class="text-red-400 hover:text-red-600"
-										hx-delete={ "/api/sessions/" + s.ID }
-										hx-confirm="Delete this session and its transcript?"
-										hx-swap="none"
-										title="Delete session"
-									>
-										<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-										</svg>
-									</button>
-								</td>
+				<div class="overflow-x-auto">
+					<table class="min-w-full divide-y divide-gray-200">
+						<thead class="bg-gray-50">
+							<tr>
+								<th class="table-header">ID</th>
+								<th class="table-header">Date</th>
+								<th class="table-header">Project</th>
+								<th class="table-header">Experiment</th>
+								<th class="table-header">Turns</th>
+								<th class="table-header">Tokens</th>
+								<th class="table-header">Cost</th>
+								<th class="table-header">Quality</th>
+								<th class="table-header">Exit</th>
+								<th class="table-header"></th>
 							</tr>
-						}
-					</tbody>
-				</table>
+						</thead>
+						<tbody class="bg-white divide-y divide-gray-200">
+							for _, s := range data.Sessions {
+								<tr class="hover:bg-gray-50">
+									<td class="table-cell font-mono text-xs">
+										<a href={ templ.SafeURL("/sessions/" + s.ID) } class="text-blue-600 hover:underline">{ truncateID(s.ID) }</a>
+									</td>
+									<td class="table-cell text-xs">{ formatDateTime(s.CreatedAt) }</td>
+									<td class="table-cell text-xs truncate" style="max-width: 120px;" title={ s.ProjectName }>
+										if s.ProjectName != "" {
+											{ s.ProjectName }
+										} else {
+											<span class="text-gray-400">—</span>
+										}
+									</td>
+									<td class="table-cell text-xs truncate" style="max-width: 100px;" title={ s.ExperimentName }>
+										if s.ExperimentName != "" {
+											{ s.ExperimentName }
+										} else {
+											<span class="text-gray-400">—</span>
+										}
+									</td>
+									<td class="table-cell">{ fmt.Sprintf("%d", s.Turns) }</td>
+									<td class="table-cell">
+										<div class="token-bar-cell">
+											<span class="token-bar-value">{ formatTokens(s.Tokens) }</span>
+											<div class="token-bar-track">
+												<div class="token-bar-fill" style={ tokenBarWidth(s.Tokens, data.MaxTokens) }></div>
+											</div>
+										</div>
+									</td>
+									<td class="table-cell text-green-600">{ fmt.Sprintf("$%.4f", s.Cost) }</td>
+									<td class="table-cell">
+										@QualityIndicator(s.IsReviewed, s.OverallRating, s.IsSuccess)
+									</td>
+									<td class="table-cell">
+										<span class={ "badge", exitReasonBadge(s.ExitReason) }>{ s.ExitReason }</span>
+									</td>
+									<td class="table-cell">
+										<button
+											class="text-red-400 hover:text-red-600"
+											hx-delete={ "/api/sessions/" + s.ID }
+											hx-confirm="Delete this session and its transcript?"
+											hx-swap="none"
+											title="Delete session"
+										>
+											<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+											</svg>
+										</button>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
 				if len(data.Sessions) == 0 {
 					<div class="p-8 text-center text-gray-500">No sessions found</div>
 				}
@@ -149,8 +174,8 @@ templ Sessions(sessions []SessionSummary) {
 }
 
 templ SessionDetailPage(session SessionDetail) {
-	@Layout("Session Detail") {
-		<div class="space-y-6">
+	@Layout("Session Detail", "/sessions") {
+		<div class="space-y-4">
 			<div class="page-header">
 				@Breadcrumbs([]BreadcrumbItem{
 					{Label: "Sessions", Href: "/sessions"},

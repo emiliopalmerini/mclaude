@@ -1,8 +1,11 @@
 package templates
 
+import "fmt"
+import "encoding/json"
+
 templ ExperimentComparePage(data ExperimentComparison) {
-	@Layout("Compare Experiments") {
-		<div class="space-y-6">
+	@Layout("Compare Experiments", "/experiments") {
+		<div class="space-y-4">
 			<!-- Header -->
 			<div class="page-header">
 				@Breadcrumbs([]BreadcrumbItem{
@@ -20,14 +23,26 @@ templ ExperimentComparePage(data ExperimentComparison) {
 					<a href="/experiments" class="btn btn-primary mt-4">Back to Experiments</a>
 				</div>
 			} else {
+				<!-- Charts -->
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+					<div class="card" x-data={ fmt.Sprintf("comparisonBarChart('compare-bar', %s)", buildCompareJSON(data.Experiments)) } x-init="init()">
+						<h2 class="text-sm font-semibold mb-2">Metrics Comparison</h2>
+						<div id="compare-bar" style="height: 280px;"></div>
+					</div>
+					<div class="card" x-data={ fmt.Sprintf("comparisonRadarChart('compare-radar', %s)", buildCompareJSON(data.Experiments)) } x-init="init()">
+						<h2 class="text-sm font-semibold mb-2">Efficiency Radar</h2>
+						<div id="compare-radar" style="height: 280px;"></div>
+					</div>
+				</div>
+
 				<!-- Comparison Table -->
 				<div class="card overflow-x-auto">
 					<table class="w-full">
 						<thead>
 							<tr class="border-b border-gray-200">
-								<th class="text-left py-3 px-4 font-semibold text-gray-600">Metric</th>
+								<th class="text-left py-2 px-4 font-semibold text-gray-600 text-sm">Metric</th>
 								for _, exp := range data.Experiments {
-									<th class="text-right py-3 px-4 font-semibold text-gray-900">
+									<th class="text-right py-2 px-4 font-semibold text-gray-900 text-sm">
 										{ exp.Name }
 										if exp.IsActive {
 											<span class="badge badge-green ml-2">Active</span>
@@ -39,116 +54,116 @@ templ ExperimentComparePage(data ExperimentComparison) {
 						<tbody class="divide-y divide-gray-100">
 							<!-- Sessions -->
 							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-2 px-4 font-semibold text-gray-700">Sessions</td>
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Sessions</td>
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Total Sessions</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Total Sessions</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatInt(exp.SessionCount) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatInt(exp.SessionCount) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Total Turns</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Total Turns</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.TotalTurns) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.TotalTurns) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">User Messages</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">User Messages</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.UserMessages) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.UserMessages) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Assistant Messages</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Assistant Messages</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.AssistantMessages) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.AssistantMessages) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Errors</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Errors</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatInt(exp.TotalErrors) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatInt(exp.TotalErrors) }</td>
 								}
 							</tr>
 
 							<!-- Tokens -->
 							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-2 px-4 font-semibold text-gray-700">Tokens</td>
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Tokens</td>
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Input Tokens</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Input Tokens</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.TokenInput) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.TokenInput) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Output Tokens</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Output Tokens</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.TokenOutput) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.TokenOutput) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Cache Read</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Cache Read</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.CacheRead) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.CacheRead) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Cache Write</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Cache Write</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.CacheWrite) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.CacheWrite) }</td>
 								}
 							</tr>
 							<tr class="font-semibold">
-								<td class="py-2 px-4 text-gray-700">Total Tokens</td>
+								<td class="py-1.5 px-4 text-gray-700 text-sm">Total Tokens</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right">{ formatTokens(exp.TotalTokens) }</td>
+									<td class="py-1.5 px-4 text-right text-sm">{ formatTokens(exp.TotalTokens) }</td>
 								}
 							</tr>
 
 							<!-- Cost -->
 							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-2 px-4 font-semibold text-gray-700">Cost</td>
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Cost</td>
 							</tr>
 							<tr class="font-semibold">
-								<td class="py-2 px-4 text-gray-700">Total Cost</td>
+								<td class="py-1.5 px-4 text-gray-700 text-sm">Total Cost</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right">{ formatCost(exp.TotalCost) }</td>
+									<td class="py-1.5 px-4 text-right text-sm">{ formatCost(exp.TotalCost) }</td>
 								}
 							</tr>
 
 							<!-- Efficiency -->
 							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-2 px-4 font-semibold text-gray-700">Efficiency</td>
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Efficiency</td>
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Tokens/Session</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Tokens/Session</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatTokens(exp.TokensPerSession) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(exp.TokensPerSession) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Cost/Session</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Cost/Session</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatCostPrecise(exp.CostPerSession) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatCostPrecise(exp.CostPerSession) }</td>
 								}
 							</tr>
 
 							<!-- Quality -->
 							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-2 px-4 font-semibold text-gray-700">Quality</td>
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Quality</td>
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Sessions Reviewed</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Sessions Reviewed</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">{ formatInt(exp.ReviewedCount) }</td>
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatInt(exp.ReviewedCount) }</td>
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Avg Rating</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Rating</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">
+									<td class="py-1.5 px-4 text-right font-medium text-sm">
 										if exp.AvgOverall != nil {
 											{ formatRating(*exp.AvgOverall) }
 										} else {
@@ -158,9 +173,9 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Success Rate</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Success Rate</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">
+									<td class="py-1.5 px-4 text-right font-medium text-sm">
 										if exp.SuccessRate != nil {
 											{ formatPercent(*exp.SuccessRate) }
 										} else {
@@ -170,9 +185,9 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Avg Accuracy</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Accuracy</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">
+									<td class="py-1.5 px-4 text-right font-medium text-sm">
 										if exp.AvgAccuracy != nil {
 											{ formatRating(*exp.AvgAccuracy) }
 										} else {
@@ -182,9 +197,9 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Avg Helpfulness</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Helpfulness</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">
+									<td class="py-1.5 px-4 text-right font-medium text-sm">
 										if exp.AvgHelpfulness != nil {
 											{ formatRating(*exp.AvgHelpfulness) }
 										} else {
@@ -194,9 +209,9 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 							<tr>
-								<td class="py-2 px-4 text-gray-600">Avg Efficiency</td>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Efficiency</td>
 								for _, exp := range data.Experiments {
-									<td class="py-2 px-4 text-right font-medium">
+									<td class="py-1.5 px-4 text-right font-medium text-sm">
 										if exp.AvgEfficiency != nil {
 											{ formatRating(*exp.AvgEfficiency) }
 										} else {
@@ -211,4 +226,38 @@ templ ExperimentComparePage(data ExperimentComparison) {
 			}
 		</div>
 	}
+}
+
+func buildCompareJSON(experiments []ExperimentCompareItem) string {
+	type chartItem struct {
+		Name             string  `json:"name"`
+		Sessions         int64   `json:"sessions"`
+		TotalTokens      int64   `json:"totalTokens"`
+		TotalCost        float64 `json:"totalCost"`
+		TokensPerSession int64   `json:"tokensPerSession"`
+		CostPerSession   float64 `json:"costPerSession"`
+		TotalTurns       int64   `json:"totalTurns"`
+		SuccessRate      float64 `json:"successRate"`
+		AvgRating        float64 `json:"avgRating"`
+	}
+	items := make([]chartItem, len(experiments))
+	for i, exp := range experiments {
+		items[i] = chartItem{
+			Name:             exp.Name,
+			Sessions:         exp.SessionCount,
+			TotalTokens:      exp.TotalTokens,
+			TotalCost:        exp.TotalCost,
+			TokensPerSession: exp.TokensPerSession,
+			CostPerSession:   exp.CostPerSession,
+			TotalTurns:       exp.TotalTurns,
+		}
+		if exp.SuccessRate != nil {
+			items[i].SuccessRate = *exp.SuccessRate * 100
+		}
+		if exp.AvgOverall != nil {
+			items[i].AvgRating = *exp.AvgOverall
+		}
+	}
+	b, _ := json.Marshal(items)
+	return string(b)
 }
