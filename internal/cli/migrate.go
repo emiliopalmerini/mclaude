@@ -350,3 +350,37 @@ func init() {
 	// Silence unused import warning
 	_ = os.Stderr
 }
+
+// RunMigrations runs all pending migrations on the provided database.
+// Exported for use in tests.
+func RunMigrations(ctx context.Context, db *sql.DB) error {
+	if err := ensureMigrationsTable(ctx, db); err != nil {
+		return fmt.Errorf("failed to create migrations table: %w", err)
+	}
+
+	currentVersion, dirty, err := getCurrentVersion(ctx, db)
+	if err != nil {
+		return fmt.Errorf("failed to get current version: %w", err)
+	}
+
+	if dirty {
+		return fmt.Errorf("database is in dirty state at version %d", currentVersion)
+	}
+
+	allMigrations, err := loadMigrations()
+	if err != nil {
+		return fmt.Errorf("failed to load migrations: %w", err)
+	}
+
+	for _, m := range allMigrations {
+		if m.version <= currentVersion {
+			continue
+		}
+
+		if err := runMigration(ctx, db, m, true); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

@@ -25,14 +25,17 @@ func NewPricingRepository(db *sql.DB) *PricingRepository {
 
 func (r *PricingRepository) Create(ctx context.Context, pricing *domain.ModelPricing) error {
 	return r.queries.CreateModelPricing(ctx, sqlc.CreateModelPricingParams{
-		ID:                   pricing.ID,
-		DisplayName:          pricing.DisplayName,
-		InputPerMillion:      pricing.InputPerMillion,
-		OutputPerMillion:     pricing.OutputPerMillion,
-		CacheReadPerMillion:  util.NullFloat64(pricing.CacheReadPerMillion),
-		CacheWritePerMillion: util.NullFloat64(pricing.CacheWritePerMillion),
-		IsDefault:            util.BoolToInt64(pricing.IsDefault),
-		CreatedAt:            pricing.CreatedAt.Format(time.RFC3339),
+		ID:                          pricing.ID,
+		DisplayName:                 pricing.DisplayName,
+		InputPerMillion:             pricing.InputPerMillion,
+		OutputPerMillion:            pricing.OutputPerMillion,
+		CacheReadPerMillion:         util.NullFloat64(pricing.CacheReadPerMillion),
+		CacheWritePerMillion:        util.NullFloat64(pricing.CacheWritePerMillion),
+		LongContextInputPerMillion:  util.NullFloat64(pricing.LongContextInputPerMillion),
+		LongContextOutputPerMillion: util.NullFloat64(pricing.LongContextOutputPerMillion),
+		LongContextThreshold:        util.NullInt64(pricing.LongContextThreshold),
+		IsDefault:                   util.BoolToInt64(pricing.IsDefault),
+		CreatedAt:                   pricing.CreatedAt.Format(time.RFC3339),
 	})
 }
 
@@ -73,13 +76,16 @@ func (r *PricingRepository) List(ctx context.Context) ([]*domain.ModelPricing, e
 
 func (r *PricingRepository) Update(ctx context.Context, pricing *domain.ModelPricing) error {
 	return r.queries.UpdateModelPricing(ctx, sqlc.UpdateModelPricingParams{
-		DisplayName:          pricing.DisplayName,
-		InputPerMillion:      pricing.InputPerMillion,
-		OutputPerMillion:     pricing.OutputPerMillion,
-		CacheReadPerMillion:  util.NullFloat64(pricing.CacheReadPerMillion),
-		CacheWritePerMillion: util.NullFloat64(pricing.CacheWritePerMillion),
-		IsDefault:            util.BoolToInt64(pricing.IsDefault),
-		ID:                   pricing.ID,
+		DisplayName:                 pricing.DisplayName,
+		InputPerMillion:             pricing.InputPerMillion,
+		OutputPerMillion:            pricing.OutputPerMillion,
+		CacheReadPerMillion:         util.NullFloat64(pricing.CacheReadPerMillion),
+		CacheWritePerMillion:        util.NullFloat64(pricing.CacheWritePerMillion),
+		LongContextInputPerMillion:  util.NullFloat64(pricing.LongContextInputPerMillion),
+		LongContextOutputPerMillion: util.NullFloat64(pricing.LongContextOutputPerMillion),
+		LongContextThreshold:        util.NullInt64(pricing.LongContextThreshold),
+		IsDefault:                   util.BoolToInt64(pricing.IsDefault),
+		ID:                          pricing.ID,
 	})
 }
 
@@ -102,14 +108,29 @@ func pricingFromRow(row sqlc.ModelPricing) *domain.ModelPricing {
 		cacheWritePerMillion = &row.CacheWritePerMillion.Float64
 	}
 
+	var longContextInputPerMillion, longContextOutputPerMillion *float64
+	var longContextThreshold *int64
+	if row.LongContextInputPerMillion.Valid {
+		longContextInputPerMillion = &row.LongContextInputPerMillion.Float64
+	}
+	if row.LongContextOutputPerMillion.Valid {
+		longContextOutputPerMillion = &row.LongContextOutputPerMillion.Float64
+	}
+	if row.LongContextThreshold.Valid {
+		longContextThreshold = &row.LongContextThreshold.Int64
+	}
+
 	return &domain.ModelPricing{
-		ID:                   row.ID,
-		DisplayName:          row.DisplayName,
-		InputPerMillion:      row.InputPerMillion,
-		OutputPerMillion:     row.OutputPerMillion,
-		CacheReadPerMillion:  cacheReadPerMillion,
-		CacheWritePerMillion: cacheWritePerMillion,
-		IsDefault:            row.IsDefault == 1,
-		CreatedAt:            createdAt,
+		ID:                          row.ID,
+		DisplayName:                 row.DisplayName,
+		InputPerMillion:             row.InputPerMillion,
+		OutputPerMillion:            row.OutputPerMillion,
+		CacheReadPerMillion:         cacheReadPerMillion,
+		CacheWritePerMillion:        cacheWritePerMillion,
+		LongContextInputPerMillion:  longContextInputPerMillion,
+		LongContextOutputPerMillion: longContextOutputPerMillion,
+		LongContextThreshold:        longContextThreshold,
+		IsDefault:                   row.IsDefault == 1,
+		CreatedAt:                   createdAt,
 	}
 }

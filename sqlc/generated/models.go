@@ -20,14 +20,17 @@ type Experiment struct {
 }
 
 type ModelPricing struct {
-	ID                   string          `json:"id"`
-	DisplayName          string          `json:"display_name"`
-	InputPerMillion      float64         `json:"input_per_million"`
-	OutputPerMillion     float64         `json:"output_per_million"`
-	CacheReadPerMillion  sql.NullFloat64 `json:"cache_read_per_million"`
-	CacheWritePerMillion sql.NullFloat64 `json:"cache_write_per_million"`
-	IsDefault            int64           `json:"is_default"`
-	CreatedAt            string          `json:"created_at"`
+	ID                          string          `json:"id"`
+	DisplayName                 string          `json:"display_name"`
+	InputPerMillion             float64         `json:"input_per_million"`
+	OutputPerMillion            float64         `json:"output_per_million"`
+	CacheReadPerMillion         sql.NullFloat64 `json:"cache_read_per_million"`
+	CacheWritePerMillion        sql.NullFloat64 `json:"cache_write_per_million"`
+	IsDefault                   int64           `json:"is_default"`
+	CreatedAt                   string          `json:"created_at"`
+	LongContextInputPerMillion  sql.NullFloat64 `json:"long_context_input_per_million"`
+	LongContextOutputPerMillion sql.NullFloat64 `json:"long_context_output_per_million"`
+	LongContextThreshold        sql.NullInt64   `json:"long_context_threshold"`
 }
 
 type PlanConfig struct {

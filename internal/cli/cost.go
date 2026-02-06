@@ -33,6 +33,7 @@ var costSetCmd = &cobra.Command{
 
 Examples:
   mclaude cost set claude-sonnet-4-20250514 --input 3.00 --output 15.00
+  mclaude cost set claude-opus-4-6-20260115 --input 5.00 --output 25.00 --cache-read 0.50 --cache-write 6.25 --long-input 10.00 --long-output 37.50
   mclaude cost set claude-opus-4-20250514 --input 15.00 --output 75.00 --cache-read 1.50 --cache-write 18.75`,
 	Args: cobra.ExactArgs(1),
 	RunE: runCostSet,
@@ -54,11 +55,14 @@ var costDeleteCmd = &cobra.Command{
 
 // Flags
 var (
-	costInput      float64
-	costOutput     float64
-	costCacheRead  float64
-	costCacheWrite float64
-	costName       string
+	costInput            float64
+	costOutput           float64
+	costCacheRead        float64
+	costCacheWrite       float64
+	costName             string
+	costLongInput        float64
+	costLongOutput       float64
+	costLongThreshold    int64
 )
 
 func init() {
@@ -73,6 +77,9 @@ func init() {
 	costSetCmd.Flags().Float64Var(&costOutput, "output", 0, "Output tokens cost per 1M (required)")
 	costSetCmd.Flags().Float64Var(&costCacheRead, "cache-read", 0, "Cache read tokens cost per 1M")
 	costSetCmd.Flags().Float64Var(&costCacheWrite, "cache-write", 0, "Cache write tokens cost per 1M")
+	costSetCmd.Flags().Float64Var(&costLongInput, "long-input", 0, "Long context input cost per 1M (>200K tokens)")
+	costSetCmd.Flags().Float64Var(&costLongOutput, "long-output", 0, "Long context output cost per 1M (>200K tokens)")
+	costSetCmd.Flags().Int64Var(&costLongThreshold, "long-threshold", 200000, "Input token threshold for long context pricing")
 	costSetCmd.Flags().StringVar(&costName, "name", "", "Display name (defaults to model ID)")
 	costSetCmd.MarkFlagRequired("input")
 	costSetCmd.MarkFlagRequired("output")
@@ -101,8 +108,8 @@ func runCostList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "MODEL ID\tNAME\tINPUT/1M\tOUTPUT/1M\tCACHE R/1M\tCACHE W/1M\tDEFAULT")
-	fmt.Fprintln(w, "--------\t----\t--------\t---------\t----------\t----------\t-------")
+	fmt.Fprintln(w, "MODEL ID\tNAME\tINPUT/1M\tOUTPUT/1M\tCACHE R/1M\tCACHE W/1M\tLONG IN/1M\tLONG OUT/1M\tDEFAULT")
+	fmt.Fprintln(w, "--------\t----\t--------\t---------\t----------\t----------\t----------\t-----------\t-------")
 
 	for _, p := range pricing {
 		cacheRead := "-"
@@ -113,14 +120,22 @@ func runCostList(cmd *cobra.Command, args []string) error {
 		if p.CacheWritePerMillion.Valid {
 			cacheWrite = fmt.Sprintf("$%.2f", p.CacheWritePerMillion.Float64)
 		}
+		longInput := "-"
+		if p.LongContextInputPerMillion.Valid {
+			longInput = fmt.Sprintf("$%.2f", p.LongContextInputPerMillion.Float64)
+		}
+		longOutput := "-"
+		if p.LongContextOutputPerMillion.Valid {
+			longOutput = fmt.Sprintf("$%.2f", p.LongContextOutputPerMillion.Float64)
+		}
 		isDefault := ""
 		if p.IsDefault == 1 {
 			isDefault = "*"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t$%.2f\t$%.2f\t%s\t%s\t%s\n",
+		fmt.Fprintf(w, "%s\t%s\t$%.2f\t$%.2f\t%s\t%s\t%s\t%s\t%s\n",
 			p.ID, p.DisplayName, p.InputPerMillion, p.OutputPerMillion,
-			cacheRead, cacheWrite, isDefault)
+			cacheRead, cacheWrite, longInput, longOutput, isDefault)
 	}
 
 	w.Flush()
@@ -161,6 +176,15 @@ func runCostSet(cmd *cobra.Command, args []string) error {
 		if costCacheWrite > 0 {
 			params.CacheWritePerMillion = util.NullFloat64Zero(&costCacheWrite)
 		}
+		if costLongInput > 0 {
+			params.LongContextInputPerMillion = util.NullFloat64Zero(&costLongInput)
+		}
+		if costLongOutput > 0 {
+			params.LongContextOutputPerMillion = util.NullFloat64Zero(&costLongOutput)
+		}
+		if costLongInput > 0 || costLongOutput > 0 {
+			params.LongContextThreshold = util.NullInt64(&costLongThreshold)
+		}
 
 		if err := queries.UpdateModelPricing(ctx, params); err != nil {
 			return fmt.Errorf("failed to update pricing: %w", err)
@@ -180,6 +204,15 @@ func runCostSet(cmd *cobra.Command, args []string) error {
 		}
 		if costCacheWrite > 0 {
 			params.CacheWritePerMillion = util.NullFloat64Zero(&costCacheWrite)
+		}
+		if costLongInput > 0 {
+			params.LongContextInputPerMillion = util.NullFloat64Zero(&costLongInput)
+		}
+		if costLongOutput > 0 {
+			params.LongContextOutputPerMillion = util.NullFloat64Zero(&costLongOutput)
+		}
+		if costLongInput > 0 || costLongOutput > 0 {
+			params.LongContextThreshold = util.NullInt64(&costLongThreshold)
 		}
 
 		// Check if this is the first pricing - make it default

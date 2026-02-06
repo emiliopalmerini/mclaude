@@ -11,19 +11,22 @@ import (
 )
 
 const createModelPricing = `-- name: CreateModelPricing :exec
-INSERT INTO model_pricing (id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO model_pricing (id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, long_context_input_per_million, long_context_output_per_million, long_context_threshold, is_default, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateModelPricingParams struct {
-	ID                   string          `json:"id"`
-	DisplayName          string          `json:"display_name"`
-	InputPerMillion      float64         `json:"input_per_million"`
-	OutputPerMillion     float64         `json:"output_per_million"`
-	CacheReadPerMillion  sql.NullFloat64 `json:"cache_read_per_million"`
-	CacheWritePerMillion sql.NullFloat64 `json:"cache_write_per_million"`
-	IsDefault            int64           `json:"is_default"`
-	CreatedAt            string          `json:"created_at"`
+	ID                          string          `json:"id"`
+	DisplayName                 string          `json:"display_name"`
+	InputPerMillion             float64         `json:"input_per_million"`
+	OutputPerMillion            float64         `json:"output_per_million"`
+	CacheReadPerMillion         sql.NullFloat64 `json:"cache_read_per_million"`
+	CacheWritePerMillion        sql.NullFloat64 `json:"cache_write_per_million"`
+	LongContextInputPerMillion  sql.NullFloat64 `json:"long_context_input_per_million"`
+	LongContextOutputPerMillion sql.NullFloat64 `json:"long_context_output_per_million"`
+	LongContextThreshold        sql.NullInt64   `json:"long_context_threshold"`
+	IsDefault                   int64           `json:"is_default"`
+	CreatedAt                   string          `json:"created_at"`
 }
 
 func (q *Queries) CreateModelPricing(ctx context.Context, arg CreateModelPricingParams) error {
@@ -34,6 +37,9 @@ func (q *Queries) CreateModelPricing(ctx context.Context, arg CreateModelPricing
 		arg.OutputPerMillion,
 		arg.CacheReadPerMillion,
 		arg.CacheWritePerMillion,
+		arg.LongContextInputPerMillion,
+		arg.LongContextOutputPerMillion,
+		arg.LongContextThreshold,
 		arg.IsDefault,
 		arg.CreatedAt,
 	)
@@ -50,7 +56,7 @@ func (q *Queries) DeleteModelPricing(ctx context.Context, id string) error {
 }
 
 const getDefaultModelPricing = `-- name: GetDefaultModelPricing :one
-SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at FROM model_pricing WHERE is_default = 1 LIMIT 1
+SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at, long_context_input_per_million, long_context_output_per_million, long_context_threshold FROM model_pricing WHERE is_default = 1 LIMIT 1
 `
 
 func (q *Queries) GetDefaultModelPricing(ctx context.Context) (ModelPricing, error) {
@@ -65,12 +71,15 @@ func (q *Queries) GetDefaultModelPricing(ctx context.Context) (ModelPricing, err
 		&i.CacheWritePerMillion,
 		&i.IsDefault,
 		&i.CreatedAt,
+		&i.LongContextInputPerMillion,
+		&i.LongContextOutputPerMillion,
+		&i.LongContextThreshold,
 	)
 	return i, err
 }
 
 const getModelPricingByID = `-- name: GetModelPricingByID :one
-SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at FROM model_pricing WHERE id = ?
+SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at, long_context_input_per_million, long_context_output_per_million, long_context_threshold FROM model_pricing WHERE id = ?
 `
 
 func (q *Queries) GetModelPricingByID(ctx context.Context, id string) (ModelPricing, error) {
@@ -85,12 +94,15 @@ func (q *Queries) GetModelPricingByID(ctx context.Context, id string) (ModelPric
 		&i.CacheWritePerMillion,
 		&i.IsDefault,
 		&i.CreatedAt,
+		&i.LongContextInputPerMillion,
+		&i.LongContextOutputPerMillion,
+		&i.LongContextThreshold,
 	)
 	return i, err
 }
 
 const listModelPricing = `-- name: ListModelPricing :many
-SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at FROM model_pricing ORDER BY display_name ASC
+SELECT id, display_name, input_per_million, output_per_million, cache_read_per_million, cache_write_per_million, is_default, created_at, long_context_input_per_million, long_context_output_per_million, long_context_threshold FROM model_pricing ORDER BY display_name ASC
 `
 
 func (q *Queries) ListModelPricing(ctx context.Context) ([]ModelPricing, error) {
@@ -111,6 +123,9 @@ func (q *Queries) ListModelPricing(ctx context.Context) ([]ModelPricing, error) 
 			&i.CacheWritePerMillion,
 			&i.IsDefault,
 			&i.CreatedAt,
+			&i.LongContextInputPerMillion,
+			&i.LongContextOutputPerMillion,
+			&i.LongContextThreshold,
 		); err != nil {
 			return nil, err
 		}
@@ -136,18 +151,21 @@ func (q *Queries) SetDefaultModelPricing(ctx context.Context, id string) error {
 
 const updateModelPricing = `-- name: UpdateModelPricing :exec
 UPDATE model_pricing
-SET display_name = ?, input_per_million = ?, output_per_million = ?, cache_read_per_million = ?, cache_write_per_million = ?, is_default = ?
+SET display_name = ?, input_per_million = ?, output_per_million = ?, cache_read_per_million = ?, cache_write_per_million = ?, long_context_input_per_million = ?, long_context_output_per_million = ?, long_context_threshold = ?, is_default = ?
 WHERE id = ?
 `
 
 type UpdateModelPricingParams struct {
-	DisplayName          string          `json:"display_name"`
-	InputPerMillion      float64         `json:"input_per_million"`
-	OutputPerMillion     float64         `json:"output_per_million"`
-	CacheReadPerMillion  sql.NullFloat64 `json:"cache_read_per_million"`
-	CacheWritePerMillion sql.NullFloat64 `json:"cache_write_per_million"`
-	IsDefault            int64           `json:"is_default"`
-	ID                   string          `json:"id"`
+	DisplayName                 string          `json:"display_name"`
+	InputPerMillion             float64         `json:"input_per_million"`
+	OutputPerMillion            float64         `json:"output_per_million"`
+	CacheReadPerMillion         sql.NullFloat64 `json:"cache_read_per_million"`
+	CacheWritePerMillion        sql.NullFloat64 `json:"cache_write_per_million"`
+	LongContextInputPerMillion  sql.NullFloat64 `json:"long_context_input_per_million"`
+	LongContextOutputPerMillion sql.NullFloat64 `json:"long_context_output_per_million"`
+	LongContextThreshold        sql.NullInt64   `json:"long_context_threshold"`
+	IsDefault                   int64           `json:"is_default"`
+	ID                          string          `json:"id"`
 }
 
 func (q *Queries) UpdateModelPricing(ctx context.Context, arg UpdateModelPricingParams) error {
@@ -157,6 +175,9 @@ func (q *Queries) UpdateModelPricing(ctx context.Context, arg UpdateModelPricing
 		arg.OutputPerMillion,
 		arg.CacheReadPerMillion,
 		arg.CacheWritePerMillion,
+		arg.LongContextInputPerMillion,
+		arg.LongContextOutputPerMillion,
+		arg.LongContextThreshold,
 		arg.IsDefault,
 		arg.ID,
 	)

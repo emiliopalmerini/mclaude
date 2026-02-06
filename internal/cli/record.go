@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -22,6 +23,10 @@ import (
 
 var recordBackgroundFile string
 var recordSync bool
+
+// testDBOverride allows tests to inject a database connection.
+// When set, processRecordInput uses this instead of creating a new connection.
+var testDBOverride *sql.DB
 
 var recordCmd = &cobra.Command{
 	Use:   "record",
@@ -129,24 +134,36 @@ func processRecordBackground(inputFile string) error {
 func processRecordInput(hookInput *domain.HookInput) error {
 	ctx := context.Background()
 
-	// Connect to database
-	db, err := turso.NewDB()
-	if err != nil {
-		return fmt.Errorf("failed to connect to database: %w", err)
-	}
-	defer db.Close()
+	// Use test database if set, otherwise connect to real database
+	var sqlDB *sql.DB
+	var tursoDB *turso.DB // Keep reference for Sync() call
+	var closeDB func()
 
-	// Initialize repositories (pass embedded *sql.DB to constructors)
-	projectRepo := turso.NewProjectRepository(db.DB)
-	experimentRepo := turso.NewExperimentRepository(db.DB)
-	sessionRepo := turso.NewSessionRepository(db.DB)
-	metricsRepo := turso.NewSessionMetricsRepository(db.DB)
-	toolRepo := turso.NewSessionToolRepository(db.DB)
-	fileRepo := turso.NewSessionFileRepository(db.DB)
-	commandRepo := turso.NewSessionCommandRepository(db.DB)
-	pricingRepo := turso.NewPricingRepository(db.DB)
-	qualityRepo := turso.NewSessionQualityRepository(db.DB)
-	planConfigRepo := turso.NewPlanConfigRepository(db.DB)
+	if testDBOverride != nil {
+		sqlDB = testDBOverride
+		closeDB = func() {} // Don't close test database
+	} else {
+		db, err := turso.NewDB()
+		if err != nil {
+			return fmt.Errorf("failed to connect to database: %w", err)
+		}
+		sqlDB = db.DB
+		tursoDB = db
+		closeDB = func() { db.Close() }
+	}
+	defer closeDB()
+
+	// Initialize repositories
+	projectRepo := turso.NewProjectRepository(sqlDB)
+	experimentRepo := turso.NewExperimentRepository(sqlDB)
+	sessionRepo := turso.NewSessionRepository(sqlDB)
+	metricsRepo := turso.NewSessionMetricsRepository(sqlDB)
+	toolRepo := turso.NewSessionToolRepository(sqlDB)
+	fileRepo := turso.NewSessionFileRepository(sqlDB)
+	commandRepo := turso.NewSessionCommandRepository(sqlDB)
+	pricingRepo := turso.NewPricingRepository(sqlDB)
+	qualityRepo := turso.NewSessionQualityRepository(sqlDB)
+	planConfigRepo := turso.NewPlanConfigRepository(sqlDB)
 
 	// Initialize transcript storage
 	transcriptStorage, err := storage.NewTranscriptStorage()
@@ -284,9 +301,11 @@ func processRecordInput(hookInput *domain.HookInput) error {
 		}
 	}
 
-	// Sync to remote if enabled
-	if err := db.Sync(); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: sync failed: %v\n", err)
+	// Sync to remote if enabled (only for real Turso connection)
+	if tursoDB != nil {
+		if err := tursoDB.Sync(); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: sync failed: %v\n", err)
+		}
 	}
 
 	// Export to OTEL if configured

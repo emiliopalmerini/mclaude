@@ -47,6 +47,15 @@ func NullFloat64Zero(f *float64) sql.NullFloat64 {
 	return sql.NullFloat64{Float64: *f, Valid: true}
 }
 
+// NullInt64 converts a *int64 to sql.NullInt64.
+// Nil pointers are treated as invalid (null).
+func NullInt64(i *int64) sql.NullInt64 {
+	if i == nil {
+		return sql.NullInt64{}
+	}
+	return sql.NullInt64{Int64: *i, Valid: true}
+}
+
 // BoolToInt64 converts a bool to int64 (true=1, false=0).
 // This is useful for SQLite which doesn't have a native boolean type.
 func BoolToInt64(b bool) int64 {

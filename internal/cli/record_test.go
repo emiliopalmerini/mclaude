@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -10,31 +11,46 @@ import (
 	"testing"
 	"time"
 
-	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
 
-func TestRecordCommand_Integration(t *testing.T) {
-	// Skip if not in integration test mode
-	if os.Getenv("MCLAUDE_DATABASE_URL") == "" {
-		t.Skip("Skipping integration test: MCLAUDE_DATABASE_URL not set")
+// TestRecordCommand_Memory runs the record command test with in-memory SQLite.
+// This is fast and runs by default.
+func TestRecordCommand_Memory(t *testing.T) {
+	db, cleanup := testDB(t)
+	defer cleanup()
+
+	runRecordTest(t, db)
+}
+
+// TestRecordCommand_Turso runs the record command test with a Turso container.
+// This is slower and only runs when MCLAUDE_TEST_TURSO=1.
+func TestRecordCommand_Turso(t *testing.T) {
+	if os.Getenv("MCLAUDE_TEST_TURSO") != "1" {
+		t.Skip("Skipping Turso integration test: set MCLAUDE_TEST_TURSO=1 to run")
 	}
+
+	db, cleanup := testTursoDB(t)
+	defer cleanup()
+
+	runRecordTest(t, db)
+}
+
+// runRecordTest contains the actual test logic, parameterized by database.
+func runRecordTest(t *testing.T, db *sql.DB) {
+	t.Helper()
 
 	// Force synchronous processing for testing
 	recordSync = true
 	defer func() { recordSync = false }()
 
+	// Override the database connection for the record command
+	testDBOverride = db
+	defer func() { testDBOverride = nil }()
+
 	ctx := context.Background()
-
-	// Connect to database
-	db, err := turso.NewDB()
-	if err != nil {
-		t.Fatalf("Failed to connect to database: %v", err)
-	}
-	defer db.Close()
-
-	queries := sqlc.New(db.DB)
+	queries := sqlc.New(db)
 
 	// Generate unique session ID for this test
 	sessionID := "test-record-" + randomID()
@@ -106,7 +122,6 @@ func TestRecordCommand_Integration(t *testing.T) {
 	defer func() {
 		// Delete test data
 		queries.DeleteSession(ctx, sessionID)
-		// Note: CASCADE should handle metrics, tools, files, commands
 	}()
 
 	// Verify session was created
@@ -138,9 +153,15 @@ func TestRecordCommand_Integration(t *testing.T) {
 	assertEqual(t, "metrics.TokenCacheRead", int64(65), metrics.TokenCacheRead)
 	assertEqual(t, "metrics.TokenCacheWrite", int64(33), metrics.TokenCacheWrite)
 
-	// Verify cost estimate exists
+	// Verify cost estimate exists (pricing was seeded by migrations)
 	if !metrics.CostEstimateUsd.Valid {
 		t.Error("Expected cost estimate to be set")
+	} else {
+		// Verify cost is reasonable (should be > 0)
+		if metrics.CostEstimateUsd.Float64 <= 0 {
+			t.Errorf("Expected positive cost estimate, got %f", metrics.CostEstimateUsd.Float64)
+		}
+		t.Logf("Cost estimate: $%.6f", metrics.CostEstimateUsd.Float64)
 	}
 
 	// Verify model ID was extracted
