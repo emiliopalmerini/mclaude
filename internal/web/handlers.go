@@ -278,6 +278,19 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	// Get sub-agents (aggregated by type+kind)
+	subagentStats, _ := queries.GetSubagentStatsBySession(ctx, id)
+	for _, sa := range subagentStats {
+		usage := templates.SubagentUsage{
+			AgentType: sa.AgentType,
+			AgentKind: sa.AgentKind,
+			Count:     sa.InvocationCount,
+			Tokens:    util.ToInt64(sa.TotalTokens),
+			Cost:      util.ToFloat64(sa.TotalCost),
+		}
+		detail.Subagents = append(detail.Subagents, usage)
+	}
+
 	// Get quality
 	if q, err := queries.GetSessionQualityBySessionID(ctx, id); err == nil {
 		quality := templates.SessionQuality{
