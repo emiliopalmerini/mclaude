@@ -12,16 +12,16 @@
   --text-primary: #1a1a1a;
   --text-secondary: #4a4a4a;
   --text-muted: #6b6b6b;
-  --accent: #fc3d21;
-  --accent-hover: #e0341c;
+  --accent: #d03010;
+  --accent-hover: #b52a0d;
   --accent-light: #fff0ed;
   --border-color: #e0e0db;
   --border-light: #f0f0eb;
-  --success: #16a34a;
+  --success: #15803d;
   --success-bg: #dcfce7;
-  --warning: #ca8a04;
+  --warning: #a16207;
   --warning-bg: #fef9c3;
-  --error: #dc2626;
+  --error: #b91c1c;
   --error-bg: #fee2e2;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
@@ -36,7 +36,7 @@
     --bg-card: #1a1a1a;
     --text-primary: #f5f5f0;
     --text-secondary: #b8b8b3;
-    --text-muted: #8a8a85;
+    --text-muted: #919190;
     --accent: #ff5a42;
     --accent-hover: #ff7a66;
     --accent-light: #2d1f1c;
@@ -543,10 +543,10 @@ textarea {
 
 /* Star Rating */
 .text-yellow-400 {
-  color: #f59e0b;
+  color: #d97706;
 }
 .text-yellow-200 {
-  color: #fde68a;
+  color: #f59e0b;
 }
 @media (prefers-color-scheme: dark) {
   .text-yellow-400 {
@@ -655,11 +655,11 @@ textarea {
 }
 
 .star-btn.filled {
-  color: #f59e0b;
+  color: #d97706;
 }
 
 .star-btn.hovered {
-  color: #fcd34d;
+  color: #f59e0b;
 }
 
 .star-clear {
