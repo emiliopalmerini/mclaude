@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/emiliopalmerini/mclaude/internal/domain"
@@ -9,31 +10,41 @@ import (
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
 
+type dashboardFilters struct {
+	Period     string
+	Experiment string
+	Project    string
+}
+
 func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+	filters := dashboardFilters{
+		Period:     r.URL.Query().Get("period"),
+		Experiment: r.URL.Query().Get("experiment"),
+		Project:    r.URL.Query().Get("project"),
+	}
+	stats := s.fetchDashboardData(ctx, filters)
+	templates.Dashboard(stats).Render(ctx, w)
+}
+
+func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilters) templates.DashboardStats {
 	queries := sqlc.New(s.db)
-
-	// Read filter params
-	period := r.URL.Query().Get("period")
-	experimentFilter := r.URL.Query().Get("experiment")
-	projectFilter := r.URL.Query().Get("project")
-
-	startDate := util.GetStartDateForPeriod(period)
+	startDate := util.GetStartDateForPeriod(filters.Period)
 
 	// Get aggregate stats based on filters
 	var aggStats *domain.AggregateStats
-	if experimentFilter != "" {
-		aggStats, _ = s.statsRepo.GetAggregateByExperiment(ctx, experimentFilter, startDate)
-	} else if projectFilter != "" {
-		aggStats, _ = s.statsRepo.GetAggregateByProject(ctx, projectFilter, startDate)
+	if filters.Experiment != "" {
+		aggStats, _ = s.statsRepo.GetAggregateByExperiment(ctx, filters.Experiment, startDate)
+	} else if filters.Project != "" {
+		aggStats, _ = s.statsRepo.GetAggregateByProject(ctx, filters.Project, startDate)
 	} else {
 		aggStats, _ = s.statsRepo.GetAggregate(ctx, startDate)
 	}
 
 	stats := templates.DashboardStats{
-		FilterPeriod:     period,
-		FilterExperiment: experimentFilter,
-		FilterProject:    projectFilter,
+		FilterPeriod:     filters.Period,
+		FilterExperiment: filters.Experiment,
+		FilterProject:    filters.Project,
 	}
 
 	if aggStats != nil {
@@ -159,5 +170,5 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		stats.SuccessRate = calculateSuccessRate(qualityStats.SuccessCount, qualityStats.FailureCount)
 	}
 
-	templates.Dashboard(stats).Render(ctx, w)
+	return stats
 }
