@@ -14,6 +14,7 @@
       {
         packages = {
           mclaude = pkgs.callPackage ./nix/package.nix {};
+          wmclaude = pkgs.callPackage ./nix/wmclaude.nix {};
           default = self.packages.${system}.mclaude;
         };
 

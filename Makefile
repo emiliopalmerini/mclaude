@@ -1,4 +1,4 @@
-.PHONY: all build test test-unit test-integration clean sqlc templ fmt lint run migrate reset install help
+.PHONY: all build build-web test test-unit test-integration clean sqlc templ fmt lint run migrate reset install help
 
 # Variables
 BINARY_NAME := mclaude
@@ -33,6 +33,14 @@ build: generate
 # Build with version info
 build-release: generate
 	CGO_ENABLED=1 go build -ldflags="-s -w" -o $(BINARY_NAME) ./cmd/mclaude
+
+# Build the standalone web server binary
+build-web: generate
+	CGO_ENABLED=1 go build -o wmclaude ./cmd/wmclaude
+
+# Build web binary with optimizations
+build-web-release: generate
+	CGO_ENABLED=1 go build -ldflags="-s -w" -o wmclaude ./cmd/wmclaude
 
 # Install to GOPATH/bin
 install: generate
@@ -107,7 +115,7 @@ dev:
 
 # Clean build artifacts
 clean:
-	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_NAME) wmclaude
 	rm -f coverage.out coverage.html
 
 # Clean generated code too
@@ -125,6 +133,7 @@ help:
 	@echo "Build targets:"
 	@echo "  all             Build everything (default)"
 	@echo "  build           Generate code + build mclaude binary"
+	@echo "  build-web       Generate code + build wmclaude web server"
 	@echo "  build-release   Generate code + build optimized binary"
 	@echo "  install         Generate code + install to GOPATH/bin"
 	@echo "  clean           Remove build artifacts"
