@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,9 +16,6 @@ import (
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/parser"
 )
-
-var recordBackgroundFile string
-var recordSync bool
 
 // testDBOverride allows tests to inject a database connection.
 // When set, processRecordInput uses this instead of creating a new connection.
@@ -32,7 +27,8 @@ var recordCmd = &cobra.Command{
 	Long: `Reads session data from stdin (Claude Code SessionEnd hook),
 parses the transcript, and saves all data to the database.
 
-This command is designed to be called from a Claude Code hook:
+This command is designed to be called from a Claude Code hook with
+"async": true so it runs in the background:
 
   {
     "hooks": {
@@ -41,7 +37,8 @@ This command is designed to be called from a Claude Code hook:
           "hooks": [
             {
               "type": "command",
-              "command": "mclaude record"
+              "command": "mclaude record",
+              "async": true
             }
           ]
         }
@@ -51,75 +48,12 @@ This command is designed to be called from a Claude Code hook:
 	RunE: runRecord,
 }
 
-func init() {
-	recordCmd.Flags().StringVar(&recordBackgroundFile, "background", "", "process hook input from file (internal use)")
-	recordCmd.Flags().MarkHidden("background")
-	recordCmd.Flags().BoolVar(&recordSync, "sync", false, "process synchronously (for debugging)")
-}
-
 func runRecord(cmd *cobra.Command, args []string) error {
-	// If --background flag is set, process from file
-	if recordBackgroundFile != "" {
-		return processRecordBackground(recordBackgroundFile)
-	}
-
 	// Read hook input from stdin
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return fmt.Errorf("failed to read stdin: %w", err)
 	}
-
-	var hookInput domain.HookInput
-	if err := json.Unmarshal(input, &hookInput); err != nil {
-		return fmt.Errorf("failed to parse hook input: %w", err)
-	}
-
-	// Process synchronously if --sync flag is set
-	if recordSync {
-		return processRecordInput(&hookInput)
-	}
-
-	// Write input to temp file for background processing
-	tempDir := os.TempDir()
-	tempFile := filepath.Join(tempDir, fmt.Sprintf("mclaude-record-%s.json", hookInput.SessionID))
-	if err := os.WriteFile(tempFile, input, 0600); err != nil {
-		return fmt.Errorf("failed to write temp file: %w", err)
-	}
-
-	// Spawn background process
-	executable, err := os.Executable()
-	if err != nil {
-		// Fallback to synchronous if we can't find executable
-		os.Remove(tempFile)
-		return processRecordInput(&hookInput)
-	}
-
-	bgCmd := exec.Command(executable, "record", "--background", tempFile)
-	bgCmd.Stdout = nil
-	bgCmd.Stderr = nil
-	bgCmd.Stdin = nil
-
-	if err := bgCmd.Start(); err != nil {
-		// Fallback to synchronous if spawn fails
-		os.Remove(tempFile)
-		return processRecordInput(&hookInput)
-	}
-
-	// Detach from child process
-	bgCmd.Process.Release()
-
-	return nil
-}
-
-func processRecordBackground(inputFile string) error {
-	// Read hook input from file
-	input, err := os.ReadFile(inputFile)
-	if err != nil {
-		return fmt.Errorf("failed to read input file: %w", err)
-	}
-
-	// Clean up temp file
-	defer os.Remove(inputFile)
 
 	var hookInput domain.HookInput
 	if err := json.Unmarshal(input, &hookInput); err != nil {
@@ -361,4 +295,3 @@ func resolveModelAlias(alias string) string {
 	// If it's already a full model ID, return as-is
 	return alias
 }
-
