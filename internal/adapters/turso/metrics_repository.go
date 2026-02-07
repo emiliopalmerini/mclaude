@@ -95,13 +95,20 @@ func NewSessionToolRepository(db *sql.DB) *SessionToolRepository {
 }
 
 func (r *SessionToolRepository) CreateBatch(ctx context.Context, tools []*domain.SessionTool) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.queries.WithTx(tx)
 	for _, tool := range tools {
 		var totalDurationMs sql.NullInt64
 		if tool.TotalDurationMs != nil {
 			totalDurationMs = sql.NullInt64{Int64: *tool.TotalDurationMs, Valid: true}
 		}
 
-		err := r.queries.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
+		err := qtx.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
 			SessionID:       tool.SessionID,
 			ToolName:        tool.ToolName,
 			InvocationCount: tool.InvocationCount,
@@ -112,7 +119,7 @@ func (r *SessionToolRepository) CreateBatch(ctx context.Context, tools []*domain
 			return fmt.Errorf("failed to create session tool %s: %w", tool.ToolName, err)
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *SessionToolRepository) ListBySessionID(ctx context.Context, sessionID string) ([]*domain.SessionTool, error) {
@@ -152,8 +159,15 @@ func NewSessionFileRepository(db *sql.DB) *SessionFileRepository {
 }
 
 func (r *SessionFileRepository) CreateBatch(ctx context.Context, files []*domain.SessionFile) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.queries.WithTx(tx)
 	for _, file := range files {
-		err := r.queries.CreateSessionFile(ctx, sqlc.CreateSessionFileParams{
+		err := qtx.CreateSessionFile(ctx, sqlc.CreateSessionFileParams{
 			SessionID:      file.SessionID,
 			FilePath:       file.FilePath,
 			Operation:      file.Operation,
@@ -163,7 +177,7 @@ func (r *SessionFileRepository) CreateBatch(ctx context.Context, files []*domain
 			return fmt.Errorf("failed to create session file %s: %w", file.FilePath, err)
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *SessionFileRepository) ListBySessionID(ctx context.Context, sessionID string) ([]*domain.SessionFile, error) {
@@ -198,6 +212,13 @@ func NewSessionCommandRepository(db *sql.DB) *SessionCommandRepository {
 }
 
 func (r *SessionCommandRepository) CreateBatch(ctx context.Context, commands []*domain.SessionCommand) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.queries.WithTx(tx)
 	for _, cmd := range commands {
 		var exitCode sql.NullInt64
 		if cmd.ExitCode != nil {
@@ -209,7 +230,7 @@ func (r *SessionCommandRepository) CreateBatch(ctx context.Context, commands []*
 			executedAt = sql.NullString{String: cmd.ExecutedAt.Format(time.RFC3339), Valid: true}
 		}
 
-		err := r.queries.CreateSessionCommand(ctx, sqlc.CreateSessionCommandParams{
+		err := qtx.CreateSessionCommand(ctx, sqlc.CreateSessionCommandParams{
 			SessionID:  cmd.SessionID,
 			Command:    cmd.Command,
 			ExitCode:   exitCode,
@@ -219,7 +240,7 @@ func (r *SessionCommandRepository) CreateBatch(ctx context.Context, commands []*
 			return fmt.Errorf("failed to create session command: %w", err)
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *SessionCommandRepository) ListBySessionID(ctx context.Context, sessionID string) ([]*domain.SessionCommand, error) {
@@ -266,6 +287,13 @@ func NewSessionSubagentRepository(db *sql.DB) *SessionSubagentRepository {
 }
 
 func (r *SessionSubagentRepository) CreateBatch(ctx context.Context, subagents []*domain.SessionSubagent) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	qtx := r.queries.WithTx(tx)
 	for _, sa := range subagents {
 		var description sql.NullString
 		if sa.Description != nil {
@@ -287,7 +315,7 @@ func (r *SessionSubagentRepository) CreateBatch(ctx context.Context, subagents [
 			costEstimate = sql.NullFloat64{Float64: *sa.CostEstimateUSD, Valid: true}
 		}
 
-		err := r.queries.CreateSessionSubagent(ctx, sqlc.CreateSessionSubagentParams{
+		err := qtx.CreateSessionSubagent(ctx, sqlc.CreateSessionSubagentParams{
 			SessionID:       sa.SessionID,
 			AgentType:       sa.AgentType,
 			AgentKind:       sa.AgentKind,
@@ -306,7 +334,7 @@ func (r *SessionSubagentRepository) CreateBatch(ctx context.Context, subagents [
 			return fmt.Errorf("failed to create session subagent %s: %w", sa.AgentType, err)
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (r *SessionSubagentRepository) ListBySessionID(ctx context.Context, sessionID string) ([]*domain.SessionSubagent, error) {
