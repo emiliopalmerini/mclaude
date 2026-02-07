@@ -10,6 +10,8 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	_ "github.com/tursodatabase/go-libsql"
+
+	"github.com/emiliopalmerini/mclaude/internal/migrate"
 )
 
 // testDB creates an in-memory SQLite database with all migrations applied.
@@ -30,7 +32,7 @@ func testDB(t *testing.T) (*sql.DB, func()) {
 
 	// Run migrations
 	ctx := context.Background()
-	if err := RunMigrations(ctx, db); err != nil {
+	if err := migrate.RunAll(ctx, db); err != nil {
 		db.Close()
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
@@ -100,7 +102,7 @@ func testTursoDB(t *testing.T) (*sql.DB, func()) {
 	}
 
 	// Run migrations
-	if err := RunMigrations(ctx, db); err != nil {
+	if err := migrate.RunAll(ctx, db); err != nil {
 		db.Close()
 		container.Terminate(ctx)
 		t.Fatalf("Failed to run migrations: %v", err)
