@@ -15,7 +15,8 @@ var skipAppContext = map[string]bool{
 	"reset":   true,
 	"help":    true,
 	"mclaude": true,
-	"record":  true, // record manages its own DB: spawns background processes and has test overrides
+	"record":  true, // record manages its own DB for test overrides
+	"hook":    true, // hook manages its own DB like record
 }
 
 var rootCmd = &cobra.Command{
@@ -50,5 +51,6 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(recordCmd)
+	rootCmd.AddCommand(hookCmd)
 	rootCmd.AddCommand(migrateCmd)
 }

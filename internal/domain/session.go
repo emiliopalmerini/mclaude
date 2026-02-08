@@ -56,6 +56,21 @@ type SessionCommand struct {
 	ExecutedAt *time.Time
 }
 
+// SessionListItem is a pre-joined summary for listing sessions with metrics.
+type SessionListItem struct {
+	ID            string
+	ProjectID     string
+	ExperimentID  *string
+	ExitReason    string
+	CreatedAt     string
+	Duration      *int64
+	TurnCount     int64
+	TotalTokens   int64
+	Cost          *float64
+	ModelID       *string
+	SubagentCount int64
+}
+
 type SessionSubagent struct {
 	ID              int64
 	SessionID       string

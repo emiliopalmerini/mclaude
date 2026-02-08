@@ -1,0 +1,4 @@
+{"type":"user","timestamp":"2025-01-17T10:00:22Z","message":{"role":"user","content":[{"type":"text","text":"Find all Go files"}]}}
+{"type":"assistant","model":"claude-haiku-4-5-20251001","timestamp":"2025-01-17T10:00:23Z","message":{"role":"assistant","content":[{"type":"text","text":"I'll search for Go files."},{"type":"tool_use","id":"subtool1","name":"Glob","input":{"pattern":"**/*.go"}}]},"usage":{"input_tokens":200,"output_tokens":80,"cache_read_input_tokens":50,"cache_creation_input_tokens":10}}
+{"type":"result","timestamp":"2025-01-17T10:00:24Z","result":{"content":"main.go\nserver.go"}}
+{"type":"assistant","timestamp":"2025-01-17T10:00:25Z","message":{"role":"assistant","content":[{"type":"text","text":"Found 2 Go files."}]},"usage":{"input_tokens":100,"output_tokens":30,"cache_read_input_tokens":20,"cache_creation_input_tokens":5}}

@@ -76,6 +76,9 @@ func buildSessionDetail(session sqlc.Session, metrics *sqlc.SessionMetric) templ
 		if metrics.CostEstimateUsd.Valid {
 			detail.CostEstimateUsd = metrics.CostEstimateUsd.Float64
 		}
+		if metrics.ModelID.Valid {
+			detail.ModelID = metrics.ModelID.String
+		}
 	}
 
 	return detail

@@ -41,10 +41,6 @@ func TestRecordCommand_Turso(t *testing.T) {
 func runRecordTest(t *testing.T, db *sql.DB) {
 	t.Helper()
 
-	// Force synchronous processing for testing
-	recordSync = true
-	defer func() { recordSync = false }()
-
 	// Override the database connection for the record command
 	testDBOverride = db
 	defer func() { testDBOverride = nil }()

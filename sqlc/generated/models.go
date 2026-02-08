@@ -19,6 +19,13 @@ type Experiment struct {
 	CreatedAt   string         `json:"created_at"`
 }
 
+type HookSubagentTracking struct {
+	AgentID   string `json:"agent_id"`
+	SessionID string `json:"session_id"`
+	AgentType string `json:"agent_type"`
+	StartedAt string `json:"started_at"`
+}
+
 type ModelPricing struct {
 	ID                          string          `json:"id"`
 	DisplayName                 string          `json:"display_name"`
@@ -135,6 +142,16 @@ type SessionTool struct {
 	InvocationCount int64         `json:"invocation_count"`
 	TotalDurationMs sql.NullInt64 `json:"total_duration_ms"`
 	ErrorCount      int64         `json:"error_count"`
+}
+
+type ToolEvent struct {
+	ID           int64          `json:"id"`
+	SessionID    string         `json:"session_id"`
+	ToolName     string         `json:"tool_name"`
+	ToolUseID    string         `json:"tool_use_id"`
+	ToolInput    sql.NullString `json:"tool_input"`
+	ToolResponse sql.NullString `json:"tool_response"`
+	CapturedAt   string         `json:"captured_at"`
 }
 
 type UsageLimit struct {

@@ -112,6 +112,32 @@ func tokenBarWidth(tokens, maxTokens int64) string {
 	return fmt.Sprintf("width: %.0f%%", pct)
 }
 
+func shortModelName(modelID string) string {
+	// Strip common prefixes for compact display
+	// e.g. "claude-opus-4-5-20250929" -> "opus-4-5"
+	// e.g. "claude-sonnet-4-5-20250929" -> "sonnet-4-5"
+	// e.g. "claude-haiku-4-5-20251001" -> "haiku-4-5"
+	parts := modelID
+	if len(parts) > 7 && parts[:7] == "claude-" {
+		parts = parts[7:]
+	}
+	// Strip trailing date suffix (e.g. "-20250929")
+	if len(parts) > 9 && parts[len(parts)-9] == '-' {
+		candidate := parts[len(parts)-8:]
+		allDigits := true
+		for _, c := range candidate {
+			if c < '0' || c > '9' {
+				allDigits = false
+				break
+			}
+		}
+		if allDigits {
+			parts = parts[:len(parts)-9]
+		}
+	}
+	return parts
+}
+
 func planDisplayName(planType string) string {
 	switch planType {
 	case "pro":

@@ -29,7 +29,7 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// List sessions with port interface for filtered queries
+	// List sessions with joined metrics (single query, no N+1)
 	opts := ports.ListSessionsOptions{Limit: limit}
 	if experimentFilter != "" {
 		opts.ExperimentID = &experimentFilter
@@ -38,7 +38,7 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		opts.ProjectID = &projectFilter
 	}
 
-	domainSessions, _ := s.sessionRepo.List(ctx, opts)
+	items, _ := s.sessionRepo.ListWithMetrics(ctx, opts)
 
 	// Build quality lookup map
 	qualityMap := make(map[string]sqlc.ListSessionQualitiesForSessionsRow)
@@ -63,27 +63,30 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var maxTokens int64
-	sessionList := make([]templates.SessionSummary, 0, len(domainSessions))
-	for _, sess := range domainSessions {
+	sessionList := make([]templates.SessionSummary, 0, len(items))
+	for _, item := range items {
 		summary := templates.SessionSummary{
-			ID:          sess.ID,
-			ProjectID:   sess.ProjectID,
-			ProjectName: projectNameMap[sess.ProjectID],
-			CreatedAt:   sess.CreatedAt.Format(time.RFC3339),
-			ExitReason:  sess.ExitReason,
+			ID:            item.ID,
+			ProjectID:     item.ProjectID,
+			ProjectName:   projectNameMap[item.ProjectID],
+			CreatedAt:     item.CreatedAt,
+			ExitReason:    item.ExitReason,
+			Turns:         item.TurnCount,
+			Tokens:        item.TotalTokens,
+			SubagentCount: item.SubagentCount,
 		}
-		if sess.ExperimentID != nil {
-			summary.ExperimentID = *sess.ExperimentID
-			summary.ExperimentName = experimentNameMap[*sess.ExperimentID]
+		if item.ExperimentID != nil {
+			summary.ExperimentID = *item.ExperimentID
+			summary.ExperimentName = experimentNameMap[*item.ExperimentID]
 		}
-
-		// Get metrics
-		if m, err := s.metricsRepo.GetBySessionID(ctx, sess.ID); err == nil && m != nil {
-			summary.Turns = m.TurnCount
-			summary.Tokens = m.TokenInput + m.TokenOutput
-			if m.CostEstimateUSD != nil {
-				summary.Cost = *m.CostEstimateUSD
-			}
+		if item.Cost != nil {
+			summary.Cost = *item.Cost
+		}
+		if item.ModelID != nil {
+			summary.Model = *item.ModelID
+		}
+		if item.Duration != nil {
+			summary.Duration = *item.Duration
 		}
 
 		if summary.Tokens > maxTokens {
@@ -91,7 +94,7 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Add quality data
-		if q, ok := qualityMap[sess.ID]; ok {
+		if q, ok := qualityMap[item.ID]; ok {
 			summary.IsReviewed = true
 			if q.OverallRating.Valid {
 				summary.OverallRating = int(q.OverallRating.Int64)
@@ -170,6 +173,23 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 			Cost:      util.ToFloat64(sa.TotalCost),
 		}
 		detail.Subagents = append(detail.Subagents, usage)
+	}
+
+	// Get tool events
+	toolEvents, _ := queries.ListToolEventsBySessionID(ctx, id)
+	for _, te := range toolEvents {
+		view := templates.ToolEventView{
+			ToolName:  te.ToolName,
+			ToolUseID: te.ToolUseID,
+			CapturedAt: te.CapturedAt,
+		}
+		if te.ToolInput.Valid {
+			view.ToolInput = te.ToolInput.String
+		}
+		if te.ToolResponse.Valid {
+			view.ToolResponse = te.ToolResponse.String
+		}
+		detail.ToolEvents = append(detail.ToolEvents, view)
 	}
 
 	// Get quality

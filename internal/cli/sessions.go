@@ -9,7 +9,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/emiliopalmerini/mclaude/internal/ports"
-	"github.com/emiliopalmerini/mclaude/internal/util"
 )
 
 var sessionsCmd = &cobra.Command{
@@ -64,46 +63,51 @@ func runSessionsList(cmd *cobra.Command, args []string) error {
 		opts.ProjectID = &sessionsProject
 	}
 
-	sessions, err := app.SessionRepo.List(ctx, opts)
+	items, err := app.SessionRepo.ListWithMetrics(ctx, opts)
 	if err != nil {
 		return fmt.Errorf("failed to list sessions: %w", err)
 	}
 
-	if len(sessions) == 0 {
+	if len(items) == 0 {
 		fmt.Println("No sessions found")
 		return nil
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tDATE\tTURNS\tTOKENS\tCOST\tREASON")
-	fmt.Fprintln(w, "--\t----\t-----\t------\t----\t------")
+	fmt.Fprintln(w, "ID\tDATE\tMODEL\tTURNS\tTOKENS\tCOST\tDURATION\tREASON")
+	fmt.Fprintln(w, "--\t----\t-----\t-----\t------\t----\t--------\t------")
 
-	for _, s := range sessions {
-		id := s.ID
+	for _, item := range items {
+		id := item.ID
 		if len(id) > 12 {
 			id = id[:12]
 		}
 
-		date := util.FormatDateTime(s.CreatedAt.Format("2006-01-02T15:04:05Z07:00"))
+		date := formatDateTimeCLI(item.CreatedAt)
 
-		turns := "-"
-		tokens := "-"
-		cost := "-"
-		m, err := app.MetricsRepo.GetBySessionID(ctx, s.ID)
-		if err == nil && m != nil {
-			turns = fmt.Sprintf("%d", m.TurnCount)
-			totalTokens := m.TokenInput + m.TokenOutput
-			tokens = util.FormatNumber(totalTokens)
-			if m.CostEstimateUSD != nil {
-				cost = fmt.Sprintf("$%.4f", *m.CostEstimateUSD)
-			}
+		model := "-"
+		if item.ModelID != nil {
+			model = shortModel(*item.ModelID)
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", id, date, turns, tokens, cost, s.ExitReason)
+		turns := fmt.Sprintf("%d", item.TurnCount)
+		tokens := formatTokensCLI(item.TotalTokens)
+
+		cost := "-"
+		if item.Cost != nil {
+			cost = fmt.Sprintf("$%.4f", *item.Cost)
+		}
+
+		duration := "-"
+		if item.Duration != nil {
+			duration = formatDurationCLI(*item.Duration)
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", id, date, model, turns, tokens, cost, duration, item.ExitReason)
 	}
 
 	w.Flush()
 
-	fmt.Printf("\nShowing %d session(s)\n", len(sessions))
+	fmt.Printf("\nShowing %d session(s)\n", len(items))
 	return nil
 }
