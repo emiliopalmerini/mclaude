@@ -66,7 +66,7 @@ func run() error {
 	}()
 
 	server := web.NewServer(
-		db, port, nil,
+		db, port, repos.Transcripts,
 		repos.Quality, repos.PlanConfig, repos.Experiments,
 		repos.Pricing, repos.Sessions, repos.Metrics,
 		repos.Stats, repos.Projects,

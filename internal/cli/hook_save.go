@@ -80,6 +80,12 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 				fmt.Fprintf(os.Stderr, "warning: failed to store transcript copy: %v\n", err)
 			}
 		}
+
+		// Store transcript to DB for remote access (wmclaude)
+		dbTranscriptStorage := turso.NewTranscriptRepository(sqlDB)
+		if _, err := dbTranscriptStorage.Store(ctx, sessionID, transcriptPath); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to store transcript to database: %v\n", err)
+		}
 	}
 
 	parsed.Metrics.ModelID = parsed.ModelID

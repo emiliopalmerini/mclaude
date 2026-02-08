@@ -21,6 +21,7 @@ type Repositories struct {
 	Quality     ports.SessionQualityRepository
 	PlanConfig  ports.PlanConfigRepository
 	Stats       ports.StatsRepository
+	Transcripts ports.TranscriptStorage
 }
 
 // NewRepositories creates all turso repository implementations from a database connection.
@@ -39,5 +40,6 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Quality:     NewSessionQualityRepository(db),
 		PlanConfig:  NewPlanConfigRepository(db),
 		Stats:       NewStatsRepository(db),
+		Transcripts: NewTranscriptRepository(db),
 	}
 }

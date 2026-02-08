@@ -144,6 +144,12 @@ type SessionTool struct {
 	ErrorCount      int64         `json:"error_count"`
 }
 
+type SessionTranscript struct {
+	SessionID string `json:"session_id"`
+	GzipData  []byte `json:"gzip_data"`
+	CreatedAt string `json:"created_at"`
+}
+
 type ToolEvent struct {
 	ID           int64          `json:"id"`
 	SessionID    string         `json:"session_id"`

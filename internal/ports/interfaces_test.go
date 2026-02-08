@@ -61,3 +61,7 @@ func TestStatsRepositoryConformance(t *testing.T) {
 func TestToolEventRepositoryConformance(t *testing.T) {
 	var _ ports.ToolEventRepository = (*turso.ToolEventRepository)(nil)
 }
+
+func TestTranscriptRepositoryConformance(t *testing.T) {
+	var _ ports.TranscriptStorage = (*turso.TranscriptRepository)(nil)
+}
