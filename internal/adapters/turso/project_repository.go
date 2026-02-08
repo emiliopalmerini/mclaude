@@ -46,25 +46,22 @@ func (r *ProjectRepository) GetByID(ctx context.Context, id string) (*domain.Pro
 }
 
 func (r *ProjectRepository) GetOrCreate(ctx context.Context, path string) (*domain.Project, error) {
-	id := hashPath(path)
-
-	existing, err := r.GetByID(ctx, id)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		return existing, nil
-	}
-
+	now := time.Now().UTC()
 	project := &domain.Project{
-		ID:        id,
+		ID:        hashPath(path),
 		Path:      path,
 		Name:      filepath.Base(path),
-		CreatedAt: time.Now().UTC(),
+		CreatedAt: now,
 	}
 
-	if err := r.Create(ctx, project); err != nil {
-		return nil, fmt.Errorf("failed to create project: %w", err)
+	err := r.queries.CreateProjectIfNotExists(ctx, sqlc.CreateProjectIfNotExistsParams{
+		ID:        project.ID,
+		Path:      project.Path,
+		Name:      project.Name,
+		CreatedAt: now.Format(time.RFC3339),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to ensure project exists: %w", err)
 	}
 
 	return project, nil

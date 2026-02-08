@@ -2,6 +2,10 @@
 INSERT INTO projects (id, path, name, created_at)
 VALUES (?, ?, ?, ?);
 
+-- name: CreateProjectIfNotExists :exec
+INSERT OR IGNORE INTO projects (id, path, name, created_at)
+VALUES (?, ?, ?, ?);
+
 -- name: GetProjectByID :one
 SELECT * FROM projects WHERE id = ?;
 

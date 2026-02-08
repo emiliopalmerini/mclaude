@@ -31,6 +31,28 @@ func (q *Queries) CreateProject(ctx context.Context, arg CreateProjectParams) er
 	return err
 }
 
+const createProjectIfNotExists = `-- name: CreateProjectIfNotExists :exec
+INSERT OR IGNORE INTO projects (id, path, name, created_at)
+VALUES (?, ?, ?, ?)
+`
+
+type CreateProjectIfNotExistsParams struct {
+	ID        string `json:"id"`
+	Path      string `json:"path"`
+	Name      string `json:"name"`
+	CreatedAt string `json:"created_at"`
+}
+
+func (q *Queries) CreateProjectIfNotExists(ctx context.Context, arg CreateProjectIfNotExistsParams) error {
+	_, err := q.db.ExecContext(ctx, createProjectIfNotExists,
+		arg.ID,
+		arg.Path,
+		arg.Name,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const deleteProject = `-- name: DeleteProject :exec
 DELETE FROM projects WHERE id = ?
 `
