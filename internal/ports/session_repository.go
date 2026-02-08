@@ -10,6 +10,7 @@ type SessionRepository interface {
 	Create(ctx context.Context, session *domain.Session) error
 	GetByID(ctx context.Context, id string) (*domain.Session, error)
 	List(ctx context.Context, opts ListSessionsOptions) ([]*domain.Session, error)
+	ListWithMetrics(ctx context.Context, opts ListSessionsOptions) ([]*domain.SessionListItem, error)
 	Delete(ctx context.Context, id string) error
 	DeleteBefore(ctx context.Context, before string) (int64, error)
 	DeleteByProject(ctx context.Context, projectID string) (int64, error)
@@ -48,4 +49,8 @@ type SessionCommandRepository interface {
 type SessionSubagentRepository interface {
 	CreateBatch(ctx context.Context, subagents []*domain.SessionSubagent) error
 	ListBySessionID(ctx context.Context, sessionID string) ([]*domain.SessionSubagent, error)
+}
+
+type ToolEventRepository interface {
+	ListBySessionID(ctx context.Context, sessionID string) ([]*domain.ToolEvent, error)
 }

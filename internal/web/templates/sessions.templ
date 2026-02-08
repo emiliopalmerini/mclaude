@@ -56,9 +56,12 @@ templ SessionsPage(data SessionsPageData) {
 								<th class="table-header">Project</th>
 								<th class="table-header">Experiment</th>
 								<th class="table-header">Turns</th>
+								<th class="table-header">Model</th>
+								<th class="table-header">Duration</th>
 								<th class="table-header">Tokens</th>
 								<th class="table-header">Cost</th>
 								<th class="table-header">Quality</th>
+								<th class="table-header">Agents</th>
 								<th class="table-header">Exit</th>
 								<th class="table-header"></th>
 							</tr>
@@ -85,6 +88,14 @@ templ SessionsPage(data SessionsPageData) {
 										}
 									</td>
 									<td class="table-cell">{ fmt.Sprintf("%d", s.Turns) }</td>
+									<td class="table-cell text-xs font-mono truncate" style="max-width: 100px;" title={ s.Model }>
+										if s.Model != "" {
+											{ shortModelName(s.Model) }
+										} else {
+											<span class="text-gray-400">—</span>
+										}
+									</td>
+									<td class="table-cell text-xs">{ formatDuration(s.Duration) }</td>
 									<td class="table-cell">
 										<div class="token-bar-cell">
 											<span class="token-bar-value">{ formatTokens(s.Tokens) }</span>
@@ -96,6 +107,13 @@ templ SessionsPage(data SessionsPageData) {
 									<td class="table-cell text-green-600">{ fmt.Sprintf("$%.4f", s.Cost) }</td>
 									<td class="table-cell">
 										@QualityIndicator(s.IsReviewed, s.OverallRating, s.IsSuccess)
+									</td>
+									<td class="table-cell text-xs">
+										if s.SubagentCount > 0 {
+											{ fmt.Sprintf("%d", s.SubagentCount) }
+										} else {
+											<span class="text-gray-400">—</span>
+										}
 									</td>
 									<td class="table-cell">
 										<span class={ "badge", exitReasonBadge(s.ExitReason) }>{ s.ExitReason }</span>
@@ -216,6 +234,10 @@ templ SessionDetailPage(session SessionDetail) {
 						@DetailRow("Project", truncateID(session.ProjectID))
 						@DetailRow("Working Directory", session.Cwd)
 						@DetailRow("Permission Mode", session.PermissionMode)
+						if session.ModelID != "" {
+							@DetailRow("Model", session.ModelID)
+						}
+						@DetailRow("Duration", formatDuration(session.DurationSeconds))
 						@DetailRow("Created", formatDateTime(session.CreatedAt))
 						if session.StartedAt != "" {
 							@DetailRow("Started", formatDateTime(session.StartedAt))
@@ -263,6 +285,51 @@ templ SessionDetailPage(session SessionDetail) {
 									}
 									if sa.DurationMs > 0 {
 										<span>{ fmt.Sprintf("%.1fs", float64(sa.DurationMs)/1000) }</span>
+									}
+								</div>
+							</div>
+						}
+					</div>
+				</div>
+			}
+
+			<!-- Tool Events -->
+			if len(session.ToolEvents) > 0 {
+				<div class="card" x-data="{ expanded: false }">
+					<div class="flex items-center justify-between mb-4">
+						<h2 class="text-lg font-semibold">
+							Tool Events
+							<span class="ml-2 badge badge-blue">{ fmt.Sprintf("%d", len(session.ToolEvents)) }</span>
+						</h2>
+						<button class="btn btn-sm btn-ghost" x-on:click="expanded = !expanded">
+							<span x-show="!expanded">Show</span>
+							<span x-show="expanded" x-cloak>Hide</span>
+						</button>
+					</div>
+					<div x-show="expanded" x-cloak class="space-y-2 max-h-96 overflow-y-auto">
+						for _, te := range session.ToolEvents {
+							<div class="border rounded p-3 text-sm" x-data="{ showDetail: false }">
+								<div class="flex justify-between items-center cursor-pointer" x-on:click="showDetail = !showDetail">
+									<div class="flex items-center gap-2">
+										<span class="font-mono font-medium">{ te.ToolName }</span>
+										<span class="text-gray-400 text-xs">{ formatDateTime(te.CapturedAt) }</span>
+									</div>
+									<svg class="w-4 h-4 text-gray-400 transition-transform" x-bind:class="showDetail && 'rotate-180'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+									</svg>
+								</div>
+								<div x-show="showDetail" x-cloak class="mt-2 space-y-2">
+									if te.ToolInput != "" {
+										<div>
+											<span class="text-xs font-medium text-gray-500">Input</span>
+											<pre class="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto">{ te.ToolInput }</pre>
+										</div>
+									}
+									if te.ToolResponse != "" {
+										<div>
+											<span class="text-xs font-medium text-gray-500">Response</span>
+											<pre class="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto max-h-48 overflow-y-auto">{ te.ToolResponse }</pre>
+										</div>
 									}
 								</div>
 							</div>

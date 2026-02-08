@@ -520,3 +520,207 @@ func (q *Queries) ListSessionsWithMetricsByExperiment(ctx context.Context, arg L
 	}
 	return items, nil
 }
+
+const listSessionsWithMetricsFull = `-- name: ListSessionsWithMetricsFull :many
+SELECT
+    s.id, s.project_id, s.experiment_id, s.exit_reason, s.created_at,
+    s.duration_seconds,
+    COALESCE(m.turn_count, 0) as turn_count,
+    COALESCE(m.token_input, 0) + COALESCE(m.token_output, 0) as total_tokens,
+    m.cost_estimate_usd,
+    m.model_id,
+    (SELECT COUNT(*) FROM session_subagents sa WHERE sa.session_id = s.id) as subagent_count
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+ORDER BY s.created_at DESC
+LIMIT ?
+`
+
+type ListSessionsWithMetricsFullRow struct {
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"project_id"`
+	ExperimentID    sql.NullString  `json:"experiment_id"`
+	ExitReason      string          `json:"exit_reason"`
+	CreatedAt       string          `json:"created_at"`
+	DurationSeconds sql.NullInt64   `json:"duration_seconds"`
+	TurnCount       int64           `json:"turn_count"`
+	TotalTokens     int64           `json:"total_tokens"`
+	CostEstimateUsd sql.NullFloat64 `json:"cost_estimate_usd"`
+	ModelID         sql.NullString  `json:"model_id"`
+	SubagentCount   int64           `json:"subagent_count"`
+}
+
+func (q *Queries) ListSessionsWithMetricsFull(ctx context.Context, limit int64) ([]ListSessionsWithMetricsFullRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsWithMetricsFull, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionsWithMetricsFullRow{}
+	for rows.Next() {
+		var i ListSessionsWithMetricsFullRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ExperimentID,
+			&i.ExitReason,
+			&i.CreatedAt,
+			&i.DurationSeconds,
+			&i.TurnCount,
+			&i.TotalTokens,
+			&i.CostEstimateUsd,
+			&i.ModelID,
+			&i.SubagentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessionsWithMetricsFullByExperiment = `-- name: ListSessionsWithMetricsFullByExperiment :many
+SELECT
+    s.id, s.project_id, s.experiment_id, s.exit_reason, s.created_at,
+    s.duration_seconds,
+    COALESCE(m.turn_count, 0) as turn_count,
+    COALESCE(m.token_input, 0) + COALESCE(m.token_output, 0) as total_tokens,
+    m.cost_estimate_usd,
+    m.model_id,
+    (SELECT COUNT(*) FROM session_subagents sa WHERE sa.session_id = s.id) as subagent_count
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.experiment_id = ?
+ORDER BY s.created_at DESC
+LIMIT ?
+`
+
+type ListSessionsWithMetricsFullByExperimentParams struct {
+	ExperimentID sql.NullString `json:"experiment_id"`
+	Limit        int64          `json:"limit"`
+}
+
+type ListSessionsWithMetricsFullByExperimentRow struct {
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"project_id"`
+	ExperimentID    sql.NullString  `json:"experiment_id"`
+	ExitReason      string          `json:"exit_reason"`
+	CreatedAt       string          `json:"created_at"`
+	DurationSeconds sql.NullInt64   `json:"duration_seconds"`
+	TurnCount       int64           `json:"turn_count"`
+	TotalTokens     int64           `json:"total_tokens"`
+	CostEstimateUsd sql.NullFloat64 `json:"cost_estimate_usd"`
+	ModelID         sql.NullString  `json:"model_id"`
+	SubagentCount   int64           `json:"subagent_count"`
+}
+
+func (q *Queries) ListSessionsWithMetricsFullByExperiment(ctx context.Context, arg ListSessionsWithMetricsFullByExperimentParams) ([]ListSessionsWithMetricsFullByExperimentRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsWithMetricsFullByExperiment, arg.ExperimentID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionsWithMetricsFullByExperimentRow{}
+	for rows.Next() {
+		var i ListSessionsWithMetricsFullByExperimentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ExperimentID,
+			&i.ExitReason,
+			&i.CreatedAt,
+			&i.DurationSeconds,
+			&i.TurnCount,
+			&i.TotalTokens,
+			&i.CostEstimateUsd,
+			&i.ModelID,
+			&i.SubagentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessionsWithMetricsFullByProject = `-- name: ListSessionsWithMetricsFullByProject :many
+SELECT
+    s.id, s.project_id, s.experiment_id, s.exit_reason, s.created_at,
+    s.duration_seconds,
+    COALESCE(m.turn_count, 0) as turn_count,
+    COALESCE(m.token_input, 0) + COALESCE(m.token_output, 0) as total_tokens,
+    m.cost_estimate_usd,
+    m.model_id,
+    (SELECT COUNT(*) FROM session_subagents sa WHERE sa.session_id = s.id) as subagent_count
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.project_id = ?
+ORDER BY s.created_at DESC
+LIMIT ?
+`
+
+type ListSessionsWithMetricsFullByProjectParams struct {
+	ProjectID string `json:"project_id"`
+	Limit     int64  `json:"limit"`
+}
+
+type ListSessionsWithMetricsFullByProjectRow struct {
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"project_id"`
+	ExperimentID    sql.NullString  `json:"experiment_id"`
+	ExitReason      string          `json:"exit_reason"`
+	CreatedAt       string          `json:"created_at"`
+	DurationSeconds sql.NullInt64   `json:"duration_seconds"`
+	TurnCount       int64           `json:"turn_count"`
+	TotalTokens     int64           `json:"total_tokens"`
+	CostEstimateUsd sql.NullFloat64 `json:"cost_estimate_usd"`
+	ModelID         sql.NullString  `json:"model_id"`
+	SubagentCount   int64           `json:"subagent_count"`
+}
+
+func (q *Queries) ListSessionsWithMetricsFullByProject(ctx context.Context, arg ListSessionsWithMetricsFullByProjectParams) ([]ListSessionsWithMetricsFullByProjectRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsWithMetricsFullByProject, arg.ProjectID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionsWithMetricsFullByProjectRow{}
+	for rows.Next() {
+		var i ListSessionsWithMetricsFullByProjectRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ExperimentID,
+			&i.ExitReason,
+			&i.CreatedAt,
+			&i.DurationSeconds,
+			&i.TurnCount,
+			&i.TotalTokens,
+			&i.CostEstimateUsd,
+			&i.ModelID,
+			&i.SubagentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

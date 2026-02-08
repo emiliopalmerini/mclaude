@@ -99,6 +99,103 @@ func (r *SessionRepository) List(ctx context.Context, opts ports.ListSessionsOpt
 	return sessions, nil
 }
 
+func (r *SessionRepository) ListWithMetrics(ctx context.Context, opts ports.ListSessionsOptions) ([]*domain.SessionListItem, error) {
+	limit := int64(opts.Limit)
+	if limit == 0 {
+		limit = 50
+	}
+
+	if opts.ProjectID != nil {
+		rows, err := r.queries.ListSessionsWithMetricsFullByProject(ctx, sqlc.ListSessionsWithMetricsFullByProjectParams{
+			ProjectID: *opts.ProjectID,
+			Limit:     limit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+		}
+		items := make([]*domain.SessionListItem, len(rows))
+		for i, row := range rows {
+			items[i] = &domain.SessionListItem{
+				ID:            row.ID,
+				ProjectID:     row.ProjectID,
+				ExperimentID:  util.NullStringToPtr(row.ExperimentID),
+				ExitReason:    row.ExitReason,
+				CreatedAt:     row.CreatedAt,
+				Duration:      nullInt64ToPtr(row.DurationSeconds),
+				TurnCount:     row.TurnCount,
+				TotalTokens:   row.TotalTokens,
+				Cost:          nullFloat64ToPtr(row.CostEstimateUsd),
+				ModelID:       util.NullStringToPtr(row.ModelID),
+				SubagentCount: row.SubagentCount,
+			}
+		}
+		return items, nil
+	}
+
+	if opts.ExperimentID != nil {
+		rows, err := r.queries.ListSessionsWithMetricsFullByExperiment(ctx, sqlc.ListSessionsWithMetricsFullByExperimentParams{
+			ExperimentID: util.NullStringPtr(opts.ExperimentID),
+			Limit:        limit,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+		}
+		items := make([]*domain.SessionListItem, len(rows))
+		for i, row := range rows {
+			items[i] = &domain.SessionListItem{
+				ID:            row.ID,
+				ProjectID:     row.ProjectID,
+				ExperimentID:  util.NullStringToPtr(row.ExperimentID),
+				ExitReason:    row.ExitReason,
+				CreatedAt:     row.CreatedAt,
+				Duration:      nullInt64ToPtr(row.DurationSeconds),
+				TurnCount:     row.TurnCount,
+				TotalTokens:   row.TotalTokens,
+				Cost:          nullFloat64ToPtr(row.CostEstimateUsd),
+				ModelID:       util.NullStringToPtr(row.ModelID),
+				SubagentCount: row.SubagentCount,
+			}
+		}
+		return items, nil
+	}
+
+	rows, err := r.queries.ListSessionsWithMetricsFull(ctx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+	}
+	items := make([]*domain.SessionListItem, len(rows))
+	for i, row := range rows {
+		items[i] = &domain.SessionListItem{
+			ID:            row.ID,
+			ProjectID:     row.ProjectID,
+			ExperimentID:  util.NullStringToPtr(row.ExperimentID),
+			ExitReason:    row.ExitReason,
+			CreatedAt:     row.CreatedAt,
+			Duration:      nullInt64ToPtr(row.DurationSeconds),
+			TurnCount:     row.TurnCount,
+			TotalTokens:   row.TotalTokens,
+			Cost:          nullFloat64ToPtr(row.CostEstimateUsd),
+			ModelID:       util.NullStringToPtr(row.ModelID),
+			SubagentCount: row.SubagentCount,
+		}
+	}
+	return items, nil
+}
+
+func nullInt64ToPtr(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	return &n.Int64
+}
+
+func nullFloat64ToPtr(n sql.NullFloat64) *float64 {
+	if !n.Valid {
+		return nil
+	}
+	return &n.Float64
+}
+
 func (r *SessionRepository) Delete(ctx context.Context, id string) error {
 	return r.queries.DeleteSession(ctx, id)
 }

@@ -105,6 +105,9 @@ type SessionSummary struct {
 	Turns          int64
 	Tokens         int64
 	Cost           float64
+	Model          string
+	Duration       int64
+	SubagentCount  int64
 	// Quality (nil if not reviewed)
 	IsReviewed    bool
 	OverallRating int
@@ -120,10 +123,19 @@ type SubagentUsage struct {
 	DurationMs int64
 }
 
+type ToolEventView struct {
+	ToolName     string
+	ToolUseID    string
+	ToolInput    string
+	ToolResponse string
+	CapturedAt   string
+}
+
 type SessionDetail struct {
 	ID                    string
 	ProjectID             string
 	ExperimentID          string
+	ModelID               string
 	Cwd                   string
 	PermissionMode        string
 	ExitReason            string
@@ -143,6 +155,7 @@ type SessionDetail struct {
 	Tools                 []ToolUsage
 	Files                 []FileOperation
 	Subagents             []SubagentUsage
+	ToolEvents            []ToolEventView
 	// Quality
 	Quality *SessionQuality
 }
