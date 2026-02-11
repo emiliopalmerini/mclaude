@@ -57,8 +57,8 @@ func (q *Queries) CreateSessionFile(ctx context.Context, arg CreateSessionFilePa
 }
 
 const createSessionMetrics = `-- name: CreateSessionMetrics :exec
-INSERT OR REPLACE INTO session_metrics (session_id, model_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT OR REPLACE INTO session_metrics (session_id, model_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count, input_rate, output_rate, cache_read_rate, cache_write_rate)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateSessionMetricsParams struct {
@@ -73,6 +73,10 @@ type CreateSessionMetricsParams struct {
 	TokenCacheWrite       int64           `json:"token_cache_write"`
 	CostEstimateUsd       sql.NullFloat64 `json:"cost_estimate_usd"`
 	ErrorCount            int64           `json:"error_count"`
+	InputRate             sql.NullFloat64 `json:"input_rate"`
+	OutputRate            sql.NullFloat64 `json:"output_rate"`
+	CacheReadRate         sql.NullFloat64 `json:"cache_read_rate"`
+	CacheWriteRate        sql.NullFloat64 `json:"cache_write_rate"`
 }
 
 func (q *Queries) CreateSessionMetrics(ctx context.Context, arg CreateSessionMetricsParams) error {
@@ -88,6 +92,10 @@ func (q *Queries) CreateSessionMetrics(ctx context.Context, arg CreateSessionMet
 		arg.TokenCacheWrite,
 		arg.CostEstimateUsd,
 		arg.ErrorCount,
+		arg.InputRate,
+		arg.OutputRate,
+		arg.CacheReadRate,
+		arg.CacheWriteRate,
 	)
 	return err
 }
@@ -368,7 +376,7 @@ func (q *Queries) GetDailyStats(ctx context.Context, arg GetDailyStatsParams) ([
 }
 
 const getSessionMetricsBySessionID = `-- name: GetSessionMetricsBySessionID :one
-SELECT session_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count, model_id FROM session_metrics WHERE session_id = ?
+SELECT session_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count, model_id, input_rate, output_rate, cache_read_rate, cache_write_rate FROM session_metrics WHERE session_id = ?
 `
 
 func (q *Queries) GetSessionMetricsBySessionID(ctx context.Context, sessionID string) (SessionMetric, error) {
@@ -386,6 +394,10 @@ func (q *Queries) GetSessionMetricsBySessionID(ctx context.Context, sessionID st
 		&i.CostEstimateUsd,
 		&i.ErrorCount,
 		&i.ModelID,
+		&i.InputRate,
+		&i.OutputRate,
+		&i.CacheReadRate,
+		&i.CacheWriteRate,
 	)
 	return i, err
 }
@@ -661,6 +673,20 @@ func (q *Queries) GetTopToolsUsageByExperiment(ctx context.Context, arg GetTopTo
 		return nil, err
 	}
 	return items, nil
+}
+
+const getTotalToolCallsByExperiment = `-- name: GetTotalToolCallsByExperiment :one
+SELECT COALESCE(SUM(st.invocation_count), 0) as total_tool_calls
+FROM session_tools st
+JOIN sessions s ON st.session_id = s.id
+WHERE s.experiment_id = ?
+`
+
+func (q *Queries) GetTotalToolCallsByExperiment(ctx context.Context, experimentID sql.NullString) (interface{}, error) {
+	row := q.db.QueryRowContext(ctx, getTotalToolCallsByExperiment, experimentID)
+	var total_tool_calls interface{}
+	err := row.Scan(&total_tool_calls)
+	return total_tool_calls, err
 }
 
 const listSessionCommandsBySessionID = `-- name: ListSessionCommandsBySessionID :many

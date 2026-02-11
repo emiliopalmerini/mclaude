@@ -100,6 +100,14 @@ func (r *StatsRepository) GetTopTools(ctx context.Context, since string, limit i
 	return tools, nil
 }
 
+func (r *StatsRepository) GetTotalToolCallsByExperiment(ctx context.Context, experimentID string) (int64, error) {
+	result, err := r.queries.GetTotalToolCallsByExperiment(ctx, util.NullString(experimentID))
+	if err != nil {
+		return 0, fmt.Errorf("failed to get tool call count: %w", err)
+	}
+	return util.ToInt64(result), nil
+}
+
 func (r *StatsRepository) GetAllExperimentStats(ctx context.Context) ([]domain.ExperimentStats, error) {
 	rows, err := r.queries.GetStatsForAllExperiments(ctx)
 	if err != nil {

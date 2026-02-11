@@ -29,6 +29,10 @@ type SessionMetrics struct {
 	TokenCacheWrite       int64
 	CostEstimateUSD       *float64
 	ErrorCount            int64
+	InputRate             *float64
+	OutputRate            *float64
+	CacheReadRate         *float64
+	CacheWriteRate        *float64
 }
 
 type SessionTool struct {

@@ -11,4 +11,7 @@ type Experiment struct {
 	EndedAt     *time.Time
 	IsActive    bool
 	CreatedAt   time.Time
+	ModelID     *string
+	PlanType    *string
+	Notes       *string
 }

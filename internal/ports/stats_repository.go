@@ -12,4 +12,5 @@ type StatsRepository interface {
 	GetAggregateByProject(ctx context.Context, projectID string, since string) (*domain.AggregateStats, error)
 	GetTopTools(ctx context.Context, since string, limit int) ([]domain.ToolUsageStats, error)
 	GetAllExperimentStats(ctx context.Context) ([]domain.ExperimentStats, error)
+	GetTotalToolCallsByExperiment(ctx context.Context, experimentID string) (int64, error)
 }

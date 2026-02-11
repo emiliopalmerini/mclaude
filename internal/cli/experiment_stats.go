@@ -27,6 +27,12 @@ type expData struct {
 	totalTokens  int64
 	tokensPerSes int64
 	costPerSes   float64
+	// Normalized behavior metrics
+	tokensPerTurn    float64
+	outputRatio      float64
+	cacheHitRate     float64
+	errorRate        float64
+	toolCallsPerTurn float64
 }
 
 func runExperimentStats(cmd *cobra.Command, args []string) error {
@@ -53,6 +59,15 @@ func runExperimentStats(cmd *cobra.Command, args []string) error {
 	}
 	if exp.Hypothesis != nil && *exp.Hypothesis != "" {
 		fmt.Printf("  Hypothesis:   %s\n", *exp.Hypothesis)
+	}
+	if exp.ModelID != nil && *exp.ModelID != "" {
+		fmt.Printf("  Model:        %s\n", *exp.ModelID)
+	}
+	if exp.PlanType != nil && *exp.PlanType != "" {
+		fmt.Printf("  Plan:         %s\n", *exp.PlanType)
+	}
+	if exp.Notes != nil && *exp.Notes != "" {
+		fmt.Printf("  Notes:        %s\n", *exp.Notes)
 	}
 
 	status := "inactive"
@@ -100,6 +115,19 @@ func runExperimentStats(cmd *cobra.Command, args []string) error {
 		fmt.Println()
 	}
 
+	// Normalized behavior metrics
+	toolCalls, _ := app.StatsRepo.GetTotalToolCallsByExperiment(ctx, exp.ID)
+	normalized := stats.ComputeNormalized(toolCalls)
+
+	fmt.Printf("  Behavior\n")
+	fmt.Printf("  --------\n")
+	fmt.Printf("  Tokens/turn:       %s\n", util.FormatNumber(int64(normalized.TokensPerTurn)))
+	fmt.Printf("  Output ratio:      %.2f\n", normalized.OutputRatio)
+	fmt.Printf("  Cache hit rate:    %.1f%%\n", normalized.CacheHitRate*100)
+	fmt.Printf("  Error rate:        %.2f%%\n", normalized.ErrorRate*100)
+	fmt.Printf("  Tool calls/turn:   %.1f\n", normalized.ToolCallsPerTurn)
+	fmt.Println()
+
 	return nil
 }
 
@@ -130,21 +158,29 @@ func runExperimentCompare(cmd *cobra.Command, args []string) error {
 			costPerSes = stats.TotalCostUsd / float64(stats.SessionCount)
 		}
 
+		toolCalls, _ := app.StatsRepo.GetTotalToolCallsByExperiment(ctx, exp.ID)
+		normalized := stats.ComputeNormalized(toolCalls)
+
 		experiments = append(experiments, expData{
-			name:         name,
-			sessions:     stats.SessionCount,
-			turns:        stats.TotalTurns,
-			userMsgs:     stats.TotalUserMessages,
-			assistMsgs:   stats.TotalAssistantMessages,
-			tokenInput:   stats.TotalTokenInput,
-			tokenOutput:  stats.TotalTokenOutput,
-			cacheRead:    stats.TotalTokenCacheRead,
-			cacheWrite:   stats.TotalTokenCacheWrite,
-			cost:         stats.TotalCostUsd,
-			errors:       stats.TotalErrors,
-			totalTokens:  totalTokens,
-			tokensPerSes: tokensPerSes,
-			costPerSes:   costPerSes,
+			name:             name,
+			sessions:         stats.SessionCount,
+			turns:            stats.TotalTurns,
+			userMsgs:         stats.TotalUserMessages,
+			assistMsgs:       stats.TotalAssistantMessages,
+			tokenInput:       stats.TotalTokenInput,
+			tokenOutput:      stats.TotalTokenOutput,
+			cacheRead:        stats.TotalTokenCacheRead,
+			cacheWrite:       stats.TotalTokenCacheWrite,
+			cost:             stats.TotalCostUsd,
+			errors:           stats.TotalErrors,
+			totalTokens:      totalTokens,
+			tokensPerSes:     tokensPerSes,
+			costPerSes:       costPerSes,
+			tokensPerTurn:    normalized.TokensPerTurn,
+			outputRatio:      normalized.OutputRatio,
+			cacheHitRate:     normalized.CacheHitRate,
+			errorRate:        normalized.ErrorRate,
+			toolCallsPerTurn: normalized.ToolCallsPerTurn,
 		})
 	}
 
@@ -192,6 +228,12 @@ func runExperimentCompare(cmd *cobra.Command, args []string) error {
 	printCompareRow(w, "Cost", experiments, func(e expData) string { return fmt.Sprintf("$%.2f", e.cost) })
 	printCompareRow(w, "Tokens/session", experiments, func(e expData) string { return util.FormatNumber(e.tokensPerSes) })
 	printCompareRow(w, "Cost/session", experiments, func(e expData) string { return fmt.Sprintf("$%.4f", e.costPerSes) })
+	fmt.Fprintln(w)
+	printCompareRow(w, "Tokens/turn", experiments, func(e expData) string { return util.FormatNumber(int64(e.tokensPerTurn)) })
+	printCompareRow(w, "Output ratio", experiments, func(e expData) string { return fmt.Sprintf("%.2f", e.outputRatio) })
+	printCompareRow(w, "Cache hit rate", experiments, func(e expData) string { return fmt.Sprintf("%.1f%%", e.cacheHitRate*100) })
+	printCompareRow(w, "Error rate", experiments, func(e expData) string { return fmt.Sprintf("%.2f%%", e.errorRate*100) })
+	printCompareRow(w, "Tool calls/turn", experiments, func(e expData) string { return fmt.Sprintf("%.1f", e.toolCallsPerTurn) })
 
 	w.Flush()
 	fmt.Println()

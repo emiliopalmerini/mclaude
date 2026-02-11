@@ -17,6 +17,9 @@ type Experiment struct {
 	EndedAt     sql.NullString `json:"ended_at"`
 	IsActive    int64          `json:"is_active"`
 	CreatedAt   string         `json:"created_at"`
+	ModelID     sql.NullString `json:"model_id"`
+	PlanType    sql.NullString `json:"plan_type"`
+	Notes       sql.NullString `json:"notes"`
 }
 
 type HookSubagentTracking struct {
@@ -104,6 +107,10 @@ type SessionMetric struct {
 	CostEstimateUsd       sql.NullFloat64 `json:"cost_estimate_usd"`
 	ErrorCount            int64           `json:"error_count"`
 	ModelID               sql.NullString  `json:"model_id"`
+	InputRate             sql.NullFloat64 `json:"input_rate"`
+	OutputRate            sql.NullFloat64 `json:"output_rate"`
+	CacheReadRate         sql.NullFloat64 `json:"cache_read_rate"`
+	CacheWriteRate        sql.NullFloat64 `json:"cache_write_rate"`
 }
 
 type SessionQuality struct {

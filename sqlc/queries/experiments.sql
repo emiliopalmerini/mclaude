@@ -1,6 +1,6 @@
 -- name: CreateExperiment :exec
-INSERT INTO experiments (id, name, description, hypothesis, started_at, ended_at, is_active, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO experiments (id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetExperimentByID :one
 SELECT * FROM experiments WHERE id = ?;
@@ -16,7 +16,7 @@ SELECT * FROM experiments ORDER BY created_at DESC;
 
 -- name: UpdateExperiment :exec
 UPDATE experiments
-SET name = ?, description = ?, hypothesis = ?, started_at = ?, ended_at = ?, is_active = ?
+SET name = ?, description = ?, hypothesis = ?, started_at = ?, ended_at = ?, is_active = ?, model_id = ?, plan_type = ?, notes = ?
 WHERE id = ?;
 
 -- name: DeleteExperiment :exec
