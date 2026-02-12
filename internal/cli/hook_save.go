@@ -37,7 +37,6 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 	subagentRepo := turso.NewSessionSubagentRepository(sqlDB)
 	pricingRepo := turso.NewPricingRepository(sqlDB)
 	qualityRepo := turso.NewSessionQualityRepository(sqlDB)
-	planConfigRepo := turso.NewPlanConfigRepository(sqlDB)
 
 	project, err := projectRepo.GetOrCreate(ctx, cwd)
 	if err != nil {
@@ -52,20 +51,6 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 	parsed, err := parser.ParseTranscript(sessionID, transcriptPath)
 	if err != nil {
 		return fmt.Errorf("failed to parse transcript: %w", err)
-	}
-
-	// Reset usage windows if expired
-	if parsed.StartedAt != nil {
-		if reset, err := planConfigRepo.ResetWindowIfExpired(ctx, *parsed.StartedAt); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to check window reset: %v\n", err)
-		} else if reset {
-			fmt.Println("5-hour usage window reset")
-		}
-		if reset, err := planConfigRepo.ResetWeeklyWindowIfExpired(ctx, *parsed.StartedAt); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to check weekly window reset: %v\n", err)
-		} else if reset {
-			fmt.Println("Weekly usage window reset")
-		}
 	}
 
 	// Store transcript copy (unless skipped)

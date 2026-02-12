@@ -22,7 +22,6 @@ type AppContext struct {
 	ProjectRepo       ports.ProjectRepository
 	PricingRepo      ports.PricingRepository
 	QualityRepo      ports.SessionQualityRepository
-	PlanConfigRepo    ports.PlanConfigRepository
 	StatsRepo         ports.StatsRepository
 	TranscriptStorage ports.TranscriptStorage
 }
@@ -53,7 +52,6 @@ func NewAppContext() (*AppContext, error) {
 		ProjectRepo:       turso.NewProjectRepository(db.DB),
 		PricingRepo:       turso.NewPricingRepository(db.DB),
 		QualityRepo:       turso.NewSessionQualityRepository(db.DB),
-		PlanConfigRepo:    turso.NewPlanConfigRepository(db.DB),
 		StatsRepo:         turso.NewStatsRepository(db.DB),
 		TranscriptStorage: transcriptStorage,
 	}, nil

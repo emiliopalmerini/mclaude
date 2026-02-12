@@ -21,7 +21,6 @@ type Server struct {
 	port              int
 	transcriptStorage ports.TranscriptStorage
 	qualityRepo       ports.SessionQualityRepository
-	planConfigRepo    ports.PlanConfigRepository
 	experimentRepo    ports.ExperimentRepository
 	expVariableRepo   ports.ExperimentVariableRepository
 	pricingRepo       ports.PricingRepository
@@ -36,7 +35,6 @@ func NewServer(
 	port int,
 	ts ports.TranscriptStorage,
 	qr ports.SessionQualityRepository,
-	pcr ports.PlanConfigRepository,
 	er ports.ExperimentRepository,
 	evr ports.ExperimentVariableRepository,
 	pr ports.PricingRepository,
@@ -51,7 +49,6 @@ func NewServer(
 		port:              port,
 		transcriptStorage: ts,
 		qualityRepo:       qr,
-		planConfigRepo:    pcr,
 		experimentRepo:    er,
 		expVariableRepo:   evr,
 		pricingRepo:       pr,
@@ -112,16 +109,9 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("POST /api/pricing/{id}/default", s.handleAPISetDefaultPricing)
 	s.router.HandleFunc("DELETE /api/pricing/{id}", s.handleAPIDeletePricing)
 
-	// Limits management
-	s.router.HandleFunc("POST /api/limits/plan", s.handleAPISetPlan)
-	s.router.HandleFunc("POST /api/limits/learn", s.handleAPILearnLimit)
-	s.router.HandleFunc("POST /api/limits/learn-weekly", s.handleAPILearnWeeklyLimit)
-
 	// Export
 	s.router.HandleFunc("GET /api/export/sessions", s.handleAPIExportSessions)
 
-	// Real-time usage endpoint (for HTMX auto-refresh)
-	s.router.HandleFunc("GET /api/realtime/usage", s.handleAPIRealtimeUsage)
 }
 
 func (s *Server) Start(ctx context.Context) error {

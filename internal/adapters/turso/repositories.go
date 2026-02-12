@@ -20,7 +20,6 @@ type Repositories struct {
 	Projects            ports.ProjectRepository
 	Pricing     ports.PricingRepository
 	Quality     ports.SessionQualityRepository
-	PlanConfig  ports.PlanConfigRepository
 	Stats       ports.StatsRepository
 	Transcripts ports.TranscriptStorage
 }
@@ -40,7 +39,6 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Projects:            NewProjectRepository(db),
 		Pricing:     NewPricingRepository(db),
 		Quality:     NewSessionQualityRepository(db),
-		PlanConfig:  NewPlanConfigRepository(db),
 		Stats:       NewStatsRepository(db),
 		Transcripts: NewTranscriptRepository(db),
 	}

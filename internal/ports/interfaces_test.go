@@ -54,10 +54,6 @@ func TestSessionQualityRepositoryConformance(t *testing.T) {
 	var _ ports.SessionQualityRepository = (*turso.SessionQualityRepository)(nil)
 }
 
-func TestPlanConfigRepositoryConformance(t *testing.T) {
-	var _ ports.PlanConfigRepository = (*turso.PlanConfigRepository)(nil)
-}
-
 func TestStatsRepositoryConformance(t *testing.T) {
 	var _ ports.StatsRepository = (*turso.StatsRepository)(nil)
 }

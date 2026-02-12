@@ -20,7 +20,6 @@ func TestAppContextFieldTypes(t *testing.T) {
 	var _ ports.ProjectRepository = a.ProjectRepo                      //nolint:staticcheck
 	var _ ports.PricingRepository = a.PricingRepo                      //nolint:staticcheck
 	var _ ports.SessionQualityRepository = a.QualityRepo               //nolint:staticcheck
-	var _ ports.PlanConfigRepository = a.PlanConfigRepo                //nolint:staticcheck
 	var _ ports.StatsRepository = a.StatsRepo                          //nolint:staticcheck
 	var _ ports.TranscriptStorage = a.TranscriptStorage                //nolint:staticcheck
 }

@@ -18,8 +18,6 @@ type DashboardStats struct {
 	ReviewedCount int64
 	SuccessRate   *float64
 	AvgOverall    *float64
-	// Usage limits
-	UsageStats *UsageLimitStats
 	// Filters
 	FilterPeriod     string
 	FilterExperiment string
@@ -45,48 +43,9 @@ type SessionsPageData struct {
 	MaxTokens        int64
 }
 
-// SettingsPageData wraps pricing and plan config for the settings page.
+// SettingsPageData wraps pricing for the settings page.
 type SettingsPageData struct {
-	Pricing    []ModelPricing
-	PlanConfig *PlanConfigView
-}
-
-// PlanConfigView for displaying plan config in settings.
-type PlanConfigView struct {
-	PlanType                string
-	WindowHours             int
-	LearnedTokenLimit       *float64
-	WeeklyLearnedTokenLimit *float64
-}
-
-type UsageLimitStats struct {
-	PlanType     string  // pro, max_5x, max_20x
-	WindowHours  int     // Rolling window size (typically 5)
-	TokensUsed   float64 // Current tokens in window
-	TokenLimit   float64 // Limit (learned or estimated)
-	UsagePercent float64 // 0-100+
-	Status       string  // OK, WARNING, EXCEEDED
-	IsLearned    bool    // true if limit is learned, false if estimated
-	MinutesLeft  int     // Minutes until window resets (approx)
-	// Weekly fields
-	WeeklyTokensUsed   float64 // Current tokens in weekly window
-	WeeklyTokenLimit   float64 // Weekly limit (learned or estimated)
-	WeeklyUsagePercent float64 // 0-100+
-	WeeklyStatus       string  // OK, WARNING, EXCEEDED
-	WeeklyIsLearned    bool    // true if weekly limit is learned
-}
-
-// RealtimeUsageStats contains real-time usage data for the JSON API.
-type RealtimeUsageStats struct {
-	Available       bool    `json:"available"`
-	FiveHourTokens  float64 `json:"five_hour_tokens"`
-	WeeklyTokens    float64 `json:"weekly_tokens"`
-	FiveHourPercent float64 `json:"five_hour_percent"`
-	WeeklyPercent   float64 `json:"weekly_percent"`
-	FiveHourStatus  string  `json:"five_hour_status"`
-	WeeklyStatus    string  `json:"weekly_status"`
-	FiveHourLimit   float64 `json:"five_hour_limit"`
-	WeeklyLimit     float64 `json:"weekly_limit"`
+	Pricing []ModelPricing
 }
 
 type ToolUsage struct {

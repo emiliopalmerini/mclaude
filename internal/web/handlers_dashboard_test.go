@@ -68,7 +68,7 @@ func testServer(t *testing.T, db *sql.DB) *Server {
 	repos := turso.NewRepositories(db)
 	return NewServer(
 		db, 0, nil,
-		repos.Quality, repos.PlanConfig, repos.Experiments,
+		repos.Quality, repos.Experiments,
 		repos.ExperimentVariables, repos.Pricing, repos.Sessions, repos.Metrics,
 		repos.Stats, repos.Projects,
 	)

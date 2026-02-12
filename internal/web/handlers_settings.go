@@ -34,20 +34,8 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		models = append(models, model)
 	}
 
-	// Get plan config
-	var planView *templates.PlanConfigView
-	if planConfig, err := s.planConfigRepo.Get(ctx); err == nil && planConfig != nil {
-		planView = &templates.PlanConfigView{
-			PlanType:                planConfig.PlanType,
-			WindowHours:             planConfig.WindowHours,
-			LearnedTokenLimit:       planConfig.LearnedTokenLimit,
-			WeeklyLearnedTokenLimit: planConfig.WeeklyLearnedTokenLimit,
-		}
-	}
-
 	pageData := templates.SettingsPageData{
-		Pricing:    models,
-		PlanConfig: planView,
+		Pricing: models,
 	}
 
 	templates.SettingsPage(pageData).Render(ctx, w)
@@ -141,90 +129,6 @@ func (s *Server) handleAPIDeletePricing(w http.ResponseWriter, r *http.Request) 
 	id := r.PathValue("id")
 
 	if err := s.pricingRepo.Delete(ctx, id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("HX-Redirect", "/settings")
-	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) handleAPISetPlan(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, "Invalid form data", http.StatusBadRequest)
-		return
-	}
-
-	planType := strings.ToLower(strings.TrimSpace(r.FormValue("plan_type")))
-	if _, ok := domain.PlanPresets[planType]; !ok {
-		http.Error(w, "Invalid plan type (valid: pro, max_5x, max_20x)", http.StatusBadRequest)
-		return
-	}
-
-	config := &domain.PlanConfig{
-		PlanType:    planType,
-		WindowHours: 5,
-	}
-
-	if err := s.planConfigRepo.Upsert(ctx, config); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("HX-Redirect", "/settings")
-	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) handleAPILearnLimit(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	config, err := s.planConfigRepo.Get(ctx)
-	if err != nil || config == nil {
-		http.Error(w, "No plan configured", http.StatusBadRequest)
-		return
-	}
-
-	summary, err := s.planConfigRepo.GetRollingWindowSummary(ctx, config.WindowHours)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if summary.TotalTokens == 0 {
-		http.Error(w, "No token usage recorded in the current window", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.planConfigRepo.UpdateLearnedLimit(ctx, summary.TotalTokens); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("HX-Redirect", "/settings")
-	w.WriteHeader(http.StatusOK)
-}
-
-func (s *Server) handleAPILearnWeeklyLimit(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	config, err := s.planConfigRepo.Get(ctx)
-	if err != nil || config == nil {
-		http.Error(w, "No plan configured", http.StatusBadRequest)
-		return
-	}
-
-	summary, err := s.planConfigRepo.GetWeeklyWindowSummary(ctx)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if summary.TotalTokens == 0 {
-		http.Error(w, "No token usage recorded in the last 7 days", http.StatusBadRequest)
-		return
-	}
-
-	if err := s.planConfigRepo.UpdateWeeklyLearnedLimit(ctx, summary.TotalTokens); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

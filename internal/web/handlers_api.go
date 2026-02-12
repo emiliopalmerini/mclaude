@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/emiliopalmerini/mclaude/internal/domain"
 	"github.com/emiliopalmerini/mclaude/internal/util"
-	"github.com/emiliopalmerini/mclaude/internal/web/templates"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
 
@@ -120,89 +118,4 @@ func (s *Server) handleAPIChartHeatmap(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"data": data,
 	})
-}
-
-func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	// Get plan config for limits
-	planConfig, err := s.planConfigRepo.Get(ctx)
-	if err != nil || planConfig == nil {
-		// No plan configured
-		if r.Header.Get("HX-Request") == "true" {
-			// HTMX request - return HTML
-			_ = templates.UsageLimitContent(nil).Render(ctx, w)
-			return
-		}
-		// JSON API request
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(templates.RealtimeUsageStats{Available: false})
-		return
-	}
-
-	// Build UsageLimitStats for template rendering
-	usageStats := &templates.UsageLimitStats{
-		PlanType:    planConfig.PlanType,
-		WindowHours: planConfig.WindowHours,
-	}
-
-	// Get 5-hour limit
-	if planConfig.LearnedTokenLimit != nil {
-		usageStats.TokenLimit = *planConfig.LearnedTokenLimit
-		usageStats.IsLearned = true
-	} else if preset, ok := domain.PlanPresets[planConfig.PlanType]; ok {
-		usageStats.TokenLimit = preset.TokenEstimate
-	}
-
-	// Get weekly limit
-	if planConfig.WeeklyLearnedTokenLimit != nil {
-		usageStats.WeeklyTokenLimit = *planConfig.WeeklyLearnedTokenLimit
-		usageStats.WeeklyIsLearned = true
-	} else if preset, ok := domain.WeeklyPlanPresets[planConfig.PlanType]; ok {
-		usageStats.WeeklyTokenLimit = preset.TokenEstimate
-	}
-
-	// Query local DB for usage data
-	if summary, err := s.planConfigRepo.GetRollingWindowSummary(ctx, planConfig.WindowHours); err == nil {
-		usageStats.TokensUsed = summary.TotalTokens
-	}
-	if summary, err := s.planConfigRepo.GetWeeklyWindowSummary(ctx); err == nil {
-		usageStats.WeeklyTokensUsed = summary.TotalTokens
-	}
-
-	// Calculate percentages and status
-	if usageStats.TokenLimit > 0 {
-		usageStats.UsagePercent = (usageStats.TokensUsed / usageStats.TokenLimit) * 100
-		usageStats.Status = domain.GetStatusFromPercent(usageStats.UsagePercent)
-	}
-
-	if usageStats.WeeklyTokenLimit > 0 {
-		usageStats.WeeklyUsagePercent = (usageStats.WeeklyTokensUsed / usageStats.WeeklyTokenLimit) * 100
-		usageStats.WeeklyStatus = domain.GetStatusFromPercent(usageStats.WeeklyUsagePercent)
-	}
-
-	usageStats.MinutesLeft = planConfig.WindowHours * 60
-
-	// Check if this is an HTMX request
-	if r.Header.Get("HX-Request") == "true" {
-		// HTMX request - return HTML
-		_ = templates.UsageLimitContent(usageStats).Render(ctx, w)
-		return
-	}
-
-	// JSON API request - convert to RealtimeUsageStats
-	realtimeStats := templates.RealtimeUsageStats{
-		Available:       true,
-		FiveHourTokens:  usageStats.TokensUsed,
-		WeeklyTokens:    usageStats.WeeklyTokensUsed,
-		FiveHourPercent: usageStats.UsagePercent,
-		WeeklyPercent:   usageStats.WeeklyUsagePercent,
-		FiveHourStatus:  usageStats.Status,
-		WeeklyStatus:    usageStats.WeeklyStatus,
-		FiveHourLimit:   usageStats.TokenLimit,
-		WeeklyLimit:     usageStats.WeeklyTokenLimit,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(realtimeStats)
 }

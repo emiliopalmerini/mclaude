@@ -38,7 +38,6 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 		aggStats       *domain.AggregateStats
 		experiments    []*domain.Experiment
 		projects       []*domain.Project
-		usageStats     *templates.UsageLimitStats
 		activeExp      sqlc.Experiment
 		defaultModel   sqlc.ModelPricing
 		tools          []sqlc.GetTopToolsUsageRow
@@ -75,54 +74,7 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 		return nil
 	})
 
-	// 4. Plan config → rolling window → weekly window (internal chain)
-	g.Go(func() error {
-		planConfig, err := s.planConfigRepo.Get(gctx)
-		if err != nil || planConfig == nil {
-			return nil
-		}
-
-		us := &templates.UsageLimitStats{
-			PlanType:    planConfig.PlanType,
-			WindowHours: planConfig.WindowHours,
-		}
-
-		if planConfig.LearnedTokenLimit != nil {
-			us.TokenLimit = *planConfig.LearnedTokenLimit
-			us.IsLearned = true
-		} else if preset, ok := domain.PlanPresets[planConfig.PlanType]; ok {
-			us.TokenLimit = preset.TokenEstimate
-		}
-
-		if summary, err := s.planConfigRepo.GetRollingWindowSummary(gctx, planConfig.WindowHours); err == nil {
-			us.TokensUsed = summary.TotalTokens
-			if us.TokenLimit > 0 {
-				us.UsagePercent = (summary.TotalTokens / us.TokenLimit) * 100
-			}
-			us.Status = domain.GetStatusFromPercent(us.UsagePercent)
-			us.MinutesLeft = planConfig.WindowHours * 60
-		}
-
-		if planConfig.WeeklyLearnedTokenLimit != nil {
-			us.WeeklyTokenLimit = *planConfig.WeeklyLearnedTokenLimit
-			us.WeeklyIsLearned = true
-		} else if preset, ok := domain.WeeklyPlanPresets[planConfig.PlanType]; ok {
-			us.WeeklyTokenLimit = preset.TokenEstimate
-		}
-
-		if weeklySummary, err := s.planConfigRepo.GetWeeklyWindowSummary(gctx); err == nil {
-			us.WeeklyTokensUsed = weeklySummary.TotalTokens
-			if us.WeeklyTokenLimit > 0 {
-				us.WeeklyUsagePercent = (weeklySummary.TotalTokens / us.WeeklyTokenLimit) * 100
-			}
-			us.WeeklyStatus = domain.GetStatusFromPercent(us.WeeklyUsagePercent)
-		}
-
-		usageStats = us
-		return nil
-	})
-
-	// 5. Active experiment
+	// 4. Active experiment
 	g.Go(func() error {
 		activeExp, _ = queries.GetActiveExperiment(gctx)
 		return nil
@@ -184,8 +136,6 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 	for _, p := range projects {
 		stats.Projects = append(stats.Projects, templates.FilterOption{ID: p.ID, Name: p.Name})
 	}
-
-	stats.UsageStats = usageStats
 
 	if activeExp.Name != "" {
 		stats.ActiveExperiment = activeExp.Name

@@ -11,82 +11,10 @@ templ SettingsPage(data SettingsPageData) {
 				</div>
 			</div>
 
-			<!-- Usage Limits Section -->
-			@LimitsSection(data.PlanConfig)
-
 			<!-- Model Pricing Section -->
 			@PricingSection(data.Pricing)
 		</div>
 	}
-}
-
-templ LimitsSection(config *PlanConfigView) {
-	<div class="card">
-		<h2 class="text-lg font-semibold mb-4">Usage Limits</h2>
-		<p class="text-gray-600 text-sm mb-4">Configure your Claude plan for usage limit tracking</p>
-
-		<!-- Plan Selection -->
-		<div class="mb-6">
-			<h3 class="text-sm font-medium text-gray-700 mb-3">Plan Type</h3>
-			<div class="flex flex-wrap gap-3">
-				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
-					<input type="hidden" name="plan_type" value="pro"/>
-					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "pro"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "pro") }>
-						<div class="font-semibold">Pro</div>
-						<div class="text-xs text-gray-500 mt-1">~45 msgs / 5hr</div>
-					</button>
-				</form>
-				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
-					<input type="hidden" name="plan_type" value="max_5x"/>
-					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "max_5x"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "max_5x") }>
-						<div class="font-semibold">Max 5x</div>
-						<div class="text-xs text-gray-500 mt-1">~225 msgs / 5hr</div>
-					</button>
-				</form>
-				<form hx-post="/api/limits/plan" hx-swap="none" class="inline">
-					<input type="hidden" name="plan_type" value="max_20x"/>
-					<button type="submit" class={ "px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors", templ.KV("border-blue-500 bg-blue-50 text-blue-700", config != nil && config.PlanType == "max_20x"), templ.KV("border-gray-200 hover:border-gray-300", config == nil || config.PlanType != "max_20x") }>
-						<div class="font-semibold">Max 20x</div>
-						<div class="text-xs text-gray-500 mt-1">~900 msgs / 5hr</div>
-					</button>
-				</form>
-			</div>
-		</div>
-
-		<!-- Learn Limits -->
-		if config != nil {
-			<div class="border-t pt-4">
-				<h3 class="text-sm font-medium text-gray-700 mb-3">Learned Limits</h3>
-				<p class="text-xs text-gray-500 mb-3">Run when you hit your limit to record the actual token threshold.</p>
-				<div class="flex flex-wrap items-center gap-4">
-					<div>
-						<span class="text-sm text-gray-600">5-Hour: </span>
-						if config.LearnedTokenLimit != nil {
-							<span class="text-sm font-medium text-blue-600">{ formatTokensFloat(*config.LearnedTokenLimit) } tokens</span>
-						} else {
-							<span class="text-sm text-gray-400">Not learned</span>
-						}
-					</div>
-					<form hx-post="/api/limits/learn" hx-swap="none" hx-confirm="Record current 5-hour usage as your token limit?" class="inline">
-						<button type="submit" class="btn btn-sm btn-secondary">Learn 5-Hour Limit</button>
-					</form>
-				</div>
-				<div class="flex flex-wrap items-center gap-4 mt-3">
-					<div>
-						<span class="text-sm text-gray-600">Weekly: </span>
-						if config.WeeklyLearnedTokenLimit != nil {
-							<span class="text-sm font-medium text-blue-600">{ formatTokensFloat(*config.WeeklyLearnedTokenLimit) } tokens</span>
-						} else {
-							<span class="text-sm text-gray-400">Not learned</span>
-						}
-					</div>
-					<form hx-post="/api/limits/learn-weekly" hx-swap="none" hx-confirm="Record current weekly usage as your token limit?" class="inline">
-						<button type="submit" class="btn btn-sm btn-secondary">Learn Weekly Limit</button>
-					</form>
-				</div>
-			</div>
-		}
-	</div>
 }
 
 templ PricingSection(pricing []ModelPricing) {

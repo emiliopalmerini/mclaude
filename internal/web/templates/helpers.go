@@ -67,14 +67,6 @@ func formatPercent(p float64) string {
 	return fmt.Sprintf("%.0f%%", p*100)
 }
 
-func formatTokensFloat(n float64) string {
-	return util.FormatTokens(n)
-}
-
-func formatUsagePercent(p float64) string {
-	return fmt.Sprintf("%.0f%%", p)
-}
-
 func buildSessionsExportURL(format, experiment string, limit int) templ.SafeURL {
 	url := fmt.Sprintf("/api/export/sessions?format=%s&limit=%d", format, limit)
 	if experiment != "" {
@@ -138,15 +130,3 @@ func shortModelName(modelID string) string {
 	return parts
 }
 
-func planDisplayName(planType string) string {
-	switch planType {
-	case "pro":
-		return "Pro"
-	case "max_5x":
-		return "Max 5x"
-	case "max_20x":
-		return "Max 20x"
-	default:
-		return planType
-	}
-}
