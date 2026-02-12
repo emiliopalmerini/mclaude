@@ -60,6 +60,9 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 					if exp.PlanType != "" {
 						<span class="badge badge-purple">{ exp.PlanType }</span>
 					}
+					for _, v := range exp.Variables {
+						<span class="badge badge-gray">{ v.Key }={ v.Value }</span>
+					}
 				</div>
 				if exp.Notes != "" {
 					<p class="text-gray-500 text-sm mt-2">{ exp.Notes }</p>

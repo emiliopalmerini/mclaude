@@ -38,6 +38,10 @@ func TestExperimentRepositoryConformance(t *testing.T) {
 	var _ ports.ExperimentRepository = (*turso.ExperimentRepository)(nil)
 }
 
+func TestExperimentVariableRepositoryConformance(t *testing.T) {
+	var _ ports.ExperimentVariableRepository = (*turso.ExperimentVariableRepository)(nil)
+}
+
 func TestProjectRepositoryConformance(t *testing.T) {
 	var _ ports.ProjectRepository = (*turso.ProjectRepository)(nil)
 }

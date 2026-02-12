@@ -36,7 +36,7 @@ func runReset(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to list tables: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var tables []string
 	for rows.Next() {

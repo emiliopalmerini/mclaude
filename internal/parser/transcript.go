@@ -91,7 +91,7 @@ func ParseTranscript(sessionID, path string) (*ParsedTranscript, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open transcript: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	result := &ParsedTranscript{
 		Metrics: &domain.SessionMetrics{

@@ -186,6 +186,11 @@ type Experiment struct {
 	CostPerSession float64
 }
 
+type ExperimentVariable struct {
+	Key   string
+	Value string
+}
+
 type ExperimentDetail struct {
 	ID          string
 	Name        string
@@ -198,6 +203,7 @@ type ExperimentDetail struct {
 	ModelID     string
 	PlanType    string
 	Notes       string
+	Variables   []ExperimentVariable
 	// Stats
 	SessionCount      int64
 	TotalTurns        int64
@@ -240,6 +246,7 @@ type ExperimentCompareItem struct {
 	IsActive          bool
 	ModelID           string
 	PlanType          string
+	Variables         []ExperimentVariable
 	SessionCount      int64
 	TotalTurns        int64
 	UserMessages      int64

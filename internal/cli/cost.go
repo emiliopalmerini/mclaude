@@ -79,8 +79,8 @@ func init() {
 	costSetCmd.Flags().Float64Var(&costLongOutput, "long-output", 0, "Long context output cost per 1M (>200K tokens)")
 	costSetCmd.Flags().Int64Var(&costLongThreshold, "long-threshold", 200000, "Input token threshold for long context pricing")
 	costSetCmd.Flags().StringVar(&costName, "name", "", "Display name (defaults to model ID)")
-	costSetCmd.MarkFlagRequired("input")
-	costSetCmd.MarkFlagRequired("output")
+	_ = costSetCmd.MarkFlagRequired("input")
+	_ = costSetCmd.MarkFlagRequired("output")
 }
 
 func runCostList(cmd *cobra.Command, args []string) error {
@@ -98,8 +98,8 @@ func runCostList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "MODEL ID\tNAME\tINPUT/1M\tOUTPUT/1M\tCACHE R/1M\tCACHE W/1M\tLONG IN/1M\tLONG OUT/1M\tDEFAULT")
-	fmt.Fprintln(w, "--------\t----\t--------\t---------\t----------\t----------\t----------\t-----------\t-------")
+	_, _ = fmt.Fprintln(w, "MODEL ID\tNAME\tINPUT/1M\tOUTPUT/1M\tCACHE R/1M\tCACHE W/1M\tLONG IN/1M\tLONG OUT/1M\tDEFAULT")
+	_, _ = fmt.Fprintln(w, "--------\t----\t--------\t---------\t----------\t----------\t----------\t-----------\t-------")
 
 	for _, p := range pricing {
 		cacheRead := "-"
@@ -123,12 +123,12 @@ func runCostList(cmd *cobra.Command, args []string) error {
 			isDefault = "*"
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t$%.2f\t$%.2f\t%s\t%s\t%s\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t$%.2f\t$%.2f\t%s\t%s\t%s\t%s\t%s\n",
 			p.ID, p.DisplayName, p.InputPerMillion, p.OutputPerMillion,
 			cacheRead, cacheWrite, longInput, longOutput, isDefault)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 	return nil
 }
 

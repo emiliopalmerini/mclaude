@@ -135,7 +135,7 @@ func (r *SessionToolRepository) CreateBatch(ctx context.Context, tools []*domain
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	for _, tool := range tools {
@@ -199,7 +199,7 @@ func (r *SessionFileRepository) CreateBatch(ctx context.Context, files []*domain
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	for _, file := range files {
@@ -252,7 +252,7 @@ func (r *SessionCommandRepository) CreateBatch(ctx context.Context, commands []*
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	for _, cmd := range commands {
@@ -327,7 +327,7 @@ func (r *SessionSubagentRepository) CreateBatch(ctx context.Context, subagents [
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func() { _ = tx.Rollback() }()
 
 	qtx := r.queries.WithTx(tx)
 	for _, sa := range subagents {

@@ -17,8 +17,9 @@ type AppContext struct {
 	FileRepo         ports.SessionFileRepository
 	CommandRepo      ports.SessionCommandRepository
 	SubagentRepo     ports.SessionSubagentRepository
-	ExperimentRepo   ports.ExperimentRepository
-	ProjectRepo      ports.ProjectRepository
+	ExperimentRepo    ports.ExperimentRepository
+	ExpVariableRepo   ports.ExperimentVariableRepository
+	ProjectRepo       ports.ProjectRepository
 	PricingRepo      ports.PricingRepository
 	QualityRepo      ports.SessionQualityRepository
 	PlanConfigRepo    ports.PlanConfigRepository
@@ -35,7 +36,7 @@ func NewAppContext() (*AppContext, error) {
 
 	transcriptStorage, err := storage.NewTranscriptStorage()
 	if err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to initialize transcript storage: %w", err)
 	}
 
@@ -48,6 +49,7 @@ func NewAppContext() (*AppContext, error) {
 		CommandRepo:       turso.NewSessionCommandRepository(db.DB),
 		SubagentRepo:      turso.NewSessionSubagentRepository(db.DB),
 		ExperimentRepo:    turso.NewExperimentRepository(db.DB),
+		ExpVariableRepo:   turso.NewExperimentVariableRepository(db.DB),
 		ProjectRepo:       turso.NewProjectRepository(db.DB),
 		PricingRepo:       turso.NewPricingRepository(db.DB),
 		QualityRepo:       turso.NewSessionQualityRepository(db.DB),

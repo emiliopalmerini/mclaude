@@ -70,6 +70,14 @@ func runExperimentStats(cmd *cobra.Command, args []string) error {
 		fmt.Printf("  Notes:        %s\n", *exp.Notes)
 	}
 
+	vars, _ := app.ExpVariableRepo.ListByExperimentID(ctx, exp.ID)
+	if len(vars) > 0 {
+		fmt.Printf("  Variables:\n")
+		for _, v := range vars {
+			fmt.Printf("    %s = %s\n", v.Key, v.Value)
+		}
+	}
+
 	status := "inactive"
 	if exp.IsActive {
 		status = "ACTIVE"
@@ -189,29 +197,18 @@ func runExperimentCompare(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  =====================\n")
 	fmt.Println()
 
-	maxNameLen := 18
-	for _, e := range experiments {
-		if len(e.name) > maxNameLen {
-			maxNameLen = len(e.name)
-		}
-	}
-	colWidth := maxNameLen + 2
-	if colWidth < 14 {
-		colWidth = max(colWidth, 14)
-	}
-
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintf(w, "  METRIC\t")
+	_, _ = fmt.Fprintf(w, "  METRIC\t")
 	for _, e := range experiments {
-		fmt.Fprintf(w, "%s\t", e.name)
+		_, _ = fmt.Fprintf(w, "%s\t", e.name)
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
-	fmt.Fprintf(w, "  ------\t")
+	_, _ = fmt.Fprintf(w, "  ------\t")
 	for range experiments {
-		fmt.Fprintf(w, "------\t")
+		_, _ = fmt.Fprintf(w, "------\t")
 	}
-	fmt.Fprintln(w)
+	_, _ = fmt.Fprintln(w)
 
 	printCompareRow(w, "Sessions", experiments, func(e expData) string { return fmt.Sprintf("%d", e.sessions) })
 	printCompareRow(w, "Turns", experiments, func(e expData) string { return util.FormatNumber(e.turns) })
@@ -235,7 +232,7 @@ func runExperimentCompare(cmd *cobra.Command, args []string) error {
 	printCompareRow(w, "Error rate", experiments, func(e expData) string { return fmt.Sprintf("%.2f%%", e.errorRate*100) })
 	printCompareRow(w, "Tool calls/turn", experiments, func(e expData) string { return fmt.Sprintf("%.1f", e.toolCallsPerTurn) })
 
-	w.Flush()
+	_ = w.Flush()
 	fmt.Println()
 
 	return nil

@@ -111,9 +111,9 @@ func NewDBWithConfig(cfg DBConfig) (*DB, error) {
 	// Verify connection
 	if err := db.Ping(); err != nil {
 		if connector != nil {
-			connector.Close()
+			_ = connector.Close()
 		}
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -145,7 +145,7 @@ func NewRemoteDB(url, authToken string) (*sql.DB, error) {
 	}
 
 	if err := db.Ping(); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping remote database: %w", err)
 	}
 

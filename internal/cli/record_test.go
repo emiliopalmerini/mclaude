@@ -103,10 +103,10 @@ func runRecordTest(t *testing.T, db *sql.DB) {
 	err = runRecord(nil, nil)
 
 	// Restore stdout and read output
-	wOut.Close()
+	_ = wOut.Close()
 	os.Stdout = oldStdout
 	var stdout bytes.Buffer
-	stdout.ReadFrom(rOut)
+	_, _ = stdout.ReadFrom(rOut)
 
 	if err != nil {
 		t.Fatalf("Record command failed: %v\nOutput: %s", err, stdout.String())
@@ -117,7 +117,7 @@ func runRecordTest(t *testing.T, db *sql.DB) {
 	// Cleanup function
 	defer func() {
 		// Delete test data
-		queries.DeleteSession(ctx, sessionID)
+		_ = queries.DeleteSession(ctx, sessionID)
 	}()
 
 	// Verify session was created
@@ -272,7 +272,7 @@ func runRecordTest(t *testing.T, db *sql.DB) {
 			t.Errorf("Stored transcript not found at %s", storedPath.String)
 		}
 		// Cleanup stored transcript
-		defer os.Remove(storedPath.String)
+		defer func() { _ = os.Remove(storedPath.String) }()
 	}
 
 	t.Log("All assertions passed!")

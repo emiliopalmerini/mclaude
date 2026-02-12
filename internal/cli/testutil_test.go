@@ -26,29 +26,22 @@ func testDB(t *testing.T) (*sql.DB, func()) {
 
 	// Enable foreign keys
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("Failed to enable foreign keys: %v", err)
 	}
 
 	// Run migrations
 	ctx := context.Background()
 	if err := migrate.RunAll(ctx, db); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	cleanup := func() {
-		db.Close()
+		_ = db.Close()
 	}
 
 	return db, cleanup
-}
-
-// tursoContainer holds the Turso container and connection info
-type tursoContainer struct {
-	container testcontainers.Container
-	db        *sql.DB
-	url       string
 }
 
 // testTursoDB creates a Turso (libsql-server) container for full integration testing.
@@ -76,13 +69,13 @@ func testTursoDB(t *testing.T) (*sql.DB, func()) {
 	// Get the mapped port
 	mappedPort, err := container.MappedPort(ctx, "8080")
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		t.Fatalf("Failed to get mapped port: %v", err)
 	}
 
 	host, err := container.Host(ctx)
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		t.Fatalf("Failed to get container host: %v", err)
 	}
 
@@ -90,51 +83,28 @@ func testTursoDB(t *testing.T) (*sql.DB, func()) {
 	url := fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
 	db, err := sql.Open("libsql", url)
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		t.Fatalf("Failed to connect to Turso: %v", err)
 	}
 
 	// Verify connection
 	if err := db.Ping(); err != nil {
-		db.Close()
-		container.Terminate(ctx)
+		_ = db.Close()
+		_ = container.Terminate(ctx)
 		t.Fatalf("Failed to ping Turso: %v", err)
 	}
 
 	// Run migrations
 	if err := migrate.RunAll(ctx, db); err != nil {
-		db.Close()
-		container.Terminate(ctx)
+		_ = db.Close()
+		_ = container.Terminate(ctx)
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
 	cleanup := func() {
-		db.Close()
-		container.Terminate(ctx)
+		_ = db.Close()
+		_ = container.Terminate(ctx)
 	}
 
 	return db, cleanup
-}
-
-// testDBType specifies which database backend to use for tests
-type testDBType int
-
-const (
-	// DBTypeMemory uses in-memory SQLite (fast, for most tests)
-	DBTypeMemory testDBType = iota
-	// DBTypeTurso uses Turso container (slower, for full integration)
-	DBTypeTurso
-)
-
-// getTestDB returns a test database based on the specified type.
-// Use DBTypeMemory for fast tests, DBTypeTurso for full integration.
-func getTestDB(t *testing.T, dbType testDBType) (*sql.DB, func()) {
-	t.Helper()
-
-	switch dbType {
-	case DBTypeTurso:
-		return testTursoDB(t)
-	default:
-		return testDB(t)
-	}
 }

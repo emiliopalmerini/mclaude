@@ -15,8 +15,9 @@ type Repositories struct {
 	Commands    ports.SessionCommandRepository
 	Subagents   ports.SessionSubagentRepository
 	ToolEvents  ports.ToolEventRepository
-	Experiments ports.ExperimentRepository
-	Projects    ports.ProjectRepository
+	Experiments         ports.ExperimentRepository
+	ExperimentVariables ports.ExperimentVariableRepository
+	Projects            ports.ProjectRepository
 	Pricing     ports.PricingRepository
 	Quality     ports.SessionQualityRepository
 	PlanConfig  ports.PlanConfigRepository
@@ -34,8 +35,9 @@ func NewRepositories(db *sql.DB) *Repositories {
 		Commands:    NewSessionCommandRepository(db),
 		Subagents:   NewSessionSubagentRepository(db),
 		ToolEvents:  NewToolEventRepository(db),
-		Experiments: NewExperimentRepository(db),
-		Projects:    NewProjectRepository(db),
+		Experiments:         NewExperimentRepository(db),
+		ExperimentVariables: NewExperimentVariableRepository(db),
+		Projects:            NewProjectRepository(db),
 		Pricing:     NewPricingRepository(db),
 		Quality:     NewSessionQualityRepository(db),
 		PlanConfig:  NewPlanConfigRepository(db),

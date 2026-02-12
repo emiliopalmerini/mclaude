@@ -106,7 +106,7 @@ func runSessionsList(cmd *cobra.Command, args []string) error {
 		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", id, date, model, turns, tokens, cost, duration, item.ExitReason)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 
 	fmt.Printf("\nShowing %d session(s)\n", len(items))
 	return nil

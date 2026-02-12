@@ -15,3 +15,10 @@ type Experiment struct {
 	PlanType    *string
 	Notes       *string
 }
+
+type ExperimentVariable struct {
+	ID           int64
+	ExperimentID string
+	Key          string
+	Value        string
+}

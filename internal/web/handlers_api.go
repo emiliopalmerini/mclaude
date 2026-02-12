@@ -33,7 +33,7 @@ func (s *Server) handleAPIStats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(stats)
+	_ = json.NewEncoder(w).Encode(stats)
 }
 
 func (s *Server) handleAPIChartTokens(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +63,7 @@ func (s *Server) handleAPIChartTokens(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"labels":   labels,
 		"tokens":   tokens,
 		"sessions": sessions,
@@ -94,7 +94,7 @@ func (s *Server) handleAPIChartCost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"labels": labels,
 		"costs":  costs,
 	})
@@ -117,7 +117,7 @@ func (s *Server) handleAPIChartHeatmap(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
+	_ = json.NewEncoder(w).Encode(map[string]any{
 		"data": data,
 	})
 }
@@ -131,12 +131,12 @@ func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) 
 		// No plan configured
 		if r.Header.Get("HX-Request") == "true" {
 			// HTMX request - return HTML
-			templates.UsageLimitContent(nil).Render(ctx, w)
+			_ = templates.UsageLimitContent(nil).Render(ctx, w)
 			return
 		}
 		// JSON API request
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(templates.RealtimeUsageStats{Available: false})
+		_ = json.NewEncoder(w).Encode(templates.RealtimeUsageStats{Available: false})
 		return
 	}
 
@@ -186,7 +186,7 @@ func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) 
 	// Check if this is an HTMX request
 	if r.Header.Get("HX-Request") == "true" {
 		// HTMX request - return HTML
-		templates.UsageLimitContent(usageStats).Render(ctx, w)
+		_ = templates.UsageLimitContent(usageStats).Render(ctx, w)
 		return
 	}
 
@@ -204,5 +204,5 @@ func (s *Server) handleAPIRealtimeUsage(w http.ResponseWriter, r *http.Request) 
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(realtimeStats)
+	_ = json.NewEncoder(w).Encode(realtimeStats)
 }

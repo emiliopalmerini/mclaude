@@ -37,18 +37,18 @@ func (s *TranscriptStorage) Store(ctx context.Context, sessionID string, sourceP
 	if err != nil {
 		return "", fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer src.Close()
+	defer func() { _ = src.Close() }()
 
 	// Create destination file
 	dest, err := os.Create(destPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer dest.Close()
+	defer func() { _ = dest.Close() }()
 
 	// Create gzip writer
 	gw := gzip.NewWriter(dest)
-	defer gw.Close()
+	defer func() { _ = gw.Close() }()
 
 	// Copy with gzip compression
 	if _, err := io.Copy(gw, src); err != nil {
@@ -70,13 +70,13 @@ func (s *TranscriptStorage) Get(ctx context.Context, sessionID string) ([]byte, 
 	if err != nil {
 		return nil, fmt.Errorf("failed to open transcript file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	gr, err := gzip.NewReader(file)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer gr.Close()
+	defer func() { _ = gr.Close() }()
 
 	data, err := io.ReadAll(gr)
 	if err != nil {

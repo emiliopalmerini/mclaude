@@ -26,7 +26,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		Project:    r.URL.Query().Get("project"),
 	}
 	stats := s.fetchDashboardData(ctx, filters)
-	templates.Dashboard(stats).Render(ctx, w)
+	_ = templates.Dashboard(stats).Render(ctx, w)
 }
 
 func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilters) templates.DashboardStats {
@@ -157,7 +157,7 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 		return nil
 	})
 
-	g.Wait()
+	_ = g.Wait()
 
 	// Assemble results
 	stats := templates.DashboardStats{

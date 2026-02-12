@@ -30,3 +30,14 @@ UPDATE experiments SET is_active = 0 WHERE id = ?;
 
 -- name: DeactivateAllExperiments :exec
 UPDATE experiments SET is_active = 0;
+
+-- name: UpsertExperimentVariable :exec
+INSERT INTO experiment_variables (experiment_id, key, value)
+VALUES (?, ?, ?)
+ON CONFLICT(experiment_id, key) DO UPDATE SET value = excluded.value;
+
+-- name: ListExperimentVariablesByExperimentID :many
+SELECT * FROM experiment_variables WHERE experiment_id = ? ORDER BY key;
+
+-- name: DeleteExperimentVariable :exec
+DELETE FROM experiment_variables WHERE experiment_id = ? AND key = ?;

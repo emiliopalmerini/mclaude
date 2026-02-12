@@ -344,7 +344,7 @@ func (s *Server) handleAPIDeleteSession(w http.ResponseWriter, r *http.Request) 
 
 	// Delete transcript file
 	if s.transcriptStorage != nil {
-		s.transcriptStorage.Delete(ctx, id)
+		_ = s.transcriptStorage.Delete(ctx, id)
 	}
 
 	// Delete session from database
@@ -391,9 +391,9 @@ func (s *Server) handleAPICleanupSessions(w http.ResponseWriter, r *http.Request
 
 	for _, sess := range sessionsToDelete {
 		if sess.TranscriptPath != "" && s.transcriptStorage != nil {
-			s.transcriptStorage.Delete(ctx, sess.ID)
+			_ = s.transcriptStorage.Delete(ctx, sess.ID)
 		}
-		s.sessionRepo.Delete(ctx, sess.ID)
+		_ = s.sessionRepo.Delete(ctx, sess.ID)
 	}
 
 	w.Header().Set("HX-Redirect", "/sessions")

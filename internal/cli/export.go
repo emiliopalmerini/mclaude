@@ -137,7 +137,7 @@ func runExportSessions(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %w", err)
 		}
-		defer output.Close()
+		defer func() { _ = output.Close() }()
 	} else {
 		output = os.Stdout
 	}

@@ -96,7 +96,7 @@ func hookDB() (*sql.DB, *turso.DB, func(), error) {
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return db.DB, db, func() { db.Close() }, nil
+	return db.DB, db, func() { _ = db.Close() }, nil
 }
 
 // syncAndClose syncs the Turso DB (if present) and runs the cleanup function.

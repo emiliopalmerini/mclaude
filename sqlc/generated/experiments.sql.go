@@ -82,6 +82,20 @@ func (q *Queries) DeleteExperiment(ctx context.Context, id string) error {
 	return err
 }
 
+const deleteExperimentVariable = `-- name: DeleteExperimentVariable :exec
+DELETE FROM experiment_variables WHERE experiment_id = ? AND key = ?
+`
+
+type DeleteExperimentVariableParams struct {
+	ExperimentID string `json:"experiment_id"`
+	Key          string `json:"key"`
+}
+
+func (q *Queries) DeleteExperimentVariable(ctx context.Context, arg DeleteExperimentVariableParams) error {
+	_, err := q.db.ExecContext(ctx, deleteExperimentVariable, arg.ExperimentID, arg.Key)
+	return err
+}
+
 const getActiveExperiment = `-- name: GetActiveExperiment :one
 SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes FROM experiments WHERE is_active = 1 LIMIT 1
 `
@@ -149,6 +163,39 @@ func (q *Queries) GetExperimentByName(ctx context.Context, name string) (Experim
 		&i.Notes,
 	)
 	return i, err
+}
+
+const listExperimentVariablesByExperimentID = `-- name: ListExperimentVariablesByExperimentID :many
+SELECT id, experiment_id, "key", value, created_at FROM experiment_variables WHERE experiment_id = ? ORDER BY key
+`
+
+func (q *Queries) ListExperimentVariablesByExperimentID(ctx context.Context, experimentID string) ([]ExperimentVariable, error) {
+	rows, err := q.db.QueryContext(ctx, listExperimentVariablesByExperimentID, experimentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ExperimentVariable{}
+	for rows.Next() {
+		var i ExperimentVariable
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExperimentID,
+			&i.Key,
+			&i.Value,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listExperiments = `-- name: ListExperiments :many
@@ -222,5 +269,22 @@ func (q *Queries) UpdateExperiment(ctx context.Context, arg UpdateExperimentPara
 		arg.Notes,
 		arg.ID,
 	)
+	return err
+}
+
+const upsertExperimentVariable = `-- name: UpsertExperimentVariable :exec
+INSERT INTO experiment_variables (experiment_id, key, value)
+VALUES (?, ?, ?)
+ON CONFLICT(experiment_id, key) DO UPDATE SET value = excluded.value
+`
+
+type UpsertExperimentVariableParams struct {
+	ExperimentID string `json:"experiment_id"`
+	Key          string `json:"key"`
+	Value        string `json:"value"`
+}
+
+func (q *Queries) UpsertExperimentVariable(ctx context.Context, arg UpsertExperimentVariableParams) error {
+	_, err := q.db.ExecContext(ctx, upsertExperimentVariable, arg.ExperimentID, arg.Key, arg.Value)
 	return err
 }

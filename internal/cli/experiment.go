@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"text/tabwriter"
 	"time"
 
@@ -99,6 +100,7 @@ var (
 	expModel       string
 	expPlan        string
 	expNotes       string
+	expVars        []string
 )
 
 func init() {
@@ -119,6 +121,7 @@ func init() {
 	experimentCreateCmd.Flags().StringVarP(&expModel, "model", "m", "", "Model ID used for this experiment (e.g. claude-opus-4-6)")
 	experimentCreateCmd.Flags().StringVarP(&expPlan, "plan", "p", "", "Plan type (e.g. pro, max_5x, max_20x)")
 	experimentCreateCmd.Flags().StringVarP(&expNotes, "notes", "n", "", "Free-form notes about methodology")
+	experimentCreateCmd.Flags().StringArrayVar(&expVars, "var", nil, "Variable key=value pair (can be repeated)")
 }
 
 func runExperimentCreate(cmd *cobra.Command, args []string) error {
@@ -165,6 +168,16 @@ func runExperimentCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to create experiment: %w", err)
 	}
 
+	for _, v := range expVars {
+		key, value, ok := strings.Cut(v, "=")
+		if !ok {
+			return fmt.Errorf("invalid variable format %q, expected key=value", v)
+		}
+		if err := app.ExpVariableRepo.Set(ctx, exp.ID, key, value); err != nil {
+			return fmt.Errorf("failed to set variable %q: %w", key, err)
+		}
+	}
+
 	fmt.Printf("Created and activated experiment: %s\n", name)
 	return nil
 }
@@ -193,8 +206,8 @@ func runExperimentList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tMODEL\tPLAN\tSESSIONS\tTOKENS\tCOST\tSTARTED\tENDED")
-	fmt.Fprintln(w, "----\t------\t-----\t----\t--------\t------\t----\t-------\t-----")
+	_, _ = fmt.Fprintln(w, "NAME\tSTATUS\tMODEL\tPLAN\tSESSIONS\tTOKENS\tCOST\tSTARTED\tENDED")
+	_, _ = fmt.Fprintln(w, "----\t------\t-----\t----\t--------\t------\t----\t-------\t-----")
 
 	for _, exp := range experiments {
 		status := "inactive"
@@ -228,11 +241,11 @@ func runExperimentList(cmd *cobra.Command, args []string) error {
 			plan = *exp.PlanType
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t$%.2f\t%s\t%s\n",
+		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t$%.2f\t%s\t%s\n",
 			exp.Name, status, model, plan, sessions, util.FormatNumber(tokens), cost, started, ended)
 	}
 
-	w.Flush()
+	_ = w.Flush()
 	return nil
 }
 

@@ -45,7 +45,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to database: %w", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	ctx := context.Background()
 	if err := migrate.RunAll(ctx, db); err != nil {
@@ -68,7 +68,7 @@ func run() error {
 	server := web.NewServer(
 		db, port, repos.Transcripts,
 		repos.Quality, repos.PlanConfig, repos.Experiments,
-		repos.Pricing, repos.Sessions, repos.Metrics,
+		repos.ExperimentVariables, repos.Pricing, repos.Sessions, repos.Metrics,
 		repos.Stats, repos.Projects,
 	)
 	return server.Start(ctx)

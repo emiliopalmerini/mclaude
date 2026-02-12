@@ -32,7 +32,7 @@ func testTursoDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("failed to start Turso container: %v", err)
 	}
-	t.Cleanup(func() { container.Terminate(ctx) })
+	t.Cleanup(func() { _ = container.Terminate(ctx) })
 
 	mappedPort, err := container.MappedPort(ctx, "8080")
 	if err != nil {
@@ -49,7 +49,7 @@ func testTursoDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatalf("failed to connect to Turso: %v", err)
 	}
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 
 	if err := db.Ping(); err != nil {
 		t.Fatalf("failed to ping Turso: %v", err)
@@ -69,7 +69,7 @@ func testServer(t *testing.T, db *sql.DB) *Server {
 	return NewServer(
 		db, 0, nil,
 		repos.Quality, repos.PlanConfig, repos.Experiments,
-		repos.Pricing, repos.Sessions, repos.Metrics,
+		repos.ExperimentVariables, repos.Pricing, repos.Sessions, repos.Metrics,
 		repos.Stats, repos.Projects,
 	)
 }
@@ -86,7 +86,7 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 	projID = "proj-test-1"
 
 	// Create experiment
-	q.CreateExperiment(ctx, sqlc.CreateExperimentParams{
+	_ = q.CreateExperiment(ctx, sqlc.CreateExperimentParams{
 		ID:        expID,
 		Name:      "Test Experiment",
 		IsActive:  1,
@@ -94,14 +94,14 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 	})
 
 	// Create projects
-	db.ExecContext(ctx, `INSERT INTO projects (id, path, name, created_at) VALUES (?, ?, ?, ?)`,
+	_, _ = db.ExecContext(ctx, `INSERT INTO projects (id, path, name, created_at) VALUES (?, ?, ?, ?)`,
 		projID, "/home/test/proj", "test-proj", now.Format(time.RFC3339))
-	db.ExecContext(ctx, `INSERT INTO projects (id, path, name, created_at) VALUES (?, ?, ?, ?)`,
+	_, _ = db.ExecContext(ctx, `INSERT INTO projects (id, path, name, created_at) VALUES (?, ?, ?, ?)`,
 		"proj-test-2", "/home/test/other", "other-proj", now.Format(time.RFC3339))
 
 	// Session 1: linked to experiment and project, created recently
 	sess1Time := now.Add(-1 * time.Hour).Format(time.RFC3339)
-	q.CreateSession(ctx, sqlc.CreateSessionParams{
+	_ = q.CreateSession(ctx, sqlc.CreateSessionParams{
 		ID:             "sess-1",
 		ProjectID:      projID,
 		ExperimentID:   sql.NullString{String: expID, Valid: true},
@@ -111,7 +111,7 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 		CreatedAt:      sess1Time,
 		StartedAt:      sql.NullString{String: sess1Time, Valid: true},
 	})
-	q.CreateSessionMetrics(ctx, sqlc.CreateSessionMetricsParams{
+	_ = q.CreateSessionMetrics(ctx, sqlc.CreateSessionMetricsParams{
 		SessionID:       "sess-1",
 		TurnCount:       5,
 		TokenInput:      1000,
@@ -120,12 +120,12 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 		TokenCacheWrite: 100,
 		CostEstimateUsd: sql.NullFloat64{Float64: 0.05, Valid: true},
 	})
-	q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
+	_ = q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
 		SessionID:       "sess-1",
 		ToolName:        "Read",
 		InvocationCount: 10,
 	})
-	q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
+	_ = q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
 		SessionID:       "sess-1",
 		ToolName:        "Edit",
 		InvocationCount: 3,
@@ -133,7 +133,7 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 
 	// Session 2: different project, no experiment
 	sess2Time := now.Add(-30 * time.Minute).Format(time.RFC3339)
-	q.CreateSession(ctx, sqlc.CreateSessionParams{
+	_ = q.CreateSession(ctx, sqlc.CreateSessionParams{
 		ID:             "sess-2",
 		ProjectID:      "proj-test-2",
 		Cwd:            "/home/test/other",
@@ -142,7 +142,7 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 		CreatedAt:      sess2Time,
 		StartedAt:      sql.NullString{String: sess2Time, Valid: true},
 	})
-	q.CreateSessionMetrics(ctx, sqlc.CreateSessionMetricsParams{
+	_ = q.CreateSessionMetrics(ctx, sqlc.CreateSessionMetricsParams{
 		SessionID:       "sess-2",
 		TurnCount:       3,
 		TokenInput:      2000,
@@ -151,7 +151,7 @@ func seedTestData(t *testing.T, db *sql.DB) (expID, projID string) {
 		TokenCacheWrite: 200,
 		CostEstimateUsd: sql.NullFloat64{Float64: 0.10, Valid: true},
 	})
-	q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
+	_ = q.CreateSessionTool(ctx, sqlc.CreateSessionToolParams{
 		SessionID:       "sess-2",
 		ToolName:        "Read",
 		InvocationCount: 5,

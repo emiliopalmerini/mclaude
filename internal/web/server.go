@@ -23,6 +23,7 @@ type Server struct {
 	qualityRepo       ports.SessionQualityRepository
 	planConfigRepo    ports.PlanConfigRepository
 	experimentRepo    ports.ExperimentRepository
+	expVariableRepo   ports.ExperimentVariableRepository
 	pricingRepo       ports.PricingRepository
 	sessionRepo       ports.SessionRepository
 	metricsRepo       ports.SessionMetricsRepository
@@ -37,6 +38,7 @@ func NewServer(
 	qr ports.SessionQualityRepository,
 	pcr ports.PlanConfigRepository,
 	er ports.ExperimentRepository,
+	evr ports.ExperimentVariableRepository,
 	pr ports.PricingRepository,
 	sr ports.SessionRepository,
 	mr ports.SessionMetricsRepository,
@@ -51,6 +53,7 @@ func NewServer(
 		qualityRepo:       qr,
 		planConfigRepo:    pcr,
 		experimentRepo:    er,
+		expVariableRepo:   evr,
 		pricingRepo:       pr,
 		sessionRepo:       sr,
 		metricsRepo:       mr,
@@ -72,7 +75,7 @@ func (s *Server) setupRoutes() {
 	// Health check
 	s.router.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	// Pages

@@ -46,8 +46,8 @@ func TestHookDispatcher_SessionEnd(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdin = r
 	go func() {
-		w.Write(inputJSON)
-		w.Close()
+		_, _ = w.Write(inputJSON)
+		_ = w.Close()
 	}()
 
 	// Capture stdout
@@ -57,10 +57,10 @@ func TestHookDispatcher_SessionEnd(t *testing.T) {
 
 	err = runHook(nil, nil)
 
-	wOut.Close()
+	_ = wOut.Close()
 	os.Stdout = oldStdout
 	var stdout bytes.Buffer
-	stdout.ReadFrom(rOut)
+	_, _ = stdout.ReadFrom(rOut)
 
 	if err != nil {
 		t.Fatalf("hook dispatcher failed: %v\nOutput: %s", err, stdout.String())
@@ -94,8 +94,8 @@ func TestHookDispatcher_UnknownEvent(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdin = r
 	go func() {
-		w.Write(input)
-		w.Close()
+		_, _ = w.Write(input)
+		_ = w.Close()
 	}()
 
 	err := runHook(nil, nil)
@@ -112,8 +112,8 @@ func TestHookDispatcher_InvalidJSON(t *testing.T) {
 	r, w, _ := os.Pipe()
 	os.Stdin = r
 	go func() {
-		w.Write(input)
-		w.Close()
+		_, _ = w.Write(input)
+		_ = w.Close()
 	}()
 
 	err := runHook(nil, nil)

@@ -28,11 +28,11 @@ func testDB(t *testing.T) *sql.DB {
 
 	ctx := context.Background()
 	if err := migrate.RunAll(ctx, db); err != nil {
-		db.Close()
+		_ = db.Close()
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
 

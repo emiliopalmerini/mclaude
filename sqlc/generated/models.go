@@ -22,6 +22,14 @@ type Experiment struct {
 	Notes       sql.NullString `json:"notes"`
 }
 
+type ExperimentVariable struct {
+	ID           int64  `json:"id"`
+	ExperimentID string `json:"experiment_id"`
+	Key          string `json:"key"`
+	Value        string `json:"value"`
+	CreatedAt    string `json:"created_at"`
+}
+
 type HookSubagentTracking struct {
 	AgentID   string `json:"agent_id"`
 	SessionID string `json:"session_id"`

@@ -46,8 +46,8 @@ func runHookWithInput(t *testing.T, input any) (string, error) {
 	r, w, _ := os.Pipe()
 	os.Stdin = r
 	go func() {
-		w.Write(inputJSON)
-		w.Close()
+		_, _ = w.Write(inputJSON)
+		_ = w.Close()
 	}()
 
 	oldStdout := os.Stdout
@@ -56,10 +56,10 @@ func runHookWithInput(t *testing.T, input any) (string, error) {
 
 	hookErr := runHook(nil, nil)
 
-	wOut.Close()
+	_ = wOut.Close()
 	os.Stdout = oldStdout
 	var stdout bytes.Buffer
-	stdout.ReadFrom(rOut)
+	_, _ = stdout.ReadFrom(rOut)
 
 	return stdout.String(), hookErr
 }
@@ -114,7 +114,7 @@ func TestHandleSessionStart_NoActiveExperiment(t *testing.T) {
 
 	// Ensure no active experiments exist
 	queries := sqlc.New(db)
-	queries.DeactivateAllExperiments(context.Background())
+	_ = queries.DeactivateAllExperiments(context.Background())
 
 	input := map[string]string{
 		"session_id":      "sess-456",

@@ -69,7 +69,7 @@ func (s *Server) handleExperiments(w http.ResponseWriter, r *http.Request) {
 		experiments = append(experiments, exp)
 	}
 
-	templates.Experiments(experiments).Render(ctx, w)
+	_ = templates.Experiments(experiments).Render(ctx, w)
 }
 
 func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +108,15 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 	}
 	if exp.Notes.Valid {
 		detail.Notes = exp.Notes.String
+	}
+
+	// Fetch variables
+	vars, _ := s.expVariableRepo.ListByExperimentID(ctx, id)
+	for _, v := range vars {
+		detail.Variables = append(detail.Variables, templates.ExperimentVariable{
+			Key:   v.Key,
+			Value: v.Value,
+		})
 	}
 
 	// Get aggregate stats
@@ -205,7 +214,7 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 		detail.SuccessRate = calculateSuccessRate(qualityStats.SuccessCount, qualityStats.FailureCount)
 	}
 
-	templates.ExperimentDetailPage(detail).Render(ctx, w)
+	_ = templates.ExperimentDetailPage(detail).Render(ctx, w)
 }
 
 func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request) {
@@ -216,13 +225,13 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 	idsParam := r.URL.Query().Get("ids")
 	if idsParam == "" {
 		// No experiments selected, show empty comparison
-		templates.ExperimentComparePage(templates.ExperimentComparison{}).Render(ctx, w)
+		_ = templates.ExperimentComparePage(templates.ExperimentComparison{}).Render(ctx, w)
 		return
 	}
 
 	ids := splitIDs(idsParam)
 	if len(ids) < 2 {
-		templates.ExperimentComparePage(templates.ExperimentComparison{}).Render(ctx, w)
+		_ = templates.ExperimentComparePage(templates.ExperimentComparison{}).Render(ctx, w)
 		return
 	}
 
@@ -243,6 +252,15 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 		}
 		if exp.PlanType.Valid {
 			item.PlanType = exp.PlanType.String
+		}
+
+		// Fetch variables
+		vars, _ := s.expVariableRepo.ListByExperimentID(ctx, id)
+		for _, v := range vars {
+			item.Variables = append(item.Variables, templates.ExperimentVariable{
+				Key:   v.Key,
+				Value: v.Value,
+			})
 		}
 
 		// Get aggregate stats
@@ -376,6 +394,24 @@ func (s *Server) handleAPICreateExperiment(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Save variables (form fields: var_key[], var_value[])
+	keys := r.Form["var_key[]"]
+	values := r.Form["var_value[]"]
+	for i := range keys {
+		key := strings.TrimSpace(keys[i])
+		if key == "" || i >= len(values) {
+			continue
+		}
+		value := strings.TrimSpace(values[i])
+		if value == "" {
+			continue
+		}
+		if err := s.expVariableRepo.Set(ctx, exp.ID, key, value); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	w.Header().Set("HX-Redirect", "/experiments")
 	w.WriteHeader(http.StatusOK)
 }
@@ -412,7 +448,7 @@ func (s *Server) handleAPIActivateExperiment(w http.ResponseWriter, r *http.Requ
 	id := r.PathValue("id")
 	queries := sqlc.New(s.db)
 
-	queries.DeactivateAllExperiments(ctx)
+	_ = queries.DeactivateAllExperiments(ctx)
 	if err := queries.ActivateExperiment(ctx, id); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

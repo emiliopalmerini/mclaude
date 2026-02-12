@@ -115,7 +115,7 @@ func (s *Server) handleAPIExportSessions(w http.ResponseWriter, r *http.Request)
 			"token_input", "token_output", "token_cache_read", "token_cache_write",
 			"cost_estimate_usd", "error_count",
 		}
-		writer.Write(header)
+		_ = writer.Write(header)
 
 		for _, es := range exportData {
 			row := []string{
@@ -127,7 +127,7 @@ func (s *Server) handleAPIExportSessions(w http.ResponseWriter, r *http.Request)
 				fmt.Sprintf("%d", es.TokenCacheWrite), fmt.Sprintf("%.6f", es.CostEstimateUsd),
 				fmt.Sprintf("%d", es.ErrorCount),
 			}
-			writer.Write(row)
+			_ = writer.Write(row)
 		}
 
 	default: // json
@@ -136,6 +136,6 @@ func (s *Server) handleAPIExportSessions(w http.ResponseWriter, r *http.Request)
 
 		encoder := json.NewEncoder(w)
 		encoder.SetIndent("", "  ")
-		encoder.Encode(exportData)
+		_ = encoder.Encode(exportData)
 	}
 }
