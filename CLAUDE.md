@@ -53,15 +53,13 @@ internal/
 │   ├── session.go              # Session, SessionMetrics
 │   ├── experiment.go           # Experiment
 │   ├── project.go              # Project
-│   ├── pricing.go              # ModelPricing
-│   └── usage.go                # PlanConfig, UsageSummary, plan presets
+│   └── pricing.go              # ModelPricing
 │
 ├── ports/                      # Interfaces (defined by domain)
 │   ├── session_repository.go
 │   ├── experiment_repository.go
 │   ├── project_repository.go
 │   ├── pricing_repository.go
-│   ├── usage_repository.go
 │   └── transcript_storage.go
 │
 ├── adapters/                   # Interface implementations
@@ -70,8 +68,7 @@ internal/
 │   │   ├── session_repository.go
 │   │   ├── experiment_repository.go
 │   │   ├── project_repository.go
-│   │   ├── pricing_repository.go
-│   │   └── usage_repository.go
+│   │   └── pricing_repository.go
 │   └── storage/
 │       └── transcript_storage.go   # XDG + gzip storage
 │
@@ -87,7 +84,6 @@ internal/
 │   ├── stats.go                # Quick statistics
 │   ├── sessions.go             # Session listing
 │   ├── cost.go                 # Pricing config
-│   ├── limits.go               # Usage limit tracking
 │   ├── cleanup.go              # Data deletion
 │   └── export.go               # JSON/CSV export
 │
@@ -135,7 +131,7 @@ sqlc/
 
 ## Database Schema
 
-9 normalized tables:
+8 normalized tables:
 
 1. **experiments** - Experiment definitions (name, description, hypothesis, dates, is_active)
 2. **projects** - Project aggregations (id=SHA256 of cwd, path, name)
@@ -145,7 +141,6 @@ sqlc/
 6. **session_files** - File operations per session
 7. **session_commands** - Bash commands executed per session
 8. **model_pricing** - Configurable model pricing for cost estimation
-9. **plan_config** - Usage limit tracking (plan type, 5-hour and weekly window limits)
 
 ## Key Patterns
 
@@ -189,8 +184,6 @@ The `record` command receives JSON from stdin (Claude Code hook), then:
 - **Project ID**: SHA256 hash of the `cwd` path (deterministic)
 - **Cost estimation**: Uses default model pricing if no model specified
 - **Cleanup cascade**: Deleting sessions also removes transcript files from storage
-- **Usage windows**: Dual-window tracking (5-hour and 7-day) with fixed start times that auto-reset when expired
-- **Plan presets**: Three tiers (pro, max_5x, max_20x) with estimated limits; users can learn actual limits
 
 ## Testing Strategy
 
