@@ -16,45 +16,63 @@ type ModelPricing struct {
 	CreatedAt                   time.Time
 }
 
-func (p *ModelPricing) CalculateCost(input, output, cacheRead, cacheWrite int64) float64 {
-	// Calculate total input tokens (including cache operations) for threshold check
+// EffectiveRates holds the resolved per-million-token rates after applying
+// long-context thresholds and deriving cache rates.
+type EffectiveRates struct {
+	Input      float64
+	Output     float64
+	CacheRead  *float64
+	CacheWrite *float64
+}
+
+// ResolveRates determines the effective per-million-token rates given the
+// token counts. Long-context thresholds and derived cache rates (0.1x read,
+// 1.25x write) are applied here so callers can store the resolved rates.
+func (p *ModelPricing) ResolveRates(input, output, cacheRead, cacheWrite int64) EffectiveRates {
 	totalInputTokens := input + cacheRead + cacheWrite
 
-	// Determine if long context pricing applies
 	useLongContext := p.LongContextThreshold != nil &&
 		p.LongContextInputPerMillion != nil &&
 		p.LongContextOutputPerMillion != nil &&
 		totalInputTokens > *p.LongContextThreshold
 
-	var inputRate, outputRate float64
+	var rates EffectiveRates
 	if useLongContext {
-		inputRate = *p.LongContextInputPerMillion
-		outputRate = *p.LongContextOutputPerMillion
+		rates.Input = *p.LongContextInputPerMillion
+		rates.Output = *p.LongContextOutputPerMillion
 	} else {
-		inputRate = p.InputPerMillion
-		outputRate = p.OutputPerMillion
+		rates.Input = p.InputPerMillion
+		rates.Output = p.OutputPerMillion
 	}
-
-	cost := float64(input) * inputRate / 1_000_000
-	cost += float64(output) * outputRate / 1_000_000
 
 	if p.CacheReadPerMillion != nil {
-		// Cache read pricing is 0.1x base input, scales with long context
-		cacheReadRate := *p.CacheReadPerMillion
+		cr := *p.CacheReadPerMillion
 		if useLongContext {
-			// Long context cache read = 0.1 * long context input price
-			cacheReadRate = inputRate * 0.1
+			cr = rates.Input * 0.1
 		}
-		cost += float64(cacheRead) * cacheReadRate / 1_000_000
+		rates.CacheRead = &cr
 	}
 	if p.CacheWritePerMillion != nil {
-		// Cache write pricing is 1.25x base input for 5-min cache, scales with long context
-		cacheWriteRate := *p.CacheWritePerMillion
+		cw := *p.CacheWritePerMillion
 		if useLongContext {
-			// Long context cache write = 1.25 * long context input price
-			cacheWriteRate = inputRate * 1.25
+			cw = rates.Input * 1.25
 		}
-		cost += float64(cacheWrite) * cacheWriteRate / 1_000_000
+		rates.CacheWrite = &cw
+	}
+
+	return rates
+}
+
+func (p *ModelPricing) CalculateCost(input, output, cacheRead, cacheWrite int64) float64 {
+	rates := p.ResolveRates(input, output, cacheRead, cacheWrite)
+
+	cost := float64(input) * rates.Input / 1_000_000
+	cost += float64(output) * rates.Output / 1_000_000
+	if rates.CacheRead != nil {
+		cost += float64(cacheRead) * *rates.CacheRead / 1_000_000
+	}
+	if rates.CacheWrite != nil {
+		cost += float64(cacheWrite) * *rates.CacheWrite / 1_000_000
 	}
 
 	return cost

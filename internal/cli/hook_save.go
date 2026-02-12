@@ -103,6 +103,17 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 			parsed.Metrics.TokenCacheWrite,
 		)
 		costEstimate = &cost
+
+		rates := pricing.ResolveRates(
+			parsed.Metrics.TokenInput,
+			parsed.Metrics.TokenOutput,
+			parsed.Metrics.TokenCacheRead,
+			parsed.Metrics.TokenCacheWrite,
+		)
+		parsed.Metrics.InputRate = &rates.Input
+		parsed.Metrics.OutputRate = &rates.Output
+		parsed.Metrics.CacheReadRate = rates.CacheRead
+		parsed.Metrics.CacheWriteRate = rates.CacheWrite
 	}
 	parsed.Metrics.CostEstimateUSD = costEstimate
 

@@ -53,6 +53,17 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 				if exp.Hypothesis != "" {
 					<p class="text-gray-500 text-sm mt-1 italic">"{ exp.Hypothesis }"</p>
 				}
+				<div class="flex gap-2 mt-2 flex-wrap">
+					if exp.ModelID != "" {
+						<span class="badge badge-blue">{ exp.ModelID }</span>
+					}
+					if exp.PlanType != "" {
+						<span class="badge badge-purple">{ exp.PlanType }</span>
+					}
+				</div>
+				if exp.Notes != "" {
+					<p class="text-gray-500 text-sm mt-2">{ exp.Notes }</p>
+				}
 			</div>
 
 			<!-- Date Range -->
@@ -100,6 +111,30 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 				<div class="card">
 					<p class="text-sm text-gray-500">Assistant Messages</p>
 					<p class="text-2xl font-bold text-gray-900">{ formatTokens(exp.AssistantMessages) }</p>
+				</div>
+			</div>
+
+			<!-- Behavior Metrics -->
+			<div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+				<div class="card">
+					<p class="text-sm text-gray-500">Tokens/Turn</p>
+					<p class="text-2xl font-bold text-gray-900">{ formatTokens(int64(exp.TokensPerTurn)) }</p>
+				</div>
+				<div class="card">
+					<p class="text-sm text-gray-500">Output Ratio</p>
+					<p class="text-2xl font-bold text-gray-900">{ fmt.Sprintf("%.2f", exp.OutputRatio) }</p>
+				</div>
+				<div class="card">
+					<p class="text-sm text-gray-500">Cache Hit Rate</p>
+					<p class="text-2xl font-bold text-gray-900">{ fmt.Sprintf("%.1f%%", exp.CacheHitRate*100) }</p>
+				</div>
+				<div class="card">
+					<p class="text-sm text-gray-500">Error Rate</p>
+					<p class="text-2xl font-bold text-gray-900">{ fmt.Sprintf("%.2f%%", exp.ErrorRate*100) }</p>
+				</div>
+				<div class="card">
+					<p class="text-sm text-gray-500">Tools/Turn</p>
+					<p class="text-2xl font-bold text-gray-900">{ fmt.Sprintf("%.1f", exp.ToolCallsPerTurn) }</p>
 				</div>
 			</div>
 

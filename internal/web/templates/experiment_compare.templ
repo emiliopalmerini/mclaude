@@ -150,6 +150,41 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 
+							<!-- Behavior -->
+							<tr class="bg-gray-50">
+								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Behavior</td>
+							</tr>
+							<tr>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Tokens/Turn</td>
+								for _, exp := range data.Experiments {
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatTokens(int64(exp.TokensPerTurn)) }</td>
+								}
+							</tr>
+							<tr>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Output Ratio</td>
+								for _, exp := range data.Experiments {
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ fmt.Sprintf("%.2f", exp.OutputRatio) }</td>
+								}
+							</tr>
+							<tr>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Cache Hit Rate</td>
+								for _, exp := range data.Experiments {
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ fmt.Sprintf("%.1f%%", exp.CacheHitRate*100) }</td>
+								}
+							</tr>
+							<tr>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Error Rate</td>
+								for _, exp := range data.Experiments {
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ fmt.Sprintf("%.2f%%", exp.ErrorRate*100) }</td>
+								}
+							</tr>
+							<tr>
+								<td class="py-1.5 px-4 text-gray-600 text-sm">Tool Calls/Turn</td>
+								for _, exp := range data.Experiments {
+									<td class="py-1.5 px-4 text-right font-medium text-sm">{ fmt.Sprintf("%.1f", exp.ToolCallsPerTurn) }</td>
+								}
+							</tr>
+
 							<!-- Quality -->
 							<tr class="bg-gray-50">
 								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Quality</td>
@@ -239,6 +274,9 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 		TotalTurns       int64   `json:"totalTurns"`
 		SuccessRate      float64 `json:"successRate"`
 		AvgRating        float64 `json:"avgRating"`
+		OutputRatio      float64 `json:"outputRatio"`
+		CacheHitRate     float64 `json:"cacheHitRate"`
+		ToolCallsPerTurn float64 `json:"toolCallsPerTurn"`
 	}
 	items := make([]chartItem, len(experiments))
 	for i, exp := range experiments {
@@ -250,6 +288,9 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 			TokensPerSession: exp.TokensPerSession,
 			CostPerSession:   exp.CostPerSession,
 			TotalTurns:       exp.TotalTurns,
+			OutputRatio:      exp.OutputRatio,
+			CacheHitRate:     exp.CacheHitRate * 100,
+			ToolCallsPerTurn: exp.ToolCallsPerTurn,
 		}
 		if exp.SuccessRate != nil {
 			items[i].SuccessRate = *exp.SuccessRate * 100

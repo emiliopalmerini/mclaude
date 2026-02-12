@@ -38,6 +38,9 @@ func (r *ExperimentRepository) Create(ctx context.Context, experiment *domain.Ex
 		EndedAt:     endedAt,
 		IsActive:    util.BoolToInt64(experiment.IsActive),
 		CreatedAt:   experiment.CreatedAt.Format(time.RFC3339),
+		ModelID:     util.NullStringPtr(experiment.ModelID),
+		PlanType:    util.NullStringPtr(experiment.PlanType),
+		Notes:       util.NullStringPtr(experiment.Notes),
 	})
 }
 
@@ -100,6 +103,9 @@ func (r *ExperimentRepository) Update(ctx context.Context, experiment *domain.Ex
 		StartedAt:   experiment.StartedAt.Format(time.RFC3339),
 		EndedAt:     endedAt,
 		IsActive:    util.BoolToInt64(experiment.IsActive),
+		ModelID:     util.NullStringPtr(experiment.ModelID),
+		PlanType:    util.NullStringPtr(experiment.PlanType),
+		Notes:       util.NullStringPtr(experiment.Notes),
 		ID:          experiment.ID,
 	})
 }
@@ -139,5 +145,8 @@ func experimentFromRow(row sqlc.Experiment) *domain.Experiment {
 		EndedAt:     endedAt,
 		IsActive:    row.IsActive == 1,
 		CreatedAt:   createdAt,
+		ModelID:     util.NullStringToPtr(row.ModelID),
+		PlanType:    util.NullStringToPtr(row.PlanType),
+		Notes:       util.NullStringToPtr(row.Notes),
 	}
 }

@@ -1,6 +1,6 @@
 -- name: CreateSessionMetrics :exec
-INSERT OR REPLACE INTO session_metrics (session_id, model_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO session_metrics (session_id, model_id, message_count_user, message_count_assistant, turn_count, token_input, token_output, token_cache_read, token_cache_write, cost_estimate_usd, error_count, input_rate, output_rate, cache_read_rate, cache_write_rate)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: GetSessionMetricsBySessionID :one
 SELECT * FROM session_metrics WHERE session_id = ?;
@@ -156,6 +156,12 @@ WHERE s.created_at >= ?
 GROUP BY agent_type, agent_kind
 ORDER BY total_tokens DESC
 LIMIT ?;
+
+-- name: GetTotalToolCallsByExperiment :one
+SELECT COALESCE(SUM(st.invocation_count), 0) as total_tool_calls
+FROM session_tools st
+JOIN sessions s ON st.session_id = s.id
+WHERE s.experiment_id = ?;
 
 -- name: GetTopToolsUsageByExperiment :many
 SELECT

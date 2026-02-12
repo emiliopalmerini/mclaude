@@ -45,6 +45,15 @@ func (s *Server) handleExperiments(w http.ResponseWriter, r *http.Request) {
 		if e.EndedAt.Valid {
 			exp.EndedAt = e.EndedAt.String
 		}
+		if e.ModelID.Valid {
+			exp.ModelID = e.ModelID.String
+		}
+		if e.PlanType.Valid {
+			exp.PlanType = e.PlanType.String
+		}
+		if e.Notes.Valid {
+			exp.Notes = e.Notes.String
+		}
 
 		// Add stats
 		if es, ok := statsMap[e.ID]; ok {
@@ -91,6 +100,15 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 	if exp.EndedAt.Valid {
 		detail.EndedAt = exp.EndedAt.String
 	}
+	if exp.ModelID.Valid {
+		detail.ModelID = exp.ModelID.String
+	}
+	if exp.PlanType.Valid {
+		detail.PlanType = exp.PlanType.String
+	}
+	if exp.Notes.Valid {
+		detail.Notes = exp.Notes.String
+	}
 
 	// Get aggregate stats
 	statsRow, err := queries.GetAggregateStatsByExperiment(ctx, sqlc.GetAggregateStatsByExperimentParams{
@@ -114,6 +132,23 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 			detail.CostPerSession = detail.TotalCost / float64(statsRow.SessionCount)
 		}
 	}
+
+	// Compute normalized behavior metrics
+	toolCalls, _ := s.statsRepo.GetTotalToolCallsByExperiment(ctx, exp.ID)
+	agStats := &domain.AggregateStats{
+		TotalTurns:           detail.TotalTurns,
+		TotalTokenInput:      detail.TokenInput,
+		TotalTokenOutput:     detail.TokenOutput,
+		TotalTokenCacheRead:  detail.CacheRead,
+		TotalTokenCacheWrite: detail.CacheWrite,
+		TotalErrors:          detail.TotalErrors,
+	}
+	normalized := agStats.ComputeNormalized(toolCalls)
+	detail.TokensPerTurn = normalized.TokensPerTurn
+	detail.OutputRatio = normalized.OutputRatio
+	detail.CacheHitRate = normalized.CacheHitRate
+	detail.ErrorRate = normalized.ErrorRate
+	detail.ToolCallsPerTurn = normalized.ToolCallsPerTurn
 
 	// Get top tools for this experiment
 	tools, _ := queries.GetTopToolsUsageByExperiment(ctx, sqlc.GetTopToolsUsageByExperimentParams{
@@ -203,6 +238,12 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 			Name:     exp.Name,
 			IsActive: exp.IsActive == 1,
 		}
+		if exp.ModelID.Valid {
+			item.ModelID = exp.ModelID.String
+		}
+		if exp.PlanType.Valid {
+			item.PlanType = exp.PlanType.String
+		}
 
 		// Get aggregate stats
 		statsRow, err := queries.GetAggregateStatsByExperiment(ctx, sqlc.GetAggregateStatsByExperimentParams{
@@ -226,6 +267,23 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 				item.CostPerSession = item.TotalCost / float64(statsRow.SessionCount)
 			}
 		}
+
+		// Compute normalized behavior metrics
+		toolCalls, _ := s.statsRepo.GetTotalToolCallsByExperiment(ctx, exp.ID)
+		agStats := &domain.AggregateStats{
+			TotalTurns:           item.TotalTurns,
+			TotalTokenInput:      item.TokenInput,
+			TotalTokenOutput:     item.TokenOutput,
+			TotalTokenCacheRead:  item.CacheRead,
+			TotalTokenCacheWrite: item.CacheWrite,
+			TotalErrors:          item.TotalErrors,
+		}
+		normalized := agStats.ComputeNormalized(toolCalls)
+		item.TokensPerTurn = normalized.TokensPerTurn
+		item.OutputRatio = normalized.OutputRatio
+		item.CacheHitRate = normalized.CacheHitRate
+		item.ErrorRate = normalized.ErrorRate
+		item.ToolCallsPerTurn = normalized.ToolCallsPerTurn
 
 		// Get quality stats
 		qualityStats, err := queries.GetQualityStatsByExperiment(ctx, util.NullString(exp.ID))
@@ -302,6 +360,15 @@ func (s *Server) handleAPICreateExperiment(w http.ResponseWriter, r *http.Reques
 	}
 	if hyp := strings.TrimSpace(r.FormValue("hypothesis")); hyp != "" {
 		exp.Hypothesis = &hyp
+	}
+	if model := strings.TrimSpace(r.FormValue("model_id")); model != "" {
+		exp.ModelID = &model
+	}
+	if plan := strings.TrimSpace(r.FormValue("plan_type")); plan != "" {
+		exp.PlanType = &plan
+	}
+	if notes := strings.TrimSpace(r.FormValue("notes")); notes != "" {
+		exp.Notes = &notes
 	}
 
 	if err := s.experimentRepo.Create(ctx, exp); err != nil {

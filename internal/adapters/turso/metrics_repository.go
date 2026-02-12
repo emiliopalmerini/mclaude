@@ -33,6 +33,20 @@ func (r *SessionMetricsRepository) Create(ctx context.Context, metrics *domain.S
 		modelID = sql.NullString{String: *metrics.ModelID, Valid: true}
 	}
 
+	var inputRate, outputRate, cacheReadRate, cacheWriteRate sql.NullFloat64
+	if metrics.InputRate != nil {
+		inputRate = sql.NullFloat64{Float64: *metrics.InputRate, Valid: true}
+	}
+	if metrics.OutputRate != nil {
+		outputRate = sql.NullFloat64{Float64: *metrics.OutputRate, Valid: true}
+	}
+	if metrics.CacheReadRate != nil {
+		cacheReadRate = sql.NullFloat64{Float64: *metrics.CacheReadRate, Valid: true}
+	}
+	if metrics.CacheWriteRate != nil {
+		cacheWriteRate = sql.NullFloat64{Float64: *metrics.CacheWriteRate, Valid: true}
+	}
+
 	return r.queries.CreateSessionMetrics(ctx, sqlc.CreateSessionMetricsParams{
 		SessionID:             metrics.SessionID,
 		ModelID:               modelID,
@@ -45,6 +59,10 @@ func (r *SessionMetricsRepository) Create(ctx context.Context, metrics *domain.S
 		TokenCacheWrite:       metrics.TokenCacheWrite,
 		CostEstimateUsd:       costEstimate,
 		ErrorCount:            metrics.ErrorCount,
+		InputRate:             inputRate,
+		OutputRate:            outputRate,
+		CacheReadRate:         cacheReadRate,
+		CacheWriteRate:        cacheWriteRate,
 	})
 }
 
@@ -67,6 +85,20 @@ func (r *SessionMetricsRepository) GetBySessionID(ctx context.Context, sessionID
 		modelID = &row.ModelID.String
 	}
 
+	var inputRate, outputRate, cacheReadRate, cacheWriteRate *float64
+	if row.InputRate.Valid {
+		inputRate = &row.InputRate.Float64
+	}
+	if row.OutputRate.Valid {
+		outputRate = &row.OutputRate.Float64
+	}
+	if row.CacheReadRate.Valid {
+		cacheReadRate = &row.CacheReadRate.Float64
+	}
+	if row.CacheWriteRate.Valid {
+		cacheWriteRate = &row.CacheWriteRate.Float64
+	}
+
 	return &domain.SessionMetrics{
 		SessionID:             row.SessionID,
 		ModelID:               modelID,
@@ -79,6 +111,10 @@ func (r *SessionMetricsRepository) GetBySessionID(ctx context.Context, sessionID
 		TokenCacheWrite:       row.TokenCacheWrite,
 		CostEstimateUSD:       costEstimate,
 		ErrorCount:            row.ErrorCount,
+		InputRate:             inputRate,
+		OutputRate:            outputRate,
+		CacheReadRate:         cacheReadRate,
+		CacheWriteRate:        cacheWriteRate,
 	}, nil
 }
 

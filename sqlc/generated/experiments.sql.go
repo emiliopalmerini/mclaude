@@ -20,8 +20,8 @@ func (q *Queries) ActivateExperiment(ctx context.Context, id string) error {
 }
 
 const createExperiment = `-- name: CreateExperiment :exec
-INSERT INTO experiments (id, name, description, hypothesis, started_at, ended_at, is_active, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO experiments (id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type CreateExperimentParams struct {
@@ -33,6 +33,9 @@ type CreateExperimentParams struct {
 	EndedAt     sql.NullString `json:"ended_at"`
 	IsActive    int64          `json:"is_active"`
 	CreatedAt   string         `json:"created_at"`
+	ModelID     sql.NullString `json:"model_id"`
+	PlanType    sql.NullString `json:"plan_type"`
+	Notes       sql.NullString `json:"notes"`
 }
 
 func (q *Queries) CreateExperiment(ctx context.Context, arg CreateExperimentParams) error {
@@ -45,6 +48,9 @@ func (q *Queries) CreateExperiment(ctx context.Context, arg CreateExperimentPara
 		arg.EndedAt,
 		arg.IsActive,
 		arg.CreatedAt,
+		arg.ModelID,
+		arg.PlanType,
+		arg.Notes,
 	)
 	return err
 }
@@ -77,7 +83,7 @@ func (q *Queries) DeleteExperiment(ctx context.Context, id string) error {
 }
 
 const getActiveExperiment = `-- name: GetActiveExperiment :one
-SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at FROM experiments WHERE is_active = 1 LIMIT 1
+SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes FROM experiments WHERE is_active = 1 LIMIT 1
 `
 
 func (q *Queries) GetActiveExperiment(ctx context.Context) (Experiment, error) {
@@ -92,12 +98,15 @@ func (q *Queries) GetActiveExperiment(ctx context.Context) (Experiment, error) {
 		&i.EndedAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.ModelID,
+		&i.PlanType,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const getExperimentByID = `-- name: GetExperimentByID :one
-SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at FROM experiments WHERE id = ?
+SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes FROM experiments WHERE id = ?
 `
 
 func (q *Queries) GetExperimentByID(ctx context.Context, id string) (Experiment, error) {
@@ -112,12 +121,15 @@ func (q *Queries) GetExperimentByID(ctx context.Context, id string) (Experiment,
 		&i.EndedAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.ModelID,
+		&i.PlanType,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const getExperimentByName = `-- name: GetExperimentByName :one
-SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at FROM experiments WHERE name = ?
+SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes FROM experiments WHERE name = ?
 `
 
 func (q *Queries) GetExperimentByName(ctx context.Context, name string) (Experiment, error) {
@@ -132,12 +144,15 @@ func (q *Queries) GetExperimentByName(ctx context.Context, name string) (Experim
 		&i.EndedAt,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.ModelID,
+		&i.PlanType,
+		&i.Notes,
 	)
 	return i, err
 }
 
 const listExperiments = `-- name: ListExperiments :many
-SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at FROM experiments ORDER BY created_at DESC
+SELECT id, name, description, hypothesis, started_at, ended_at, is_active, created_at, model_id, plan_type, notes FROM experiments ORDER BY created_at DESC
 `
 
 func (q *Queries) ListExperiments(ctx context.Context) ([]Experiment, error) {
@@ -158,6 +173,9 @@ func (q *Queries) ListExperiments(ctx context.Context) ([]Experiment, error) {
 			&i.EndedAt,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.ModelID,
+			&i.PlanType,
+			&i.Notes,
 		); err != nil {
 			return nil, err
 		}
@@ -174,7 +192,7 @@ func (q *Queries) ListExperiments(ctx context.Context) ([]Experiment, error) {
 
 const updateExperiment = `-- name: UpdateExperiment :exec
 UPDATE experiments
-SET name = ?, description = ?, hypothesis = ?, started_at = ?, ended_at = ?, is_active = ?
+SET name = ?, description = ?, hypothesis = ?, started_at = ?, ended_at = ?, is_active = ?, model_id = ?, plan_type = ?, notes = ?
 WHERE id = ?
 `
 
@@ -185,6 +203,9 @@ type UpdateExperimentParams struct {
 	StartedAt   string         `json:"started_at"`
 	EndedAt     sql.NullString `json:"ended_at"`
 	IsActive    int64          `json:"is_active"`
+	ModelID     sql.NullString `json:"model_id"`
+	PlanType    sql.NullString `json:"plan_type"`
+	Notes       sql.NullString `json:"notes"`
 	ID          string         `json:"id"`
 }
 
@@ -196,6 +217,9 @@ func (q *Queries) UpdateExperiment(ctx context.Context, arg UpdateExperimentPara
 		arg.StartedAt,
 		arg.EndedAt,
 		arg.IsActive,
+		arg.ModelID,
+		arg.PlanType,
+		arg.Notes,
 		arg.ID,
 	)
 	return err

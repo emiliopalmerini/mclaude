@@ -175,6 +175,9 @@ type Experiment struct {
 	EndedAt     string
 	IsActive    bool
 	CreatedAt   string
+	ModelID     string
+	PlanType    string
+	Notes       string
 	// Stats
 	SessionCount   int64
 	TotalTokens    int64
@@ -192,6 +195,9 @@ type ExperimentDetail struct {
 	EndedAt     string
 	IsActive    bool
 	CreatedAt   string
+	ModelID     string
+	PlanType    string
+	Notes       string
 	// Stats
 	SessionCount      int64
 	TotalTurns        int64
@@ -217,6 +223,12 @@ type ExperimentDetail struct {
 	AvgAccuracy    *float64
 	AvgHelpfulness *float64
 	AvgEfficiency  *float64
+	// Normalized behavior metrics
+	TokensPerTurn    float64
+	OutputRatio      float64
+	CacheHitRate     float64
+	ErrorRate        float64
+	ToolCallsPerTurn float64
 }
 
 type ExperimentComparison struct {
@@ -226,6 +238,8 @@ type ExperimentComparison struct {
 type ExperimentCompareItem struct {
 	Name              string
 	IsActive          bool
+	ModelID           string
+	PlanType          string
 	SessionCount      int64
 	TotalTurns        int64
 	UserMessages      int64
@@ -246,6 +260,12 @@ type ExperimentCompareItem struct {
 	AvgAccuracy    *float64
 	AvgHelpfulness *float64
 	AvgEfficiency  *float64
+	// Normalized behavior metrics
+	TokensPerTurn    float64
+	OutputRatio      float64
+	CacheHitRate     float64
+	ErrorRate        float64
+	ToolCallsPerTurn float64
 }
 
 type ModelPricing struct {

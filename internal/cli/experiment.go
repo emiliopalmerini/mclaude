@@ -96,6 +96,9 @@ Examples:
 var (
 	expDescription string
 	expHypothesis  string
+	expModel       string
+	expPlan        string
+	expNotes       string
 )
 
 func init() {
@@ -113,6 +116,9 @@ func init() {
 	// Flags for create command
 	experimentCreateCmd.Flags().StringVarP(&expDescription, "description", "d", "", "Description of the experiment")
 	experimentCreateCmd.Flags().StringVarP(&expHypothesis, "hypothesis", "H", "", "Hypothesis to test")
+	experimentCreateCmd.Flags().StringVarP(&expModel, "model", "m", "", "Model ID used for this experiment (e.g. claude-opus-4-6)")
+	experimentCreateCmd.Flags().StringVarP(&expPlan, "plan", "p", "", "Plan type (e.g. pro, max_5x, max_20x)")
+	experimentCreateCmd.Flags().StringVarP(&expNotes, "notes", "n", "", "Free-form notes about methodology")
 }
 
 func runExperimentCreate(cmd *cobra.Command, args []string) error {
@@ -144,6 +150,15 @@ func runExperimentCreate(cmd *cobra.Command, args []string) error {
 	}
 	if expHypothesis != "" {
 		exp.Hypothesis = &expHypothesis
+	}
+	if expModel != "" {
+		exp.ModelID = &expModel
+	}
+	if expPlan != "" {
+		exp.PlanType = &expPlan
+	}
+	if expNotes != "" {
+		exp.Notes = &expNotes
 	}
 
 	if err := app.ExperimentRepo.Create(ctx, exp); err != nil {
@@ -178,8 +193,8 @@ func runExperimentList(cmd *cobra.Command, args []string) error {
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "NAME\tSTATUS\tSESSIONS\tTOKENS\tCOST\tSTARTED\tENDED")
-	fmt.Fprintln(w, "----\t------\t--------\t------\t----\t-------\t-----")
+	fmt.Fprintln(w, "NAME\tSTATUS\tMODEL\tPLAN\tSESSIONS\tTOKENS\tCOST\tSTARTED\tENDED")
+	fmt.Fprintln(w, "----\t------\t-----\t----\t--------\t------\t----\t-------\t-----")
 
 	for _, exp := range experiments {
 		status := "inactive"
@@ -204,8 +219,17 @@ func runExperimentList(cmd *cobra.Command, args []string) error {
 			cost = es.TotalCostUsd
 		}
 
-		fmt.Fprintf(w, "%s\t%s\t%d\t%s\t$%.2f\t%s\t%s\n",
-			exp.Name, status, sessions, util.FormatNumber(tokens), cost, started, ended)
+		model := "-"
+		if exp.ModelID != nil {
+			model = *exp.ModelID
+		}
+		plan := "-"
+		if exp.PlanType != nil {
+			plan = *exp.PlanType
+		}
+
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%d\t%s\t$%.2f\t%s\t%s\n",
+			exp.Name, status, model, plan, sessions, util.FormatNumber(tokens), cost, started, ended)
 	}
 
 	w.Flush()

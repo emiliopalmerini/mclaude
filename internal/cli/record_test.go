@@ -169,6 +169,22 @@ func runRecordTest(t *testing.T, db *sql.DB) {
 		assertEqual(t, "metrics.ModelID", "claude-sonnet-4-20250514", metrics.ModelID.String)
 	}
 
+	// Verify pricing rates were captured
+	if !metrics.InputRate.Valid {
+		t.Error("Expected input rate to be set")
+	} else if metrics.InputRate.Float64 <= 0 {
+		t.Errorf("Expected positive input rate, got %f", metrics.InputRate.Float64)
+	}
+	if !metrics.OutputRate.Valid {
+		t.Error("Expected output rate to be set")
+	} else if metrics.OutputRate.Float64 <= 0 {
+		t.Errorf("Expected positive output rate, got %f", metrics.OutputRate.Float64)
+	}
+	t.Logf("Rates: input=$%.2f/MTok, output=$%.2f/MTok", metrics.InputRate.Float64, metrics.OutputRate.Float64)
+	if metrics.CacheReadRate.Valid {
+		t.Logf("Cache rates: read=$%.2f/MTok, write=$%.2f/MTok", metrics.CacheReadRate.Float64, metrics.CacheWriteRate.Float64)
+	}
+
 	// Verify tools
 	tools, err := queries.ListSessionToolsBySessionID(ctx, sessionID)
 	if err != nil {
