@@ -123,6 +123,12 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		pageData.Projects = append(pageData.Projects, templates.FilterOption{ID: id, Name: name})
 	}
 
+	// HTMX partial: render only the session table
+	if r.Header.Get("HX-Request") != "" {
+		templates.SessionTable(pageData).Render(ctx, w)
+		return
+	}
+
 	templates.SessionsPage(pageData).Render(ctx, w)
 }
 

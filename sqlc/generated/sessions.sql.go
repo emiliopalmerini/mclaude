@@ -724,3 +724,74 @@ func (q *Queries) ListSessionsWithMetricsFullByProject(ctx context.Context, arg 
 	}
 	return items, nil
 }
+
+const listSessionsWithMetricsFullByProjectAndExperiment = `-- name: ListSessionsWithMetricsFullByProjectAndExperiment :many
+SELECT
+    s.id, s.project_id, s.experiment_id, s.exit_reason, s.created_at,
+    s.duration_seconds,
+    COALESCE(m.turn_count, 0) as turn_count,
+    COALESCE(m.token_input, 0) + COALESCE(m.token_output, 0) as total_tokens,
+    m.cost_estimate_usd,
+    m.model_id,
+    (SELECT COUNT(*) FROM session_subagents sa WHERE sa.session_id = s.id) as subagent_count
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.project_id = ? AND s.experiment_id = ?
+ORDER BY s.created_at DESC
+LIMIT ?
+`
+
+type ListSessionsWithMetricsFullByProjectAndExperimentParams struct {
+	ProjectID    string         `json:"project_id"`
+	ExperimentID sql.NullString `json:"experiment_id"`
+	Limit        int64          `json:"limit"`
+}
+
+type ListSessionsWithMetricsFullByProjectAndExperimentRow struct {
+	ID              string          `json:"id"`
+	ProjectID       string          `json:"project_id"`
+	ExperimentID    sql.NullString  `json:"experiment_id"`
+	ExitReason      string          `json:"exit_reason"`
+	CreatedAt       string          `json:"created_at"`
+	DurationSeconds sql.NullInt64   `json:"duration_seconds"`
+	TurnCount       int64           `json:"turn_count"`
+	TotalTokens     int64           `json:"total_tokens"`
+	CostEstimateUsd sql.NullFloat64 `json:"cost_estimate_usd"`
+	ModelID         sql.NullString  `json:"model_id"`
+	SubagentCount   int64           `json:"subagent_count"`
+}
+
+func (q *Queries) ListSessionsWithMetricsFullByProjectAndExperiment(ctx context.Context, arg ListSessionsWithMetricsFullByProjectAndExperimentParams) ([]ListSessionsWithMetricsFullByProjectAndExperimentRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionsWithMetricsFullByProjectAndExperiment, arg.ProjectID, arg.ExperimentID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionsWithMetricsFullByProjectAndExperimentRow{}
+	for rows.Next() {
+		var i ListSessionsWithMetricsFullByProjectAndExperimentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.ExperimentID,
+			&i.ExitReason,
+			&i.CreatedAt,
+			&i.DurationSeconds,
+			&i.TurnCount,
+			&i.TotalTokens,
+			&i.CostEstimateUsd,
+			&i.ModelID,
+			&i.SubagentCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

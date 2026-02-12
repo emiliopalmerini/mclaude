@@ -276,8 +276,8 @@ templ Layout(title, currentPath string) {
 							if (!el || !experiments || experiments.length < 2) return;
 							this.chart = echarts.init(el);
 							// Find max for each metric to normalize
-							const metrics = ['tokensPerSession', 'costPerSession', 'totalTurns', 'successRate', 'avgRating'];
-							const labels = ['Tok/Session', '$/Session', 'Turns', 'Success%', 'Avg Rating'];
+							const metrics = ['tokensPerTurn', 'outputRatio', 'cacheHitRate', 'toolCallsPerTurn', 'errorRate'];
+							const labels = ['Tok/Turn', 'Output Ratio', 'Cache Hit %', 'Tools/Turn', 'Error Rate'];
 							const maxVals = metrics.map(m => Math.max(...experiments.map(e => e[m] || 0), 1));
 							this.chart.setOption({
 								tooltip: {},

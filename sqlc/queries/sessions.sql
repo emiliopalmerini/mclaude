@@ -114,3 +114,18 @@ LEFT JOIN session_metrics m ON s.id = m.session_id
 WHERE s.project_id = ?
 ORDER BY s.created_at DESC
 LIMIT ?;
+
+-- name: ListSessionsWithMetricsFullByProjectAndExperiment :many
+SELECT
+    s.id, s.project_id, s.experiment_id, s.exit_reason, s.created_at,
+    s.duration_seconds,
+    COALESCE(m.turn_count, 0) as turn_count,
+    COALESCE(m.token_input, 0) + COALESCE(m.token_output, 0) as total_tokens,
+    m.cost_estimate_usd,
+    m.model_id,
+    (SELECT COUNT(*) FROM session_subagents sa WHERE sa.session_id = s.id) as subagent_count
+FROM sessions s
+LEFT JOIN session_metrics m ON s.id = m.session_id
+WHERE s.project_id = ? AND s.experiment_id = ?
+ORDER BY s.created_at DESC
+LIMIT ?;

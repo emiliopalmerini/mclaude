@@ -822,6 +822,8 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 		OutputRatio      float64 `json:"outputRatio"`
 		CacheHitRate     float64 `json:"cacheHitRate"`
 		ToolCallsPerTurn float64 `json:"toolCallsPerTurn"`
+		TokensPerTurn    float64 `json:"tokensPerTurn"`
+		ErrorRate        float64 `json:"errorRate"`
 	}
 	items := make([]chartItem, len(experiments))
 	for i, exp := range experiments {
@@ -836,6 +838,8 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 			OutputRatio:      exp.OutputRatio,
 			CacheHitRate:     exp.CacheHitRate * 100,
 			ToolCallsPerTurn: exp.ToolCallsPerTurn,
+			TokensPerTurn:    exp.TokensPerTurn,
+			ErrorRate:        exp.ErrorRate * 100,
 		}
 		if exp.SuccessRate != nil {
 			items[i].SuccessRate = *exp.SuccessRate * 100

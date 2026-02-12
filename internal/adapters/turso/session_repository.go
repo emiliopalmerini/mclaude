@@ -105,66 +105,66 @@ func (r *SessionRepository) ListWithMetrics(ctx context.Context, opts ports.List
 		limit = 50
 	}
 
-	if opts.ProjectID != nil {
+	type listRow struct {
+		ID              string
+		ProjectID       string
+		ExperimentID    sql.NullString
+		ExitReason      string
+		CreatedAt       string
+		DurationSeconds sql.NullInt64
+		TurnCount       int64
+		TotalTokens     int64
+		CostEstimateUsd sql.NullFloat64
+		ModelID         sql.NullString
+		SubagentCount   int64
+	}
+
+	var genericRows []listRow
+	var queryErr error
+
+	switch {
+	case opts.ProjectID != nil && opts.ExperimentID != nil:
+		rows, err := r.queries.ListSessionsWithMetricsFullByProjectAndExperiment(ctx, sqlc.ListSessionsWithMetricsFullByProjectAndExperimentParams{
+			ProjectID:    *opts.ProjectID,
+			ExperimentID: util.NullStringPtr(opts.ExperimentID),
+			Limit:        limit,
+		})
+		queryErr = err
+		for _, row := range rows {
+			genericRows = append(genericRows, listRow{row.ID, row.ProjectID, row.ExperimentID, row.ExitReason, row.CreatedAt, row.DurationSeconds, row.TurnCount, row.TotalTokens, row.CostEstimateUsd, row.ModelID, row.SubagentCount})
+		}
+	case opts.ProjectID != nil:
 		rows, err := r.queries.ListSessionsWithMetricsFullByProject(ctx, sqlc.ListSessionsWithMetricsFullByProjectParams{
 			ProjectID: *opts.ProjectID,
 			Limit:     limit,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+		queryErr = err
+		for _, row := range rows {
+			genericRows = append(genericRows, listRow{row.ID, row.ProjectID, row.ExperimentID, row.ExitReason, row.CreatedAt, row.DurationSeconds, row.TurnCount, row.TotalTokens, row.CostEstimateUsd, row.ModelID, row.SubagentCount})
 		}
-		items := make([]*domain.SessionListItem, len(rows))
-		for i, row := range rows {
-			items[i] = &domain.SessionListItem{
-				ID:            row.ID,
-				ProjectID:     row.ProjectID,
-				ExperimentID:  util.NullStringToPtr(row.ExperimentID),
-				ExitReason:    row.ExitReason,
-				CreatedAt:     row.CreatedAt,
-				Duration:      nullInt64ToPtr(row.DurationSeconds),
-				TurnCount:     row.TurnCount,
-				TotalTokens:   row.TotalTokens,
-				Cost:          nullFloat64ToPtr(row.CostEstimateUsd),
-				ModelID:       util.NullStringToPtr(row.ModelID),
-				SubagentCount: row.SubagentCount,
-			}
-		}
-		return items, nil
-	}
-
-	if opts.ExperimentID != nil {
+	case opts.ExperimentID != nil:
 		rows, err := r.queries.ListSessionsWithMetricsFullByExperiment(ctx, sqlc.ListSessionsWithMetricsFullByExperimentParams{
 			ExperimentID: util.NullStringPtr(opts.ExperimentID),
 			Limit:        limit,
 		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+		queryErr = err
+		for _, row := range rows {
+			genericRows = append(genericRows, listRow{row.ID, row.ProjectID, row.ExperimentID, row.ExitReason, row.CreatedAt, row.DurationSeconds, row.TurnCount, row.TotalTokens, row.CostEstimateUsd, row.ModelID, row.SubagentCount})
 		}
-		items := make([]*domain.SessionListItem, len(rows))
-		for i, row := range rows {
-			items[i] = &domain.SessionListItem{
-				ID:            row.ID,
-				ProjectID:     row.ProjectID,
-				ExperimentID:  util.NullStringToPtr(row.ExperimentID),
-				ExitReason:    row.ExitReason,
-				CreatedAt:     row.CreatedAt,
-				Duration:      nullInt64ToPtr(row.DurationSeconds),
-				TurnCount:     row.TurnCount,
-				TotalTokens:   row.TotalTokens,
-				Cost:          nullFloat64ToPtr(row.CostEstimateUsd),
-				ModelID:       util.NullStringToPtr(row.ModelID),
-				SubagentCount: row.SubagentCount,
-			}
+	default:
+		rows, err := r.queries.ListSessionsWithMetricsFull(ctx, limit)
+		queryErr = err
+		for _, row := range rows {
+			genericRows = append(genericRows, listRow{row.ID, row.ProjectID, row.ExperimentID, row.ExitReason, row.CreatedAt, row.DurationSeconds, row.TurnCount, row.TotalTokens, row.CostEstimateUsd, row.ModelID, row.SubagentCount})
 		}
-		return items, nil
 	}
 
-	rows, err := r.queries.ListSessionsWithMetricsFull(ctx, limit)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list sessions with metrics: %w", err)
+	if queryErr != nil {
+		return nil, fmt.Errorf("failed to list sessions with metrics: %w", queryErr)
 	}
-	items := make([]*domain.SessionListItem, len(rows))
-	for i, row := range rows {
+
+	items := make([]*domain.SessionListItem, len(genericRows))
+	for i, row := range genericRows {
 		items[i] = &domain.SessionListItem{
 			ID:            row.ID,
 			ProjectID:     row.ProjectID,
