@@ -51,6 +51,20 @@ type ModelPricing struct {
 	LongContextThreshold        sql.NullInt64   `json:"long_context_threshold"`
 }
 
+type PlanConfig struct {
+	ID                      int64           `json:"id"`
+	PlanType                string          `json:"plan_type"`
+	WindowHours             int64           `json:"window_hours"`
+	LearnedTokenLimit       sql.NullFloat64 `json:"learned_token_limit"`
+	LearnedAt               sql.NullString  `json:"learned_at"`
+	CreatedAt               string          `json:"created_at"`
+	UpdatedAt               string          `json:"updated_at"`
+	WindowStartTime         sql.NullString  `json:"window_start_time"`
+	WeeklyWindowStartTime   sql.NullString  `json:"weekly_window_start_time"`
+	WeeklyLearnedTokenLimit sql.NullFloat64 `json:"weekly_learned_token_limit"`
+	WeeklyLearnedAt         sql.NullString  `json:"weekly_learned_at"`
+}
+
 type Project struct {
 	ID        string `json:"id"`
 	Path      string `json:"path"`
@@ -159,4 +173,22 @@ type ToolEvent struct {
 	ToolInput    sql.NullString `json:"tool_input"`
 	ToolResponse sql.NullString `json:"tool_response"`
 	CapturedAt   string         `json:"captured_at"`
+}
+
+type UsageLimit struct {
+	ID            string          `json:"id"`
+	LimitValue    float64         `json:"limit_value"`
+	WarnThreshold sql.NullFloat64 `json:"warn_threshold"`
+	Enabled       int64           `json:"enabled"`
+	CreatedAt     string          `json:"created_at"`
+	UpdatedAt     string          `json:"updated_at"`
+}
+
+type UsageMetric struct {
+	ID         int64          `json:"id"`
+	MetricName string         `json:"metric_name"`
+	Value      float64        `json:"value"`
+	Attributes sql.NullString `json:"attributes"`
+	RecordedAt string         `json:"recorded_at"`
+	CreatedAt  string         `json:"created_at"`
 }
