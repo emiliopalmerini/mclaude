@@ -182,9 +182,17 @@ func RunMigration(ctx context.Context, db *sql.DB, m Migration, up bool) error {
 	return nil
 }
 
-// SplitSQL splits a SQL string by semicolons.
-func SplitSQL(sql string) []string {
-	return strings.Split(sql, ";")
+// SplitSQL splits a SQL string by semicolons, stripping line comments.
+func SplitSQL(s string) []string {
+	var cleaned []string
+	for _, line := range strings.Split(s, "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "--") {
+			continue
+		}
+		cleaned = append(cleaned, line)
+	}
+	return strings.Split(strings.Join(cleaned, "\n"), ";")
 }
 
 // MigrateUp runs all pending up migrations.

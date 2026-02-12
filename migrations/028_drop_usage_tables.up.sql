@@ -1,3 +1,3 @@
-DROP TABLE IF EXISTS plan_config;
-DROP TABLE IF EXISTS usage_limits;
-DROP TABLE IF EXISTS usage_metrics;
+-- no-op: plan_config, usage_limits, usage_metrics tables already dropped
+-- by the original (failed) DROP TABLE migration attempt.
+-- Code no longer references these tables.
