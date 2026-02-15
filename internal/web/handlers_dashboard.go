@@ -2,11 +2,11 @@ package web
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/emiliopalmerini/mclaude/internal/domain"
+	"github.com/emiliopalmerini/mclaude/internal/ports"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 	"github.com/emiliopalmerini/mclaude/internal/web/templates"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
@@ -33,83 +33,61 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 	queries := sqlc.New(s.db)
 	startDate := util.GetStartDateForPeriod(filters.Period)
 
-	// Results collected by each goroutine (no mutex needed — each writes to its own var)
-	var (
-		aggStats       *domain.AggregateStats
-		experiments    []*domain.Experiment
-		projects       []*domain.Project
-		activeExp      sqlc.Experiment
-		defaultModel   sqlc.ModelPricing
-		tools          []sqlc.GetTopToolsUsageRow
-		sessions       []sqlc.ListSessionsWithMetricsRow
-		qualityStats   sqlc.GetOverallQualityStatsRow
-		qualityStatsOK bool
-	)
-
-	g, gctx := errgroup.WithContext(ctx)
+	// Sequential fetching — the remote libsql driver doesn't support concurrent connections well,
+	// and SetMaxOpenConns(1) serializes access anyway.
 
 	// 1. Aggregate stats
-	g.Go(func() error {
-		var err error
-		if filters.Experiment != "" {
-			aggStats, err = s.statsRepo.GetAggregateByExperiment(gctx, filters.Experiment, startDate)
-		} else if filters.Project != "" {
-			aggStats, err = s.statsRepo.GetAggregateByProject(gctx, filters.Project, startDate)
-		} else {
-			aggStats, err = s.statsRepo.GetAggregate(gctx, startDate)
-		}
-		_ = err
-		return nil
-	})
+	var aggStats *domain.AggregateStats
+	var err error
+	if filters.Experiment != "" {
+		aggStats, err = s.statsRepo.GetAggregateByExperiment(ctx, filters.Experiment, startDate)
+	} else if filters.Project != "" {
+		aggStats, err = s.statsRepo.GetAggregateByProject(ctx, filters.Project, startDate)
+	} else {
+		aggStats, err = s.statsRepo.GetAggregate(ctx, startDate)
+	}
+	if err != nil {
+		slog.Error("dashboard: aggregate stats", "error", err)
+	}
 
 	// 2. Experiments list (for dropdown)
-	g.Go(func() error {
-		experiments, _ = s.experimentRepo.List(gctx)
-		return nil
-	})
+	experiments, err := s.experimentRepo.List(ctx)
+	if err != nil {
+		slog.Error("dashboard: experiments list", "error", err)
+	}
 
 	// 3. Projects list (for dropdown)
-	g.Go(func() error {
-		projects, _ = s.projectRepo.List(gctx)
-		return nil
-	})
+	projects, err := s.projectRepo.List(ctx)
+	if err != nil {
+		slog.Error("dashboard: projects list", "error", err)
+	}
 
-	// 4. Active experiment
-	g.Go(func() error {
-		activeExp, _ = queries.GetActiveExperiment(gctx)
-		return nil
-	})
+	// 4. Active experiment (via port interface)
+	activeExp, err := s.experimentRepo.GetActive(ctx)
+	if err != nil {
+		slog.Error("dashboard: active experiment", "error", err)
+	}
 
-	// 6. Default model
-	g.Go(func() error {
-		defaultModel, _ = queries.GetDefaultModelPricing(gctx)
-		return nil
-	})
+	// 5. Default model (via port interface)
+	defaultModel, err := s.pricingRepo.GetDefault(ctx)
+	if err != nil {
+		slog.Error("dashboard: default model", "error", err)
+	}
 
-	// 7. Top tools
-	g.Go(func() error {
-		tools, _ = queries.GetTopToolsUsage(gctx, sqlc.GetTopToolsUsageParams{
-			CreatedAt: startDate,
-			Limit:     5,
-		})
-		return nil
-	})
+	// 6. Top tools (via port interface)
+	tools, err := s.statsRepo.GetTopTools(ctx, startDate, 5)
+	if err != nil {
+		slog.Error("dashboard: top tools", "error", err)
+	}
 
-	// 8. Recent sessions
-	g.Go(func() error {
-		sessions, _ = queries.ListSessionsWithMetrics(gctx, 5)
-		return nil
-	})
+	// 7. Recent sessions (via port interface)
+	sessionItems, err := s.sessionRepo.ListWithMetrics(ctx, ports.ListSessionsOptions{Limit: 5})
+	if err != nil {
+		slog.Error("dashboard: recent sessions", "error", err)
+	}
 
-	// 9. Quality stats
-	g.Go(func() error {
-		var err error
-		qualityStats, err = queries.GetOverallQualityStats(gctx)
-		qualityStatsOK = err == nil
-		return nil
-	})
-
-	_ = g.Wait()
+	// 8. Quality stats (no port equivalent, use sqlc directly)
+	qualityStats, qualityErr := queries.GetOverallQualityStats(ctx)
 
 	// Assemble results
 	stats := templates.DashboardStats{
@@ -137,26 +115,24 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 		stats.Projects = append(stats.Projects, templates.FilterOption{ID: p.ID, Name: p.Name})
 	}
 
-	if activeExp.Name != "" {
+	if activeExp != nil {
 		stats.ActiveExperiment = activeExp.Name
 	}
-	if defaultModel.DisplayName != "" {
+	if defaultModel != nil {
 		stats.DefaultModel = defaultModel.DisplayName
 	}
 
 	topTools := make([]templates.ToolUsage, 0, len(tools))
 	for _, t := range tools {
-		if t.TotalInvocations.Valid {
-			topTools = append(topTools, templates.ToolUsage{
-				Name:  t.ToolName,
-				Count: int64(t.TotalInvocations.Float64),
-			})
-		}
+		topTools = append(topTools, templates.ToolUsage{
+			Name:  t.ToolName,
+			Count: t.TotalInvocations,
+		})
 	}
 	stats.TopTools = topTools
 
-	recentSessions := make([]templates.SessionSummary, 0, len(sessions))
-	for _, sess := range sessions {
+	recentSessions := make([]templates.SessionSummary, 0, len(sessionItems))
+	for _, sess := range sessionItems {
 		summary := templates.SessionSummary{
 			ID:         sess.ID,
 			CreatedAt:  sess.CreatedAt,
@@ -164,14 +140,14 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 			Turns:      sess.TurnCount,
 			Tokens:     sess.TotalTokens,
 		}
-		if sess.CostEstimateUsd.Valid {
-			summary.Cost = sess.CostEstimateUsd.Float64
+		if sess.Cost != nil {
+			summary.Cost = *sess.Cost
 		}
 		recentSessions = append(recentSessions, summary)
 	}
 	stats.RecentSessions = recentSessions
 
-	if qualityStatsOK && qualityStats.ReviewedCount > 0 {
+	if qualityErr == nil && qualityStats.ReviewedCount > 0 {
 		stats.ReviewedCount = qualityStats.ReviewedCount
 		if qualityStats.AvgOverallRating.Valid {
 			avg := qualityStats.AvgOverallRating.Float64

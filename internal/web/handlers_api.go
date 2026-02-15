@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -45,10 +46,15 @@ func (s *Server) handleAPIChartTokens(w http.ResponseWriter, r *http.Request) {
 		startDate = time.Now().AddDate(0, 0, -30).Format(time.RFC3339)
 	}
 
-	stats, _ := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
+	stats, err := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
 		CreatedAt: startDate,
 		Limit:     30,
 	})
+	if err != nil {
+		slog.Error("api: chart tokens", "error", err)
+		http.Error(w, "failed to fetch token stats", http.StatusInternalServerError)
+		return
+	}
 
 	labels := make([]string, len(stats))
 	tokens := make([]int64, len(stats))
@@ -78,10 +84,15 @@ func (s *Server) handleAPIChartCost(w http.ResponseWriter, r *http.Request) {
 		startDate = time.Now().AddDate(0, 0, -30).Format(time.RFC3339)
 	}
 
-	stats, _ := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
+	stats, err := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
 		CreatedAt: startDate,
 		Limit:     30,
 	})
+	if err != nil {
+		slog.Error("api: chart cost", "error", err)
+		http.Error(w, "failed to fetch cost stats", http.StatusInternalServerError)
+		return
+	}
 
 	labels := make([]string, len(stats))
 	costs := make([]float64, len(stats))
@@ -104,10 +115,15 @@ func (s *Server) handleAPIChartHeatmap(w http.ResponseWriter, r *http.Request) {
 
 	// Get daily stats for the current year
 	startDate := time.Now().AddDate(0, 0, -365).Format(time.RFC3339)
-	stats, _ := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
+	stats, err := queries.GetDailyStats(ctx, sqlc.GetDailyStatsParams{
 		CreatedAt: startDate,
 		Limit:     366,
 	})
+	if err != nil {
+		slog.Error("api: chart heatmap", "error", err)
+		http.Error(w, "failed to fetch heatmap stats", http.StatusInternalServerError)
+		return
+	}
 
 	data := make([][2]any, len(stats))
 	for i, stat := range stats {

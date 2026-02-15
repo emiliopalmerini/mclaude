@@ -138,6 +138,10 @@ func NewRemoteDB(url, authToken string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open remote database: %w", err)
 	}
 
+	// Serialize all access through a single connection to avoid race conditions
+	// in the go-libsql remote (HTTP/hrana) driver.
+	db.SetMaxOpenConns(1)
+
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("failed to ping remote database: %w", err)
