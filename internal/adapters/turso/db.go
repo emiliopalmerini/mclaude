@@ -94,12 +94,6 @@ func NewDBWithConfig(cfg DBConfig) (*DB, error) {
 		}
 
 		db = sql.OpenDB(connector)
-
-		// Initial sync to pull latest data
-		if _, err := connector.Sync(); err != nil {
-			// Log warning but don't fail - local data is still usable
-			fmt.Fprintf(os.Stderr, "warning: initial sync failed: %v\n", err)
-		}
 	} else {
 		// Local-only mode using file path connection
 		db, err = sql.Open("libsql", "file:"+localPath)
@@ -180,14 +174,8 @@ func (d *DB) IsSyncEnabled() bool {
 }
 
 // Close closes the database connection and connector.
+// Callers that need to push writes should call Sync() explicitly before Close().
 func (d *DB) Close() error {
-	// Sync before closing if enabled
-	if d.syncMode == SyncModeEnabled && d.connector != nil {
-		d.mu.Lock()
-		_, _ = d.connector.Sync() // Best-effort final sync
-		d.mu.Unlock()
-	}
-
 	var errs []error
 	if err := d.DB.Close(); err != nil {
 		errs = append(errs, err)
