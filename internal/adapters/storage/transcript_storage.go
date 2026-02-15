@@ -109,4 +109,3 @@ func (s *TranscriptStorage) Exists(ctx context.Context, sessionID string) (bool,
 func (s *TranscriptStorage) getPath(sessionID string) string {
 	return filepath.Join(s.baseDir, sessionID+".jsonl.gz")
 }
-

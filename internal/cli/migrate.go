@@ -88,4 +88,3 @@ func runMigrate(cmd *cobra.Command, args []string) error {
 
 	return migrateErr
 }
-

@@ -321,13 +321,13 @@ func processSubagentResult(entry TranscriptEntry, sessionID string, pendingSubs 
 	}
 
 	subagent := &domain.SessionSubagent{
-		SessionID:   sessionID,
-		AgentType:   pending.agentType,
-		AgentKind:   pending.agentKind,
-		Description: pending.description,
-		Model:       pending.model,
-		TotalTokens: toolUseResult.TotalTokens,
-		ToolUseCount: toolUseResult.TotalToolUseCount,
+		SessionID:       sessionID,
+		AgentType:       pending.agentType,
+		AgentKind:       pending.agentKind,
+		Description:     pending.description,
+		Model:           pending.model,
+		TotalTokens:     toolUseResult.TotalTokens,
+		ToolUseCount:    toolUseResult.TotalToolUseCount,
 		TotalDurationMs: toolUseResult.TotalDurationMs,
 	}
 

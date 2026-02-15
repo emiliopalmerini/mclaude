@@ -15,21 +15,21 @@ func TestAggregateStats_ComputeNormalized(t *testing.T) {
 		{
 			name: "normal case",
 			stats: AggregateStats{
-				SessionCount:        10,
-				TotalTurns:          50,
-				TotalTokenInput:     100000,
-				TotalTokenOutput:    20000,
-				TotalTokenCacheRead: 50000,
+				SessionCount:         10,
+				TotalTurns:           50,
+				TotalTokenInput:      100000,
+				TotalTokenOutput:     20000,
+				TotalTokenCacheRead:  50000,
 				TotalTokenCacheWrite: 10000,
-				TotalErrors:         5,
+				TotalErrors:          5,
 			},
 			totalToolCalls: 200,
 			expected: NormalizedMetrics{
-				TokensPerTurn:    2400,    // (100000+20000)/50
-				OutputRatio:      0.2,     // 20000/100000
+				TokensPerTurn:    2400,                                     // (100000+20000)/50
+				OutputRatio:      0.2,                                      // 20000/100000
 				CacheHitRate:     50000.0 / (100000.0 + 50000.0 + 10000.0), // 50000/160000
-				ErrorRate:        0.1,     // 5/50
-				ToolCallsPerTurn: 4.0,     // 200/50
+				ErrorRate:        0.1,                                      // 5/50
+				ToolCallsPerTurn: 4.0,                                      // 200/50
 			},
 		},
 		{
@@ -69,12 +69,12 @@ func TestAggregateStats_ComputeNormalized(t *testing.T) {
 		{
 			name: "zero context tokens — cache hit rate zero",
 			stats: AggregateStats{
-				TotalTurns:          20,
-				TotalTokenInput:     0,
-				TotalTokenOutput:    1000,
-				TotalTokenCacheRead: 0,
+				TotalTurns:           20,
+				TotalTokenInput:      0,
+				TotalTokenOutput:     1000,
+				TotalTokenCacheRead:  0,
 				TotalTokenCacheWrite: 0,
-				TotalErrors:         0,
+				TotalErrors:          0,
 			},
 			totalToolCalls: 0,
 			expected: NormalizedMetrics{

@@ -78,10 +78,10 @@ type SessionListItem struct {
 type SessionSubagent struct {
 	ID              int64
 	SessionID       string
-	AgentType       string   // subagent_type for Task (e.g. "Explore", "Bash"), skill name for Skill (e.g. "commit")
-	AgentKind       string   // "task" or "skill"
-	Description     *string  // short description from Task input
-	Model           *string  // model alias (e.g. "haiku", "sonnet") or nil
+	AgentType       string  // subagent_type for Task (e.g. "Explore", "Bash"), skill name for Skill (e.g. "commit")
+	AgentKind       string  // "task" or "skill"
+	Description     *string // short description from Task input
+	Model           *string // model alias (e.g. "haiku", "sonnet") or nil
 	TotalTokens     int64
 	TokenInput      int64
 	TokenOutput     int64

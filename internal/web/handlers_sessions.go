@@ -185,8 +185,8 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 	toolEvents, _ := queries.ListToolEventsBySessionID(ctx, id)
 	for _, te := range toolEvents {
 		view := templates.ToolEventView{
-			ToolName:  te.ToolName,
-			ToolUseID: te.ToolUseID,
+			ToolName:   te.ToolName,
+			ToolUseID:  te.ToolUseID,
 			CapturedAt: te.CapturedAt,
 		}
 		if te.ToolInput.Valid {

@@ -129,4 +129,3 @@ func shortModelName(modelID string) string {
 	}
 	return parts
 }
-

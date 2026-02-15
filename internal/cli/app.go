@@ -10,18 +10,18 @@ import (
 
 // AppContext holds all shared dependencies for CLI commands.
 type AppContext struct {
-	DB               *turso.DB
-	SessionRepo      ports.SessionRepository
-	MetricsRepo      ports.SessionMetricsRepository
-	ToolRepo         ports.SessionToolRepository
-	FileRepo         ports.SessionFileRepository
-	CommandRepo      ports.SessionCommandRepository
-	SubagentRepo     ports.SessionSubagentRepository
+	DB                *turso.DB
+	SessionRepo       ports.SessionRepository
+	MetricsRepo       ports.SessionMetricsRepository
+	ToolRepo          ports.SessionToolRepository
+	FileRepo          ports.SessionFileRepository
+	CommandRepo       ports.SessionCommandRepository
+	SubagentRepo      ports.SessionSubagentRepository
 	ExperimentRepo    ports.ExperimentRepository
 	ExpVariableRepo   ports.ExperimentVariableRepository
 	ProjectRepo       ports.ProjectRepository
-	PricingRepo      ports.PricingRepository
-	QualityRepo      ports.SessionQualityRepository
+	PricingRepo       ports.PricingRepository
+	QualityRepo       ports.SessionQualityRepository
 	StatsRepo         ports.StatsRepository
 	TranscriptStorage ports.TranscriptStorage
 }

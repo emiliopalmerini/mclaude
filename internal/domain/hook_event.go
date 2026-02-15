@@ -53,9 +53,9 @@ type SubagentStartInput struct {
 // SubagentStopInput is sent when a sub-agent stops.
 type SubagentStopInput struct {
 	HookEventBase
-	StopHookActive     bool   `json:"stop_hook_active"`
-	AgentID            string `json:"agent_id"`
-	AgentType          string `json:"agent_type"`
+	StopHookActive      bool   `json:"stop_hook_active"`
+	AgentID             string `json:"agent_id"`
+	AgentType           string `json:"agent_type"`
 	AgentTranscriptPath string `json:"agent_transcript_path"`
 }
 

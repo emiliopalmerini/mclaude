@@ -19,11 +19,11 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	models := make([]templates.ModelPricing, 0, len(pricing))
 	for _, p := range pricing {
 		model := templates.ModelPricing{
-			ID:              p.ID,
-			DisplayName:     p.DisplayName,
-			InputPerMillion: p.InputPerMillion,
+			ID:               p.ID,
+			DisplayName:      p.DisplayName,
+			InputPerMillion:  p.InputPerMillion,
 			OutputPerMillion: p.OutputPerMillion,
-			IsDefault:       p.IsDefault,
+			IsDefault:        p.IsDefault,
 		}
 		if p.CacheReadPerMillion != nil {
 			model.CacheReadPerMillion = *p.CacheReadPerMillion

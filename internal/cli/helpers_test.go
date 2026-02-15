@@ -25,11 +25,11 @@ func (m *mockExperimentRepo) GetActive(_ context.Context) (*domain.Experiment, e
 	return nil, nil
 }
 func (m *mockExperimentRepo) List(_ context.Context) ([]*domain.Experiment, error) { return nil, nil }
-func (m *mockExperimentRepo) Update(_ context.Context, _ *domain.Experiment) error  { return nil }
-func (m *mockExperimentRepo) Delete(_ context.Context, _ string) error              { return nil }
-func (m *mockExperimentRepo) Activate(_ context.Context, _ string) error            { return nil }
-func (m *mockExperimentRepo) Deactivate(_ context.Context, _ string) error          { return nil }
-func (m *mockExperimentRepo) DeactivateAll(_ context.Context) error                 { return nil }
+func (m *mockExperimentRepo) Update(_ context.Context, _ *domain.Experiment) error { return nil }
+func (m *mockExperimentRepo) Delete(_ context.Context, _ string) error             { return nil }
+func (m *mockExperimentRepo) Activate(_ context.Context, _ string) error           { return nil }
+func (m *mockExperimentRepo) Deactivate(_ context.Context, _ string) error         { return nil }
+func (m *mockExperimentRepo) DeactivateAll(_ context.Context) error                { return nil }
 
 func TestGetExperimentByName_Found(t *testing.T) {
 	repo := &mockExperimentRepo{exp: &domain.Experiment{ID: "abc", Name: "test"}}

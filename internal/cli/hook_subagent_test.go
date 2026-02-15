@@ -87,15 +87,15 @@ func TestHandleSubagentStop_ParsesAndSaves(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"session_id":             sessionID,
-		"transcript_path":        "/tmp/main_transcript.jsonl",
-		"cwd":                    "/project",
-		"permission_mode":        "default",
-		"hook_event_name":        "SubagentStop",
-		"stop_hook_active":       false,
-		"agent_id":               "agent-002",
-		"agent_type":             "Explore",
-		"agent_transcript_path":  transcriptPath,
+		"session_id":            sessionID,
+		"transcript_path":       "/tmp/main_transcript.jsonl",
+		"cwd":                   "/project",
+		"permission_mode":       "default",
+		"hook_event_name":       "SubagentStop",
+		"stop_hook_active":      false,
+		"agent_id":              "agent-002",
+		"agent_type":            "Explore",
+		"agent_transcript_path": transcriptPath,
 	}
 
 	_, err = runHookWithInput(t, input)
@@ -142,15 +142,15 @@ func TestHandleSubagentStop_NoTrackingRow(t *testing.T) {
 	defer func() { testDBOverride = nil }()
 
 	input := map[string]any{
-		"session_id":             "sess-sa-3",
-		"transcript_path":        "/tmp/transcript.jsonl",
-		"cwd":                    "/project",
-		"permission_mode":        "default",
-		"hook_event_name":        "SubagentStop",
-		"stop_hook_active":       false,
-		"agent_id":               "agent-nonexistent",
-		"agent_type":             "Explore",
-		"agent_transcript_path":  "/tmp/subagent.jsonl",
+		"session_id":            "sess-sa-3",
+		"transcript_path":       "/tmp/transcript.jsonl",
+		"cwd":                   "/project",
+		"permission_mode":       "default",
+		"hook_event_name":       "SubagentStop",
+		"stop_hook_active":      false,
+		"agent_id":              "agent-nonexistent",
+		"agent_type":            "Explore",
+		"agent_transcript_path": "/tmp/subagent.jsonl",
 	}
 
 	// Should not crash, just handle gracefully
@@ -179,15 +179,15 @@ func TestHandleSubagentStop_MissingTranscript(t *testing.T) {
 	}
 
 	input := map[string]any{
-		"session_id":             "sess-sa-4",
-		"transcript_path":        "/tmp/transcript.jsonl",
-		"cwd":                    "/project",
-		"permission_mode":        "default",
-		"hook_event_name":        "SubagentStop",
-		"stop_hook_active":       false,
-		"agent_id":               "agent-003",
-		"agent_type":             "Explore",
-		"agent_transcript_path":  "/nonexistent/transcript.jsonl",
+		"session_id":            "sess-sa-4",
+		"transcript_path":       "/tmp/transcript.jsonl",
+		"cwd":                   "/project",
+		"permission_mode":       "default",
+		"hook_event_name":       "SubagentStop",
+		"stop_hook_active":      false,
+		"agent_id":              "agent-003",
+		"agent_type":            "Explore",
+		"agent_transcript_path": "/nonexistent/transcript.jsonl",
 	}
 
 	// Should handle missing transcript gracefully (log warning, still delete tracking)

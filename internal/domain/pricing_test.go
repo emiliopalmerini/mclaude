@@ -282,7 +282,7 @@ func TestModelPricing_ResolveRates_ConsistentWithCalculateCost(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                                  string
+		name                                 string
 		input, output, cacheRead, cacheWrite int64
 	}{
 		{"standard", 50000, 5000, 10000, 5000},

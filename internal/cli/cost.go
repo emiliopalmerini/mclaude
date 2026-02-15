@@ -142,11 +142,11 @@ func runCostSet(cmd *cobra.Command, args []string) error {
 	}
 
 	pricing := &domain.ModelPricing{
-		ID:              modelID,
-		DisplayName:     displayName,
-		InputPerMillion: costInput,
+		ID:               modelID,
+		DisplayName:      displayName,
+		InputPerMillion:  costInput,
 		OutputPerMillion: costOutput,
-		CreatedAt:       time.Now().UTC(),
+		CreatedAt:        time.Now().UTC(),
 	}
 
 	if costCacheRead > 0 {
