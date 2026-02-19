@@ -121,18 +121,6 @@ type SessionMetric struct {
 	CacheWriteRate        sql.NullFloat64 `json:"cache_write_rate"`
 }
 
-type SessionQuality struct {
-	SessionID         string         `json:"session_id"`
-	OverallRating     sql.NullInt64  `json:"overall_rating"`
-	IsSuccess         sql.NullInt64  `json:"is_success"`
-	AccuracyRating    sql.NullInt64  `json:"accuracy_rating"`
-	HelpfulnessRating sql.NullInt64  `json:"helpfulness_rating"`
-	EfficiencyRating  sql.NullInt64  `json:"efficiency_rating"`
-	Notes             sql.NullString `json:"notes"`
-	ReviewedAt        sql.NullString `json:"reviewed_at"`
-	CreatedAt         string         `json:"created_at"`
-}
-
 type SessionSubagent struct {
 	ID              int64           `json:"id"`
 	SessionID       string          `json:"session_id"`
@@ -157,12 +145,6 @@ type SessionTool struct {
 	InvocationCount int64         `json:"invocation_count"`
 	TotalDurationMs sql.NullInt64 `json:"total_duration_ms"`
 	ErrorCount      int64         `json:"error_count"`
-}
-
-type SessionTranscript struct {
-	SessionID string `json:"session_id"`
-	GzipData  []byte `json:"gzip_data"`
-	CreatedAt string `json:"created_at"`
 }
 
 type ToolEvent struct {

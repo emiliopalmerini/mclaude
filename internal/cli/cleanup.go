@@ -7,7 +7,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/emiliopalmerini/mclaude/internal/adapters/turso"
 	"github.com/emiliopalmerini/mclaude/internal/domain"
 )
 
@@ -111,22 +110,8 @@ func runCleanup(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Create DB transcript storage for cleaning up database-stored transcripts
-	dbTranscriptStorage := turso.NewTranscriptRepository(app.DB.DB)
-
 	deleted := 0
 	for _, s := range sessionsToDelete {
-		if s.TranscriptPath != "" {
-			if err := app.TranscriptStorage.Delete(ctx, s.ID); err != nil {
-				fmt.Printf("Warning: failed to delete transcript for %s: %v\n", s.ID, err)
-			}
-		}
-
-		// Also delete from DB transcript storage
-		if err := dbTranscriptStorage.Delete(ctx, s.ID); err != nil {
-			fmt.Printf("Warning: failed to delete DB transcript for %s: %v\n", s.ID, err)
-		}
-
 		if err := app.SessionRepo.Delete(ctx, s.ID); err != nil {
 			fmt.Printf("Warning: failed to delete session %s: %v\n", s.ID, err)
 			continue

@@ -22,7 +22,6 @@ templ Dashboard(stats DashboardStats) {
 				@StatCard("Sessions", fmt.Sprintf("%d", stats.SessionCount), "Total sessions recorded")
 				@StatCard("Tokens", formatTokens(stats.TotalTokens), fmt.Sprintf("%s in / %s out / %s cache", formatTokens(stats.TokenInput), formatTokens(stats.TokenOutput), formatTokens(stats.CacheRead + stats.CacheWrite)))
 				@CostCard(stats.TotalCost, stats.DefaultModel)
-				@QualityDashboardCard(stats.ReviewedCount, stats.SuccessRate, stats.AvgOverall)
 			</div>
 
 			<!-- Token Breakdown Donut -->
@@ -157,23 +156,4 @@ templ CostCard(totalCost float64, defaultModel string) {
 	</div>
 }
 
-templ QualityDashboardCard(reviewedCount int64, successRate *float64, avgOverall *float64) {
-	<div class="card">
-		<dt class="text-sm font-medium text-gray-500 truncate">Quality</dt>
-		if reviewedCount == 0 {
-			<dd class="mt-1 text-3xl font-semibold text-gray-400">—</dd>
-			<dd class="mt-1 text-sm text-gray-500">No reviews yet</dd>
-		} else {
-			<dd class="mt-1 flex items-center gap-2">
-				if successRate != nil {
-					<span class="text-2xl font-bold text-green-600">{ formatPercent(*successRate) }</span>
-				}
-				if avgOverall != nil {
-					<span class="text-2xl font-bold text-yellow-500">{ formatRating(*avgOverall) }</span>
-				}
-			</dd>
-			<dd class="mt-1 text-sm text-gray-500">{ fmt.Sprintf("%d reviewed", reviewedCount) }</dd>
-		}
-	</div>
-}
 

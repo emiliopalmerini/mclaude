@@ -43,7 +43,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}()
 
 	server := web.NewServer(
-		app.DB.DB, servePort, app.TranscriptStorage, app.QualityRepo,
+		app.DB.DB, servePort,
 		app.ExperimentRepo, app.ExpVariableRepo, app.PricingRepo, app.SessionRepo, app.MetricsRepo, app.StatsRepo, app.ProjectRepo,
 	)
 	return server.Start(ctx)

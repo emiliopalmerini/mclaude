@@ -36,7 +36,6 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 	commandRepo := turso.NewSessionCommandRepository(sqlDB)
 	subagentRepo := turso.NewSessionSubagentRepository(sqlDB)
 	pricingRepo := turso.NewPricingRepository(sqlDB)
-	qualityRepo := turso.NewSessionQualityRepository(sqlDB)
 
 	project, err := projectRepo.GetOrCreate(ctx, cwd)
 	if err != nil {
@@ -64,12 +63,6 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "warning: failed to store transcript copy: %v\n", err)
 			}
-		}
-
-		// Store transcript to DB for remote access (wmclaude)
-		dbTranscriptStorage := turso.NewTranscriptRepository(sqlDB)
-		if _, err := dbTranscriptStorage.Store(ctx, sessionID, transcriptPath); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: failed to store transcript to database: %v\n", err)
 		}
 	}
 
@@ -132,8 +125,6 @@ func saveSessionData(ctx context.Context, sqlDB *sql.DB, sessionID, transcriptPa
 	if err := sessionRepo.Create(ctx, session); err != nil {
 		return fmt.Errorf("failed to create session: %w", err)
 	}
-
-	_ = qualityRepo.Delete(ctx, session.ID)
 
 	if err := metricsRepo.Create(ctx, parsed.Metrics); err != nil {
 		return fmt.Errorf("failed to create session metrics: %w", err)

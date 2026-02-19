@@ -2,58 +2,11 @@ package web
 
 import (
 	"database/sql"
-	"math"
 	"testing"
 	"time"
 
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
-
-func TestCalculateSuccessRate_BothValid(t *testing.T) {
-	rate := calculateSuccessRate(
-		sql.NullFloat64{Float64: 7, Valid: true},
-		sql.NullFloat64{Float64: 3, Valid: true},
-	)
-	if rate == nil {
-		t.Fatal("expected non-nil rate")
-	}
-	if math.Abs(*rate-0.7) > 0.001 {
-		t.Errorf("expected 0.7, got %f", *rate)
-	}
-}
-
-func TestCalculateSuccessRate_ZeroTotal(t *testing.T) {
-	rate := calculateSuccessRate(
-		sql.NullFloat64{Float64: 0, Valid: true},
-		sql.NullFloat64{Float64: 0, Valid: true},
-	)
-	if rate != nil {
-		t.Errorf("expected nil rate for zero total, got %f", *rate)
-	}
-}
-
-func TestCalculateSuccessRate_NullValues(t *testing.T) {
-	rate := calculateSuccessRate(
-		sql.NullFloat64{Valid: false},
-		sql.NullFloat64{Valid: false},
-	)
-	if rate != nil {
-		t.Error("expected nil rate for null values")
-	}
-}
-
-func TestCalculateSuccessRate_AllSuccess(t *testing.T) {
-	rate := calculateSuccessRate(
-		sql.NullFloat64{Float64: 5, Valid: true},
-		sql.NullFloat64{Float64: 0, Valid: true},
-	)
-	if rate == nil {
-		t.Fatal("expected non-nil rate")
-	}
-	if math.Abs(*rate-1.0) > 0.001 {
-		t.Errorf("expected 1.0, got %f", *rate)
-	}
-}
 
 func TestFormatChartDate_TimeType(t *testing.T) {
 	tm := time.Date(2024, 6, 15, 0, 0, 0, 0, time.UTC)

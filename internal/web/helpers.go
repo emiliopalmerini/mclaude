@@ -1,32 +1,12 @@
 package web
 
 import (
-	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/emiliopalmerini/mclaude/internal/web/templates"
 	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
-
-// calculateSuccessRate computes a success rate from nullable success/failure counts.
-// Returns nil if total is zero.
-func calculateSuccessRate(successCount, failureCount sql.NullFloat64) *float64 {
-	sc := int64(0)
-	fc := int64(0)
-	if successCount.Valid {
-		sc = int64(successCount.Float64)
-	}
-	if failureCount.Valid {
-		fc = int64(failureCount.Float64)
-	}
-	total := sc + fc
-	if total > 0 {
-		rate := float64(sc) / float64(total)
-		return &rate
-	}
-	return nil
-}
 
 // formatChartDate converts a date interface{} (from sqlc) to a "YYYY-MM-DD" string.
 func formatChartDate(date any) string {

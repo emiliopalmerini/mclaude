@@ -141,40 +141,6 @@ templ ExperimentDetailPage(exp ExperimentDetail) {
 				</div>
 			</div>
 
-			<!-- Quality Stats -->
-			if exp.ReviewedCount > 0 {
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-					<div class="card">
-						<p class="text-sm text-gray-500">Reviewed</p>
-						<p class="text-2xl font-bold text-gray-900">{ formatInt(exp.ReviewedCount) }</p>
-					</div>
-					<div class="card">
-						<p class="text-sm text-gray-500">Success Rate</p>
-						if exp.SuccessRate != nil {
-							<p class="text-2xl font-bold text-green-600">{ formatPercent(*exp.SuccessRate) }</p>
-						} else {
-							<p class="text-2xl font-bold text-gray-400">—</p>
-						}
-					</div>
-					<div class="card">
-						<p class="text-sm text-gray-500">Avg Rating</p>
-						if exp.AvgOverall != nil {
-							<p class="text-2xl font-bold text-yellow-500">{ formatRating(*exp.AvgOverall) }</p>
-						} else {
-							<p class="text-2xl font-bold text-gray-400">—</p>
-						}
-					</div>
-					<div class="card">
-						<p class="text-sm text-gray-500">Avg Efficiency</p>
-						if exp.AvgEfficiency != nil {
-							<p class="text-2xl font-bold text-blue-600">{ formatRating(*exp.AvgEfficiency) }</p>
-						} else {
-							<p class="text-2xl font-bold text-gray-400">—</p>
-						}
-					</div>
-				</div>
-			}
-
 			<!-- Token Breakdown & Tools -->
 			<div class="grid md:grid-cols-2 gap-4">
 				<!-- Token Breakdown Donut -->

@@ -14,10 +14,6 @@ type DashboardStats struct {
 	DefaultModel     string // Display name of the default model for cost calculations
 	TopTools         []ToolUsage
 	RecentSessions   []SessionSummary
-	// Quality stats
-	ReviewedCount int64
-	SuccessRate   *float64
-	AvgOverall    *float64
 	// Filters
 	FilterPeriod     string
 	FilterExperiment string
@@ -67,10 +63,6 @@ type SessionSummary struct {
 	Model          string
 	Duration       int64
 	SubagentCount  int64
-	// Quality (nil if not reviewed)
-	IsReviewed    bool
-	OverallRating int
-	IsSuccess     *bool
 }
 
 type SubagentUsage struct {
@@ -115,8 +107,6 @@ type SessionDetail struct {
 	Files                 []FileOperation
 	Subagents             []SubagentUsage
 	ToolEvents            []ToolEventView
-	// Quality
-	Quality *SessionQuality
 }
 
 type FileOperation struct {
@@ -181,13 +171,6 @@ type ExperimentDetail struct {
 	TopTools []ToolUsage
 	// Recent sessions
 	RecentSessions []SessionSummary
-	// Quality stats
-	ReviewedCount  int64
-	AvgOverall     *float64
-	SuccessRate    *float64
-	AvgAccuracy    *float64
-	AvgHelpfulness *float64
-	AvgEfficiency  *float64
 	// Normalized behavior metrics
 	TokensPerTurn    float64
 	OutputRatio      float64
@@ -219,13 +202,6 @@ type ExperimentCompareItem struct {
 	TotalCost         float64
 	TokensPerSession  int64
 	CostPerSession    float64
-	// Quality metrics
-	ReviewedCount  int64
-	AvgOverall     *float64
-	SuccessRate    *float64
-	AvgAccuracy    *float64
-	AvgHelpfulness *float64
-	AvgEfficiency  *float64
 	// Normalized behavior metrics
 	TokensPerTurn    float64
 	OutputRatio      float64
@@ -242,49 +218,4 @@ type ModelPricing struct {
 	CacheReadPerMillion  float64
 	CacheWritePerMillion float64
 	IsDefault            bool
-}
-
-// SessionQuality for review form and display
-type SessionQuality struct {
-	SessionID         string
-	OverallRating     int // 0 means unset
-	IsSuccess         *bool
-	AccuracyRating    int
-	HelpfulnessRating int
-	EfficiencyRating  int
-	Notes             string
-	ReviewedAt        string
-}
-
-// TranscriptMessage for transcript viewer
-type TranscriptMessage struct {
-	Role      string
-	Content   string
-	Timestamp string
-	Tools     []TranscriptToolUse
-}
-
-// TranscriptToolUse for displaying tool invocations
-type TranscriptToolUse struct {
-	Name  string
-	Input string
-}
-
-// SessionReviewData combines session detail with quality and transcript
-type SessionReviewData struct {
-	SessionDetail
-	Quality    SessionQuality
-	Transcript []TranscriptMessage
-}
-
-// QualityStats for experiment comparison
-type QualityStats struct {
-	ReviewedCount  int64
-	AvgOverall     *float64
-	SuccessCount   int64
-	FailureCount   int64
-	SuccessRate    *float64
-	AvgAccuracy    *float64
-	AvgHelpfulness *float64
-	AvgEfficiency  *float64
 }

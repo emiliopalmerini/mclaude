@@ -16,25 +16,21 @@ import (
 var staticFiles embed.FS
 
 type Server struct {
-	db                *sql.DB
-	router            *http.ServeMux
-	port              int
-	transcriptStorage ports.TranscriptStorage
-	qualityRepo       ports.SessionQualityRepository
-	experimentRepo    ports.ExperimentRepository
-	expVariableRepo   ports.ExperimentVariableRepository
-	pricingRepo       ports.PricingRepository
-	sessionRepo       ports.SessionRepository
-	metricsRepo       ports.SessionMetricsRepository
-	statsRepo         ports.StatsRepository
-	projectRepo       ports.ProjectRepository
+	db              *sql.DB
+	router          *http.ServeMux
+	port            int
+	experimentRepo  ports.ExperimentRepository
+	expVariableRepo ports.ExperimentVariableRepository
+	pricingRepo     ports.PricingRepository
+	sessionRepo     ports.SessionRepository
+	metricsRepo     ports.SessionMetricsRepository
+	statsRepo       ports.StatsRepository
+	projectRepo     ports.ProjectRepository
 }
 
 func NewServer(
 	db *sql.DB,
 	port int,
-	ts ports.TranscriptStorage,
-	qr ports.SessionQualityRepository,
 	er ports.ExperimentRepository,
 	evr ports.ExperimentVariableRepository,
 	pr ports.PricingRepository,
@@ -44,18 +40,16 @@ func NewServer(
 	projr ports.ProjectRepository,
 ) *Server {
 	s := &Server{
-		db:                db,
-		router:            http.NewServeMux(),
-		port:              port,
-		transcriptStorage: ts,
-		qualityRepo:       qr,
-		experimentRepo:    er,
-		expVariableRepo:   evr,
-		pricingRepo:       pr,
-		sessionRepo:       sr,
-		metricsRepo:       mr,
-		statsRepo:         str,
-		projectRepo:       projr,
+		db:              db,
+		router:          http.NewServeMux(),
+		port:            port,
+		experimentRepo:  er,
+		expVariableRepo: evr,
+		pricingRepo:     pr,
+		sessionRepo:     sr,
+		metricsRepo:     mr,
+		statsRepo:       str,
+		projectRepo:     projr,
 	}
 	s.setupRoutes()
 	return s
@@ -79,7 +73,6 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("GET /", s.handleDashboard)
 	s.router.HandleFunc("GET /sessions", s.handleSessions)
 	s.router.HandleFunc("GET /sessions/{id}", s.handleSessionDetail)
-	s.router.HandleFunc("GET /sessions/{id}/review", s.handleSessionReview)
 	s.router.HandleFunc("GET /experiments", s.handleExperiments)
 	s.router.HandleFunc("GET /experiments/compare", s.handleExperimentCompare)
 	s.router.HandleFunc("GET /experiments/{id}", s.handleExperimentDetail)
@@ -96,9 +89,6 @@ func (s *Server) setupRoutes() {
 	s.router.HandleFunc("DELETE /api/experiments/{id}", s.handleAPIDeleteExperiment)
 
 	s.router.HandleFunc("POST /api/experiments/{id}/end", s.handleAPIEndExperiment)
-
-	// Quality review endpoints
-	s.router.HandleFunc("POST /api/sessions/{id}/quality", s.handleAPISaveQuality)
 
 	// Session management
 	s.router.HandleFunc("DELETE /api/sessions/{id}", s.handleAPIDeleteSession)

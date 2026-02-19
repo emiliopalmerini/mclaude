@@ -50,18 +50,10 @@ func TestPricingRepositoryConformance(t *testing.T) {
 	var _ ports.PricingRepository = (*turso.PricingRepository)(nil)
 }
 
-func TestSessionQualityRepositoryConformance(t *testing.T) {
-	var _ ports.SessionQualityRepository = (*turso.SessionQualityRepository)(nil)
-}
-
 func TestStatsRepositoryConformance(t *testing.T) {
 	var _ ports.StatsRepository = (*turso.StatsRepository)(nil)
 }
 
 func TestToolEventRepositoryConformance(t *testing.T) {
 	var _ ports.ToolEventRepository = (*turso.ToolEventRepository)(nil)
-}
-
-func TestTranscriptRepositoryConformance(t *testing.T) {
-	var _ ports.TranscriptStorage = (*turso.TranscriptRepository)(nil)
 }

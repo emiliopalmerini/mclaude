@@ -19,9 +19,7 @@ type Repositories struct {
 	ExperimentVariables ports.ExperimentVariableRepository
 	Projects            ports.ProjectRepository
 	Pricing             ports.PricingRepository
-	Quality             ports.SessionQualityRepository
 	Stats               ports.StatsRepository
-	Transcripts         ports.TranscriptStorage
 }
 
 // NewRepositories creates all turso repository implementations from a database connection.
@@ -38,8 +36,6 @@ func NewRepositories(db *sql.DB) *Repositories {
 		ExperimentVariables: NewExperimentVariableRepository(db),
 		Projects:            NewProjectRepository(db),
 		Pricing:             NewPricingRepository(db),
-		Quality:             NewSessionQualityRepository(db),
 		Stats:               NewStatsRepository(db),
-		Transcripts:         NewTranscriptRepository(db),
 	}
 }

@@ -191,29 +191,6 @@ func (s *Server) handleExperimentDetail(w http.ResponseWriter, r *http.Request) 
 		detail.RecentSessions = append(detail.RecentSessions, summary)
 	}
 
-	// Get quality stats
-	qualityStats, err := queries.GetQualityStatsByExperiment(ctx, util.NullString(exp.ID))
-	if err == nil && qualityStats.ReviewedCount > 0 {
-		detail.ReviewedCount = qualityStats.ReviewedCount
-		if qualityStats.AvgOverallRating.Valid {
-			avg := qualityStats.AvgOverallRating.Float64
-			detail.AvgOverall = &avg
-		}
-		if qualityStats.AvgAccuracy.Valid {
-			avg := qualityStats.AvgAccuracy.Float64
-			detail.AvgAccuracy = &avg
-		}
-		if qualityStats.AvgHelpfulness.Valid {
-			avg := qualityStats.AvgHelpfulness.Float64
-			detail.AvgHelpfulness = &avg
-		}
-		if qualityStats.AvgEfficiency.Valid {
-			avg := qualityStats.AvgEfficiency.Float64
-			detail.AvgEfficiency = &avg
-		}
-		detail.SuccessRate = calculateSuccessRate(qualityStats.SuccessCount, qualityStats.FailureCount)
-	}
-
 	_ = templates.ExperimentDetailPage(detail).Render(ctx, w)
 }
 
@@ -302,31 +279,6 @@ func (s *Server) handleExperimentCompare(w http.ResponseWriter, r *http.Request)
 		item.CacheHitRate = normalized.CacheHitRate
 		item.ErrorRate = normalized.ErrorRate
 		item.ToolCallsPerTurn = normalized.ToolCallsPerTurn
-
-		// Get quality stats
-		qualityStats, err := queries.GetQualityStatsByExperiment(ctx, util.NullString(exp.ID))
-		if err == nil && qualityStats.ReviewedCount > 0 {
-			item.ReviewedCount = qualityStats.ReviewedCount
-
-			if qualityStats.AvgOverallRating.Valid {
-				avg := qualityStats.AvgOverallRating.Float64
-				item.AvgOverall = &avg
-			}
-			if qualityStats.AvgAccuracy.Valid {
-				avg := qualityStats.AvgAccuracy.Float64
-				item.AvgAccuracy = &avg
-			}
-			if qualityStats.AvgHelpfulness.Valid {
-				avg := qualityStats.AvgHelpfulness.Float64
-				item.AvgHelpfulness = &avg
-			}
-			if qualityStats.AvgEfficiency.Valid {
-				avg := qualityStats.AvgEfficiency.Float64
-				item.AvgEfficiency = &avg
-			}
-
-			item.SuccessRate = calculateSuccessRate(qualityStats.SuccessCount, qualityStats.FailureCount)
-		}
 
 		items = append(items, item)
 	}

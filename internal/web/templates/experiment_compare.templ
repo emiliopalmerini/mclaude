@@ -185,77 +185,7 @@ templ ExperimentComparePage(data ExperimentComparison) {
 								}
 							</tr>
 
-							<!-- Quality -->
-							<tr class="bg-gray-50">
-								<td colspan={ colSpan(len(data.Experiments) + 1) } class="py-1.5 px-4 font-semibold text-gray-700 text-sm">Quality</td>
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Sessions Reviewed</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">{ formatInt(exp.ReviewedCount) }</td>
-								}
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Rating</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">
-										if exp.AvgOverall != nil {
-											{ formatRating(*exp.AvgOverall) }
-										} else {
-											<span class="text-gray-400">-</span>
-										}
-									</td>
-								}
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Success Rate</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">
-										if exp.SuccessRate != nil {
-											{ formatPercent(*exp.SuccessRate) }
-										} else {
-											<span class="text-gray-400">-</span>
-										}
-									</td>
-								}
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Accuracy</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">
-										if exp.AvgAccuracy != nil {
-											{ formatRating(*exp.AvgAccuracy) }
-										} else {
-											<span class="text-gray-400">-</span>
-										}
-									</td>
-								}
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Helpfulness</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">
-										if exp.AvgHelpfulness != nil {
-											{ formatRating(*exp.AvgHelpfulness) }
-										} else {
-											<span class="text-gray-400">-</span>
-										}
-									</td>
-								}
-							</tr>
-							<tr>
-								<td class="py-1.5 px-4 text-gray-600 text-sm">Avg Efficiency</td>
-								for _, exp := range data.Experiments {
-									<td class="py-1.5 px-4 text-right font-medium text-sm">
-										if exp.AvgEfficiency != nil {
-											{ formatRating(*exp.AvgEfficiency) }
-										} else {
-											<span class="text-gray-400">-</span>
-										}
-									</td>
-								}
-							</tr>
-						</tbody>
+							</tbody>
 					</table>
 				</div>
 			}
@@ -272,8 +202,6 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 		TokensPerSession int64   `json:"tokensPerSession"`
 		CostPerSession   float64 `json:"costPerSession"`
 		TotalTurns       int64   `json:"totalTurns"`
-		SuccessRate      float64 `json:"successRate"`
-		AvgRating        float64 `json:"avgRating"`
 		OutputRatio      float64 `json:"outputRatio"`
 		CacheHitRate     float64 `json:"cacheHitRate"`
 		ToolCallsPerTurn float64 `json:"toolCallsPerTurn"`
@@ -295,12 +223,6 @@ func buildCompareJSON(experiments []ExperimentCompareItem) string {
 			ToolCallsPerTurn: exp.ToolCallsPerTurn,
 			TokensPerTurn:    exp.TokensPerTurn,
 			ErrorRate:        exp.ErrorRate * 100,
-		}
-		if exp.SuccessRate != nil {
-			items[i].SuccessRate = *exp.SuccessRate * 100
-		}
-		if exp.AvgOverall != nil {
-			items[i].AvgRating = *exp.AvgOverall
 		}
 	}
 	b, _ := json.Marshal(items)

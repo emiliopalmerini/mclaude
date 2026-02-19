@@ -59,14 +59,6 @@ func colSpan(n int) string {
 	return fmt.Sprintf("%d", n)
 }
 
-func formatRating(r float64) string {
-	return fmt.Sprintf("%.1f ★", r)
-}
-
-func formatPercent(p float64) string {
-	return fmt.Sprintf("%.0f%%", p*100)
-}
-
 func buildSessionsExportURL(format, experiment string, limit int) templ.SafeURL {
 	url := fmt.Sprintf("/api/export/sessions?format=%s&limit=%d", format, limit)
 	if experiment != "" {

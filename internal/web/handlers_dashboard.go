@@ -9,7 +9,6 @@ import (
 	"github.com/emiliopalmerini/mclaude/internal/ports"
 	"github.com/emiliopalmerini/mclaude/internal/util"
 	"github.com/emiliopalmerini/mclaude/internal/web/templates"
-	sqlc "github.com/emiliopalmerini/mclaude/sqlc/generated"
 )
 
 type dashboardFilters struct {
@@ -30,7 +29,6 @@ func (s *Server) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilters) templates.DashboardStats {
-	queries := sqlc.New(s.db)
 	startDate := util.GetStartDateForPeriod(filters.Period)
 
 	// Sequential fetching — the remote libsql driver doesn't support concurrent connections well,
@@ -85,9 +83,6 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 	if err != nil {
 		slog.Error("dashboard: recent sessions", "error", err)
 	}
-
-	// 8. Quality stats (no port equivalent, use sqlc directly)
-	qualityStats, qualityErr := queries.GetOverallQualityStats(ctx)
 
 	// Assemble results
 	stats := templates.DashboardStats{
@@ -146,15 +141,6 @@ func (s *Server) fetchDashboardData(ctx context.Context, filters dashboardFilter
 		recentSessions = append(recentSessions, summary)
 	}
 	stats.RecentSessions = recentSessions
-
-	if qualityErr == nil && qualityStats.ReviewedCount > 0 {
-		stats.ReviewedCount = qualityStats.ReviewedCount
-		if qualityStats.AvgOverallRating.Valid {
-			avg := qualityStats.AvgOverallRating.Float64
-			stats.AvgOverall = &avg
-		}
-		stats.SuccessRate = calculateSuccessRate(qualityStats.SuccessCount, qualityStats.FailureCount)
-	}
 
 	return stats
 }
